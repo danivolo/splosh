@@ -750,7 +750,7 @@ def inspect(snap, view, x, y, frame=None, limit=20):
     idx = np.nonzero(r2 < h * h)[0]
     weight_kind = resolve_weight(view)
     mass = np.asarray(snap["Masses"], dtype=np.float64)[idx]
-    if view.field == "rho" or weight_kind == "mass":
+    if view.field == "rho" or weight_kind in ("mass", "column"):
         w = mass
     else:
         if "Density" not in snap:

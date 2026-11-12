@@ -18,7 +18,8 @@ def load_snapshot(path, gas_fields=("Coordinates", "SmoothingLength", "Masses", 
         out["time"] = float(hd["Time"])
         out["header"] = {k: (hd[k].tolist() if hasattr(hd[k], "tolist") else hd[k]) for k in
                          ("BoxSize", "Redshift", "UnitLength_In_CGS", "UnitMass_In_CGS", "UnitVelocity_In_CGS", "Kernel_Function_ID", "ComovingIntegrationOn",
-                                                   "HubbleParam", "UnitLength_in_cm", "UnitMass_in_g", "UnitVelocity_in_cm_per_s") if k in hd}
+                                                   "HubbleParam", "UnitLength_in_cm", "UnitMass_in_g", "UnitVelocity_in_cm_per_s",
+                                                   "Gravitational_Constant_In_Code_Inits", "Fixed_ForceSoftening_Keplerian_Kernel_Extent") if k in hd}
         g = f["PartType0"]
         out["path"] = str(path)
         todo = []

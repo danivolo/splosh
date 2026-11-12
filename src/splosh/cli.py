@@ -58,7 +58,7 @@ def add_view_options(p):
     p.add_argument("--width", type=float, help="window width in code length units")
     p.add_argument("--npix", type=int)
     p.add_argument("--cx", type=float); p.add_argument("--cy", type=float); p.add_argument("--z0", type=float, help="slice plane along the line of sight")
-    p.add_argument("--weight", choices=["auto", "mass", "volume"])
+    p.add_argument("--weight", choices=["auto", "mass", "volume", "column"])
     p.add_argument("--hscale", type=float, help="multiply H before splatting (1 = the code's kernel; 2 reproduces readers that treat H as h with support 2h)")
     p.add_argument("--units", choices=["code", "cgs", "astro"], help="unit system of the map values: code (default), cgs, astro (Msun/pc^2, K, km/s, Myr, pc)")
     p.add_argument("--gamma", type=float, help="adiabatic index of the derived fields (default 5/3)")

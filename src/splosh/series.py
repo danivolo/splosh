@@ -513,7 +513,7 @@ def heat_tile(p, ctx, tnow=None):
     out = {"heat": {"x": fx(edges), "y": Y, "z": Z, "zscale": p.get("zscale") or "log", "cmap": p.get("cmap") or "magma", "norm": p.get("norm", "none"),
                     "label": p.get("zlabel") or ("fraction" if p.get("norm") == "column" else p["prefix"].rstrip("_"))},
            "curves": [], "styles": [], "xnow": fx(tnow) if (tnow is not None and p.get("marker", True)) else None, "xlabel": xlabel,
-           "ylabel": p.get("ylabel") or p["prefix"].rstrip("_"), "yscale": "lin", "note": tab.note}
+           "ylabel": p.get("ylabel") or p["prefix"].rstrip("_"), "yscale": p.get("yscale") or "lin", "note": tab.note}
     for c in p.get("overlay") or []:                     # curves on the same y axis (e.g. the lowest occupied bin over the occupancy)
         for cv in curves(tab, [c], ids=p.get("ids"), n=1500):
             out["curves"].append((tab.meta.get(c, {}).get("label", c), fx(np.asarray(cv["t"], float)), np.asarray(cv["y"], float)))

@@ -24,6 +24,12 @@ bunit (UnitMagneticField_in_gauss of the run, for beta).
   Pmag      magnetic pressure B_int^2 / 2 [code pressure] = B_gauss^2 / 8 pi in cgs; beta = pressure / Pmag.
   divB      H |div B| / |B|, the relative divergence error (H = SmoothingLength); needs DivergenceOfMagneticField, written by GIZMO only with
             OUTPUT_BFIELD_DIVCLEAN_INFO (splosh does no neighbour search, so it cannot compute div B itself).
+  tau_bin   torque of each gas particle on the orbit of the binary (the two lowest-ID black holes), per unit gas mass, along the orbit normal:
+            mu (r x (g_1 - g_0)) . L_hat with r = x_1 - x_0, mu = m_0 m_1 / (m_0 + m_1) (dynamical masses), g_k = G (x_gas - x_k) f(|x_gas - x_k|, h) the pull of the
+            particle on black hole k per unit gas mass (GIZMO's cubic-spline softened gravity, h = max(SmoothingLength, the header's fixed softening extents of
+            types 0 and 5)). The common pull moves the centre of mass and drops out. > 0: the gas adds angular momentum to the orbit (a circular binary of fixed
+            masses widens, da/dt / a = 2 tau / L_orb), < 0 it shrinks. With weight = column a projection is the torque per unit area. G from the header
+            (Gravitational_Constant_In_Code_Inits) or from the code units.          [code velocity^2]
 No neighbour searches are used (no vorticity, divergence, gradients). A dataset missing from the snapshot raises a KeyError naming it."""
 import numpy as np
 
@@ -192,6 +198,73 @@ def f_divb(ctx):
         return _need(ctx, "SmoothingLength") * d / b
 
 
+G_CGS = 6.67408e-8      # GIZMO's GRAVITY_G
+
+
+def _kernel_accel_factor(r, h):
+    """GIZMO/GADGET cubic-spline softened gravity: acceleration = G m dx f(r, h), h the kernel extent (1/r^3 outside)."""
+    f = np.empty_like(r)
+    far = r >= h
+    f[far] = 1.0 / r[far] ** 3
+    u = r[~far] / h[~far]
+    hinv3 = 1.0 / h[~far] ** 3
+    fi = np.where(u < 0.5, 10.666666666667 + u * u * (32.0 * u - 38.4),
+                  21.333333333333 - 48.0 * u + 38.4 * u * u - 10.666666666667 * u ** 3 - 0.066666666667 / np.maximum(u, 1e-12) ** 3)
+    f[~far] = hinv3 * fi
+    return f
+
+
+def binary_of(snap):
+    """(x0, x1, v0, v1, m0, m1) of the two lowest-ID black holes (dynamical masses), or raise ValueError."""
+    if "bh_pos" not in snap or len(snap["bh_pos"]) < 2:
+        raise ValueError("tau_bin needs two black holes (PartType5)")
+    o = np.argsort(np.asarray(snap["bh_id"]).astype(np.int64), kind="stable")[:2] if "bh_id" in snap else np.arange(2)
+    m = np.asarray(snap["bh_mdyn"] if "bh_mdyn" in snap else snap["bh_mass"], dtype=np.float64)
+    p, v = np.asarray(snap["bh_pos"], dtype=np.float64), np.asarray(snap["bh_vel"], dtype=np.float64)
+    return p[o[0]], p[o[1]], v[o[0]], v[o[1]], float(m[o[0]]), float(m[o[1]])
+
+
+def gravitational_constant(snap):
+    hd = snap.get("header", {}) or {}
+    g = hd.get("Gravitational_Constant_In_Code_Inits")
+    if g is not None and float(g) > 0:
+        return float(g)
+    u = Units.from_header(hd)
+    return G_CGS * u.mass_g * u.time_s ** 2 / u.length_cm ** 3
+
+
+def binary_torque(snap, pos=None, hsml=None, chunk=1 << 21):
+    """tau_bin per gas particle (see the module docstring), in chunks to bound the memory."""
+    x0, x1, v0, v1, m0, m1 = binary_of(snap)
+    pos = np.asarray(snap["Coordinates"] if pos is None else pos)
+    hsml = np.asarray(snap["SmoothingLength"] if hsml is None else hsml)
+    r_rel = x1 - x0
+    L = np.cross(r_rel, v1 - v0)
+    Lhat = L / np.linalg.norm(L)
+    w = np.cross(Lhat, r_rel)                          # (r x g) . L_hat = g . (L_hat x r)
+    mu = m0 * m1 / (m0 + m1)
+    ext = np.asarray((snap.get("header", {}) or {}).get("Fixed_ForceSoftening_Keplerian_Kernel_Extent", np.zeros(6)), dtype=np.float64).ravel()
+    hmin = max(float(ext[0]) if ext.size > 0 else 0.0, float(ext[5]) if ext.size > 5 else 0.0)
+    G = gravitational_constant(snap)
+    out = np.empty(len(pos), np.float64)
+    for s in range(0, len(pos), chunk):
+        p = pos[s:s + chunk].astype(np.float64)
+        h = np.maximum(hsml[s:s + chunk].astype(np.float64), hmin)
+        acc = 0.0
+        for x, sgn in ((x0, -1.0), (x1, 1.0)):
+            dx = p - x
+            r = np.sqrt((dx * dx).sum(1))
+            acc = acc + sgn * (dx @ w) * _kernel_accel_factor(np.maximum(r, 1e-12), h)
+        out[s:s + chunk] = G * mu * acc
+    return out
+
+
+def f_tau_bin(ctx):
+    """Torque of each gas particle on the binary orbit per unit gas mass (> 0 widens the orbit); see the module docstring."""
+    _need(ctx, "SmoothingLength")
+    return binary_torque(ctx.snap)
+
+
 def _entropy_dim(view):
     g = float(getattr(view, "gamma", DEFAULT_GAMMA))
     return (-3.0 * (1.0 - g), 1.0 - g, 2.0)
@@ -218,6 +291,7 @@ _ALL = [
     ("beta", f_beta, "plasma beta 2 P / |B|^2", ("Density", "InternalEnergy", "MagneticField"), DIMLESS),
     ("B", f_bmag, "magnetic field strength |B| [gauss]", ("MagneticField",), GAUSS),
     ("Pmag", f_pmag, "magnetic pressure |B|^2 / 2 (code units, mu_0 = 1)", ("MagneticField",), PRESSURE),
+    ("tau_bin", f_tau_bin, "torque on the binary orbit per unit gas mass (> 0 widens it; weight=column: per unit area)", ("SmoothingLength",), (0, 0, 2)),
     ("divB", f_divb, "relative divergence error H |div B| / |B| (GIZMO: build with OUTPUT_BFIELD_DIVCLEAN_INFO)", ("MagneticField", "DivergenceOfMagneticField", "SmoothingLength"), DIMLESS),
 ]
 

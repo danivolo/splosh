@@ -36,7 +36,7 @@ class View:
     cx: float = 0.0             # window centre in frame coordinates (pan)
     cy: float = 0.0
     z0: float = 0.0             # slice plane position along the line of sight (frame coordinates)
-    weight: str = "auto"        # auto | mass | volume
+    weight: str = "auto"        # auto | mass | volume | column (sum of m q K, not normalised: the column density of q in a projection, rho q in a slice)
     hscale: float = 1.0         # multiplies the stored smoothing length before splatting: 1 = the code's own kernel (H = support radius); 2 = what a reader that treats H as
                                 # the Monaghan h (support 2h), e.g. pynbody fed `smooth = H`, draws
     units: str = "code"         # code | cgs | astro: the unit system of the map values (the window, width, cx, cy, z0 stay in code length units)
@@ -61,8 +61,10 @@ class View:
             raise ValueError("mode must be proj, slice or volume")
         if not self.kappa >= 0:
             raise ValueError("kappa must be >= 0 (0 = automatic)")
-        if self.weight not in ("auto", "mass", "volume"):
-            raise ValueError("weight must be auto, mass or volume")
+        if self.weight not in ("auto", "mass", "volume", "column"):
+            raise ValueError("weight must be auto, mass, volume or column")
+        if self.weight == "column" and self.mode == "volume":
+            raise ValueError("weight 'column' is for projections and slices")
         if self.units not in SYSTEMS:
             raise ValueError(f"units must be one of {list(SYSTEMS)}")
         if not self.gamma > 1.0:
@@ -173,7 +175,7 @@ def render_fields(snap, view, fields, frame=None):
     idx = np.nonzero(keep)[0]
     weight = resolve_weight(view.with_(field=fields[0]))
     mass = np.asarray(snap["Masses"], dtype=np.float64)
-    w = mass[idx] if weight == "mass" else mass[idx] / np.asarray(snap["Density"], dtype=np.float64)[idx]
+    w = mass[idx] if weight in ("mass", "column") else mass[idx] / np.asarray(snap["Density"], dtype=np.float64)[idx]
     if len(idx) == 0:
         return [np.full((view.npix, view.npix), np.nan) for _ in fields]
     ctx = FieldContext(snap, frame, view)
@@ -190,7 +192,10 @@ def render_fields(snap, view, fields, frame=None):
     out = []
     with np.errstate(invalid="ignore", divide="ignore"):
         for k in range(len(fields)):                        # the same float32 arithmetic as render_map (bitwise the same maps)
-            out.append(np.where(w0 > thr, img[..., k + 1] / w0, np.nan).astype(np.float32).astype(np.float64))
+            if weight == "column":
+                out.append(img[..., k + 1].astype(np.float64))
+            else:
+                out.append(np.where(w0 > thr, img[..., k + 1] / w0, np.nan).astype(np.float32).astype(np.float64))
     return out
 
 
@@ -208,7 +213,7 @@ def render_map(snap, view, frame=None, engine_kw=None):
     x, y, z, hh, idx = select_in_frame(snap, frame, AXES[view.axes], view.width, view.cx, view.cy, view.hscale, view.z0, view.mode == "slice")
     weight = resolve_weight(view)
     mass = np.asarray(snap["Masses"])
-    if view.field == "rho" or weight == "mass":
+    if view.field == "rho" or weight in ("mass", "column"):
         w = gather(mass, idx).astype(np.float64)
     else:
         w = gather(mass, idx).astype(np.float64) / gather(np.asarray(snap["Density"]), idx).astype(np.float64)
@@ -248,6 +253,10 @@ def render_map(snap, view, frame=None, engine_kw=None):
         w0 = img[..., 0]
         out = w0.copy()
         label = "column density" if view.mode == "proj" else "density"
+    elif weight == "column":                               # not normalised: sum m q K = the column density of q (projection) or rho q (slice)
+        w0 = img[..., 0]
+        out = img[..., 1].astype(np.float32)
+        label = f"column of {view.field}" if view.mode == "proj" else f"rho {view.field}"
     else:
         w0 = img[..., 0]
         with np.errstate(invalid="ignore", divide="ignore"):
@@ -260,6 +269,8 @@ def render_map(snap, view, frame=None, engine_kw=None):
     units = Units.from_header(snap.get("header", {}))
     from .fields import resolve_unit
     dim = resolve_unit(view, view.field, view.mode)
+    if weight == "column" and view.field != "rho" and isinstance(dim, tuple):
+        dim = tuple(a + b for a, b in zip(dim, COLUMN if view.mode == "proj" else DENSITY))
     qmeta = quantity_meta(units, dim, view.field, view.units)
     out = out * np.float32(qmeta["factor"]) if qmeta["factor"] != 1.0 else out
     lu, lf = units.length_unit(view.units)

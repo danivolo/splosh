@@ -16,7 +16,7 @@
 | `splosh fields`, `splosh store [--clear]` | list fields with their cgs unit and the PartType0 datasets each needs, presets, plugins; mapstore statistics. |
 
 View options (shared by `render`, `shot`, `sheet`, `movie` and `serve`, which uses them as defaults): `--center`, `--align`, `--axes xy|xz|yz`, `--mode proj|slice`, `--field`, `--width`, `--npix`,
-`--cx --cy` (pan), `--z0` (slice plane), `--weight auto|mass|volume`, `--units code|cgs|astro`, `--gamma`, `--xh`, `--mu`, `--bunit`, `--post SPEC`, `--exact`, `--preset NAME`, `--view k=v,k=v`.
+`--cx --cy` (pan), `--z0` (slice plane), `--weight auto|mass|volume|column`, `--units code|cgs|astro`, `--gamma`, `--xh`, `--mu`, `--bunit`, `--post SPEC`, `--exact`, `--preset NAME`, `--view k=v,k=v`.
 
 ## Frames
 Centre (`--center`): `com` (mass-weighted gas + black holes), `mass-weighted` (gas), `bh` (black-hole particles; the binary centre of mass for two), `peak` (densest gas particle),
@@ -33,6 +33,8 @@ holes' orbital angular momentum becomes +z). Velocities rotate with the position
 - Projection: `rho` = column density (conserves the mass); other fields are the weighted mean along the line of sight, default weight = mass (density-weighted).
 - Slice at `z0` along the line of sight: `rho` = SPH density `sum m W`; other fields = normalised SPH interpolation `sum (m/rho) q W / sum (m/rho) W` (default weight volume), pixels where
   the weight sum is under 5% are NaN. A slice samples the kernel at pixel centres: use pixels finer than the typical H.
+- `weight=column`: the sum `sum m q K` without the normalisation: in a projection the column density of q (e.g. `tau_bin`, the torque on the binary per unit gas mass, becomes the
+  torque per unit area: where the gas widens (> 0) or shrinks (< 0) the orbit; use a diverging colour map with symmetric limits), in a slice `rho q`.
 - Fields: `rho`, `u`, `vx`, `vy`, `vz` (aligned frame), `vlos`, `speed`, `H`, the derived fields below; plugins register more.
 
 ## Units and derived fields

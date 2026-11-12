@@ -142,3 +142,35 @@ def test_density_map_needs_no_density_dataset():
     del s["Density"]
     img, _ = render_map(s, View(center="com", mode="slice", field="rho", width=6.0, npix=32))
     assert img.shape == (32, 32) and img.max() > 0
+
+
+@pytest.mark.parametrize("mode", ["proj", "slice"])
+def test_column_weight_is_the_unnormalised_sum(mode):
+    """weight=column: sum m q K (the column density of q, or rho q in a slice) = (mass-weighted map) x (rho map) where both are defined."""
+    s = synthetic_snap(hmin=0.15 if mode == "slice" else 0.55)
+    base = dict(center="bh", align="bh", mode=mode, field="u", width=4.0, npix=48, z0=0.05, exact=True)
+    col, meta = render_map(s, View(weight="column", **base))
+    avg, _ = render_map(s, View(weight="mass", **base))
+    rho, _ = render_map(s, View(**{**base, "field": "rho"}))
+    ok = np.isfinite(avg) & (rho > 0.02 * rho.max())
+    assert ok.sum() > 300 and np.all(np.isfinite(col))
+    assert np.allclose(col[ok], avg[ok] * rho[ok], rtol=2e-3, atol=1e-6 * np.abs(col).max())
+    assert meta["weight"] == "column"
+    with pytest.raises(ValueError):
+        View(weight="column", mode="volume").validate()
+
+
+def test_binary_torque_point_masses():
+    """tau_bin of a particle far outside every softening length: mu (r x (g1 - g0)) . L_hat with Newtonian g; the summed torque changes sign with the side."""
+    from splosh.fields import binary_torque
+    s = {"Coordinates": np.array([[0.0, 3.0, 0.0], [3.0, 0.3, 0.0]]), "SmoothingLength": np.array([0.01, 0.01]),
+         "bh_pos": np.array([[0.5, 0.0, 0.0], [-0.5, 0.0, 0.0]]), "bh_vel": np.array([[0.0, 0.7, 0.0], [0.0, -0.7, 0.0]]),
+         "bh_mass": np.array([1.0, 3.0]), "bh_id": np.array([7, 9]), "header": {"Gravitational_Constant_In_Code_Inits": 2.0}}
+    t = binary_torque(s)
+    x0, x1, m0, m1 = s["bh_pos"][0], s["bh_pos"][1], 1.0, 3.0
+    r = x1 - x0
+    Lhat = np.cross(r, s["bh_vel"][1] - s["bh_vel"][0]); Lhat /= np.linalg.norm(Lhat)
+    for k, p in enumerate(s["Coordinates"]):
+        g = [2.0 * (p - x) / np.linalg.norm(p - x) ** 3 for x in (x0, x1)]
+        ref = m0 * m1 / (m0 + m1) * np.cross(r, g[1] - g[0]) @ Lhat
+        assert abs(t[k] - ref) < 1e-12 * max(1.0, abs(ref))
