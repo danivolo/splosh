@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "splosh"
+version = "0.0.1"
+description = "Fast maps, a browser viewer, figures and movies for GIZMO / SPH snapshots"
+license = {text = "GPL-3.0-or-later"}
+readme = "README.md"
+classifiers = ["License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)", "Programming Language :: Python :: 3", "Topic :: Scientific/Engineering :: Astronomy"]
+requires-python = ">=3.10"
+dependencies = ["numpy", "numba", "h5py"]
+
+[project.scripts]
+splosh = "splosh.cli:main"
+astroview = "splosh.cli:main"     # old name, kept for old scripts
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+splosh = ["viewer.html", "layout.html"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

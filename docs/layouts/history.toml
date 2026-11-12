@@ -1,0 +1,16 @@
+schema = "splosh-layout-1"
+name = "history"
+scope = "run"
+ncols = 2
+
+[[panel]]
+id = "mass"
+type = "timeseries"
+columns = ["gas_mass"]
+xaxis = "time_myr"
+
+[[panel]]
+id = "sep"
+type = "timeseries"
+columns = ["bh_sep", "bh_mtot"]
+ylog = true

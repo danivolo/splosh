@@ -1,0 +1,133 @@
+# splosh analyze RUN --config analyze.toml
+# Every section is optional. Names become directories under RUN/analysis/ (or --out), so they must be unique and file-system safe.
+# Lengths are in code units unless the map's `units` says otherwise.
+
+[analysis]
+# store = "maps"            # mapstore directory (default OUT/.maps)
+
+[[map]]                      # any View field (center, align, axes, mode, field, width, npix, units, ...) plus the style below
+name = "density"
+center = "com"
+align = "none"
+width = "auto"               # "auto" = 2.2 x the radius holding 95% of the gas mass, from the first snapshot; or a number
+field = "rho"
+mode = "proj"
+npix = 512
+limits = "global"            # global (locked over the run) | frame (per map) | fixed (vmin, vmax) | viewport (percentiles over `viewport`)
+pct = [1, 99.9]              # percentiles for global / frame / viewport (global without pct = min / max)
+cmap = "viridis"             # viridis inferno magma gray coolwarm RdBu_r
+# scale = "log"              # log | linear | asinh | asinh:F (F = softening, default 0.1) (default: asinh for signed fields such as vx, vlos, jz, else log; histeq is not allowed here)
+# post = "none"              # none | resid (contrast against the azimuthal mean) | resid:mean | resid:smooth:S | grad | grad:S; a transform defaults to RdBu_r + linear + symmetric limits (grad: magma, asinh)
+# title = "gas"              # default: the product name
+# scalebar = true
+# colorbar = true
+
+[[map]]
+name = "temperature"
+center = "com"
+width = "auto"
+field = "T"
+mode = "slice"
+units = "astro"
+limits = "viewport"
+viewport = [0.25, 0.25, 0.75, 0.75]
+cmap = "inferno"
+
+# a contrast map and a gradient map of the same view (the density is rendered once per post):
+# [[map]]
+# name = "contrast"
+# center = "bh"
+# width = 14
+# post = "resid"              # f / azimuthal mean - 1, RdBu_r, limits (-v, v), v = 99th percentile of |f| (set pct = [1, 99.9] to change)
+# limits = "global"
+# [[map]]
+# name = "slope"
+# center = "bh"
+# width = 14
+# post = "grad:0.2"           # |grad log10 f| after a Gaussian of 0.2 code length
+
+[[profile]]
+name = "radial"
+center = "com"
+quantities = ["u", "density"]  # particle quantities: density, or any map field
+weighting = "mass"             # mass | volume | number
+geometry = "spherical"         # spherical | cylindrical (R = hypot(x, y))
+spacing = "log"                # log | lin
+rmin = "auto"                  # auto: rmax / 1000
+rmax = "auto"                  # auto: half of the automatic map width
+bins = 40
+
+# [[profile]]                  # a probability density function of the first quantity, with the others averaged per bin
+# name = "rho_pdf"
+# geometry = "pdf"
+# quantities = ["density", "T"]  # PDF of the density, mean (and `T_std`) temperature in each density bin
+# weighting = "mass"           # mass | volume | number
+# spacing = "log"
+# rmin = 1e-3                  # the range of the binned quantity: both required, > 0 for log spacing
+# rmax = 1e3
+# bins = 40
+# [[profile]]                  # azimuthal Fourier modes per ring: A<m> = |sum w exp(i m phi)| / sum w, phi<m> = phase; <q>_std columns give the scatter of every quantity
+# name = "modes"
+# center = "bh"
+# geometry = "cylindrical"
+# quantities = ["A1", "A2", "phi2", "u"]
+# rmin = 0.2
+# rmax = 10
+# bins = 40
+
+[[scalar]]                     # one table: OUT/scalars.csv (columns snapshot, time, then the scalars)
+name = "builtin"               # all of: counts gas_mass com rho_max mean_u mean_T black_holes; or names = ["gas_mass", "black_holes"]
+# [[scalar]]                 # opt-in: A1, A2, ... and phi1, phi2, ... of the gas in an annulus, to plot against time (not part of "builtin")
+# name = "modes"
+# names = ["modes"]
+# params = { center = "bh", rmin = 0.5, rmax = 5.0, orders = [1, 2] }     # rmin = rmax = 0: the radii holding 10 % and 90 % of the gas mass
+# [[scalar]]
+# name = "my_scalar"           # registered with plugins.register_scalar
+
+[[dashboard]]                         # shorthand: map products in a grid, then one small time series per scalar column (with a marker at the snapshot's time)
+name = "overview"
+panels = ["density", "temperature"]   # [[map]] products, drawn with their own colours and limits
+labels = ["column density", "temperature"]
+ncols = 2
+scalars = ["gas_mass", "rho_max"]
+series = "all"                        # all (whole run) | past (up to this snapshot: older dashboards stay valid while the run grows)
+# title = "run overview"
+
+[[dashboard]]                         # the general form: a layout file (docs/layouts/overview.toml), by name (looked up in ./layouts next to this file) or path
+name = "board"
+layout = "overview"
+
+[[timeseries]]                        # a run-wide figure (a layout with scope = run), or the shorthand columns = [...]
+name = "history"
+layout = "history"
+
+[[timeseries]]
+name = "masses"
+columns = ["gas_mass", "bh_m1 / bh_m2"]   # names of scalar columns or safe expressions
+xaxis = "time_myr"                        # time | time_myr | index
+
+[[movie]]
+name = "overview_movie"
+source = "overview"                   # a map or dashboard product
+fps = 12
+
+# Comparison of several runs (splosh compare RUN1 RUN2 --config this.toml): see docs/USAGE.md
+[[compare]]
+name = "gas"
+type = "timeseries"
+columns = ["gas_mass", "bh_sep"]
+align = "time"                  # time | time_myr | index | offset (with offsets = [shift of run 1, shift of run 2, ...])
+
+[[compare]]
+name = "profiles"
+type = "profile"
+product = "radial"
+quantities = ["u"]
+at = [0.5, 1.0]
+
+[[compare]]
+name = "grid"
+type = "maps"
+maps = ["density", "temperature"]   # a row per map product, a column per run, one picture per `at` value
+n = 4                               # or at = [...]; default: 4 values over the range all runs cover
+# tol = 0.05                        # largest distance to a run's nearest snapshot (aligned units); default half its median spacing

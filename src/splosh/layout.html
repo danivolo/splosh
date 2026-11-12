@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>splosh layouts</title><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b1020'/%3E%3Cpath d='M32 32c6-8 18-6 20 4s-10 20-22 16S10 34 18 22s30-10 34 2' fill='none' stroke='%2378c8ff' stroke-width='4' stroke-linecap='round'/%3E%3Cpath d='M32 32c-6 8-18 6-20-4s10-20 22-16 20 18 12 30' fill='none' stroke='%23ffb45a' stroke-width='3' stroke-linecap='round' opacity='.85'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%23fff3c4'/%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:#111;color:#ddd;font:13px/1.35 system-ui,sans-serif;display:flex;height:100vh}
+.side{width:270px;padding:10px;overflow:auto;flex:none;border-right:1px solid #333}
+#insp{width:310px;border-right:0;border-left:1px solid #333}
+#mid{flex:1;min-width:0;overflow:auto;padding:10px}
+h1{font-size:15px;margin:0 0 8px;display:flex;justify-content:space-between;align-items:center}h1 a{font-size:12px;font-weight:normal;color:#8bd}h2{font-size:13px;margin:12px 0 4px;color:#9ab}
+label{display:block;margin-top:6px;color:#9ab}
+select,input[type=number],input[type=text]{width:100%;background:#222;color:#ddd;border:1px solid #444;padding:3px;font:inherit}
+input.mod,select.mod{border-color:#6a8}
+input.bad{border-color:#e66}
+.row{display:flex;gap:4px;align-items:center}.row>*{flex:1}.row>button{flex:none}
+button{background:#2a3a4a;color:#ddd;border:1px solid #456;padding:3px 8px;cursor:pointer;flex:none;font:inherit}
+button:hover{background:#34495c}button:disabled{opacity:.4;cursor:default}
+.chk{display:flex;align-items:center;gap:4px;margin:4px 0 0;color:#9ab}.chk input{margin:0}
+#err{background:#3a1a1a;border:1px solid #a44;color:#fcc;padding:5px 8px;margin-bottom:8px;white-space:pre-wrap;display:none;font:12px ui-monospace,monospace}
+#err.on{display:block}
+#gridwrap{position:relative;width:100%;user-select:none;touch-action:none}
+.gcell{position:absolute;border:1px dashed #2c3640}
+.pbox{position:absolute;border:1px solid #567;border-radius:3px;padding:3px 6px;overflow:hidden;cursor:grab;font-size:12px}
+.pbox.sel{outline:2px solid #4af;z-index:3}
+.pbox .t{opacity:.7;font:10px ui-monospace,monospace}
+.pbox .h{position:absolute;right:0;bottom:0;width:14px;height:14px;cursor:nwse-resize;background:linear-gradient(135deg,transparent 50%,#fff8 50%)}
+.t-map{background:#1d3a2c}.t-profile{background:#3a2d1d}.t-timeseries{background:#1d2f4a}.t-text{background:#333}
+.ghost{position:absolute;border:2px dashed #4af;background:#4af2;z-index:4;pointer-events:none}.ghost.no{border-color:#e55;background:#e552}
+#prev{margin-top:10px}
+#prev img{border:1px solid #333;background:#000;display:block;max-width:100%}
+#notes{font:11px/1.4 ui-monospace,monospace;color:#ca8;white-space:pre-wrap;margin-top:4px}
+#pstat{font:11px ui-monospace,monospace;color:#8a8}
+.field{display:flex;gap:4px;align-items:center;margin-top:4px}
+.field>span{width:92px;flex:none;color:#9ab;font-size:12px;overflow:hidden;text-overflow:ellipsis}.field>span.mod{color:#8dc}
+.field>input,.field>select{flex:1;min-width:0}
+.field>button{padding:0 5px;visibility:hidden}.field.set>button{visibility:visible}
+.field input[type=checkbox]{flex:none;width:auto}
+.tb{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.dr{display:flex;gap:3px;margin-top:3px}.dr input:first-child{width:80px;flex:none}
+small{color:#789}
+@media (max-width:900px){body{flex-direction:column;height:auto}.side,#insp{width:auto;border:0}}
+</style></head><body>
+<div class="side">
+  <h1>layout editor <a id="viewerlink" href="#" target="_blank" title="the map viewer, in a new tab">viewer</a></h1>
+  <label>layout file</label>
+  <div class="row"><select id="files"></select><button id="load">open</button></div>
+  <div class="row"><input type="text" id="file" placeholder="file name (no extension)"><button id="save">save</button></div>
+  <div id="sstat"><small></small></div>
+  <div class="row" style="margin-top:6px"><button id="newb">new</button><button id="undo" title="ctrl+z">undo</button><button id="redo" title="ctrl+shift+z">redo</button></div>
+  <h2>layout</h2>
+  <label>name</label><input type="text" id="name">
+  <label>title</label><input type="text" id="title">
+  <div class="row"><div><label>scope</label><select id="scope"></select></div><div><label>columns</label><input type="number" id="ncols" min="1" max="8" step="1"></div></div>
+  <div class="row"><div><label>cell width</label><input type="number" id="cellw" min="40" step="10" placeholder="auto"></div><div><label>cell height</label><input type="number" id="cellh" min="40" step="10" placeholder="auto"></div></div>
+  <h2>figure <small>(publication renderer)</small></h2>
+  <div id="figopts"></div>
+  <h2>derived curves</h2>
+  <div id="derived"></div><button id="addder" style="margin-top:4px">+ derived</button>
+  <h2>preview</h2>
+  <label>run</label><select id="run"></select>
+  <label>snapshot <span id="snaplab"></span></label>
+  <div class="row"><input type="range" id="snap" min="0" max="0" value="0"></div>
+  <div class="chk"><input type="checkbox" id="auto" checked><span>refresh on every change</span></div>
+  <div class="chk"><input type="checkbox" id="pub"><span>publication look (matplotlib, the [figure] options)</span></div>
+  <div class="row" style="margin-top:4px"><button id="refresh">refresh now</button></div>
+  <h2>movie of this layout</h2>
+  <div class="row"><div><label>from</label><input type="number" id="mv_from" min="0" value="0"></div><div><label>to</label><input type="number" id="mv_to" min="0"></div>
+    <div><label>every</label><input type="number" id="mv_every" min="1" value="1"></div><div><label>fps</label><input type="number" id="mv_fps" min="1" value="12"></div></div>
+  <div class="row"><div><label>movie file name</label><input type="text" id="mv_name" placeholder="automatic: layout_run_from-to.mp4"></div></div>
+  <div class="row"><button id="mv_go" title="a long job on the server (the viewer's job list shows it too); the layout must be saved">make the movie</button>
+    <label class="chk" style="flex:1"><input type="checkbox" id="mv_pub" checked> publication look</label></div>
+  <div id="mv_info"><small></small></div>
+  <div class="row" style="margin-top:4px"><button data-export="pdf" title="the publication figure of this snapshot as PDF">PDF</button><button data-export="png" title="as PNG at the figure's dpi">PNG</button><button data-export="svg">SVG</button></div>
+  <div id="pstat"></div>
+  <p><small>drag a panel to move it, drag its corner to resize; Delete removes it; ctrl+z undoes. Keys starting with <code>x_</code> are kept untouched.</small></p>
+</div>
+<div id="mid">
+  <div class="tb"><button data-add="map">+ map</button><button data-add="profile">+ profile</button><button data-add="timeseries">+ time series</button><button data-add="text">+ text</button>
+    <button id="dup">duplicate</button><button id="del">delete</button></div>
+  <div id="err"></div>
+  <div id="gridwrap"></div>
+  <div id="prev"><img id="pimg" alt="" hidden><div id="notes"></div></div>
+</div>
+<div class="side" id="insp"><h1>panel</h1><div id="fields"><small>select a panel</small></div></div>
+<datalist id="dl-scale"><option>log</option><option>linear</option><option>asinh</option><option>asinh:0.05</option></datalist>
+<datalist id="dl-center"><option>bh</option><option>com</option><option>mass-weighted</option><option>peak</option><option>ids:500000,500001</option><option>xyz:0,0,0</option></datalist>
+<datalist id="dl-align"><option>none</option><option>bh</option><option>pair:500000,500001</option><option>vec:1,0,0</option></datalist>
+<datalist id="dl-post"><option>none</option><option>resid</option><option>resid:azim</option><option>resid:mean</option><option>resid:smooth:1</option><option>grad</option><option>grad:2</option></datalist>
+<script>
+try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith("astroview.") && localStorage.getItem("splosh." + k.slice(10)) === null) localStorage.setItem("splosh." + k.slice(10), localStorage.getItem(k)); } } catch (e) {}   // settings remembered under the old name (astroview)
+"use strict";
+const TOKEN = new URLSearchParams(location.search).get("token") || "";
+const H = {"X-Splosh-Token": TOKEN};
+const URLQ = new URLSearchParams(location.search);          // ?open=NAME&analysis=DIR&config=FILE&run=LABEL: a layout made by a viewer job, previewed with its pipeline's output
+document.getElementById("viewerlink").href = "/?token=" + encodeURIComponent(TOKEN);
+const $ = id => document.getElementById(id);
+const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); kids.forEach(k => e.append(k)); return e; };
+async function api(path, body) {
+  const opt = body === undefined ? {headers: H} : {method: "POST", headers: {...H, "Content-Type": "application/json"}, body: JSON.stringify(body)};
+  const r = await fetch(path, opt);
+  if (!r.ok) throw new Error(await r.text());
+  return r;
+}
+let REG = null, RUNS = null;
+let L = emptyLayout(), V = null, VL = null, SEL = null, dirty = false, hist = [], hpos = -1, fileName = "";
+function emptyLayout() { return {schema: "splosh-layout-1", name: "new_layout", scope: "snapshot", ncols: 2, derived: [], panel: []}; }
+const clone = o => JSON.parse(JSON.stringify(o));
+const COMMON = ["id", "label", "row", "col", "rowspan", "colspan"];
+const NUMKEYS = new Set(["vmin", "vmax", "xoffset", "gamma", "xh", "mu", "bunit"]);
+const NUMLIST = new Set(["pct", "viewport"]);
+const NUMTEXT = new Set(["width", "z0", "hscale", "cx", "cy"]);
+const INTKEYS = new Set(["row", "col", "rowspan", "colspan", "npix"]);
+const LISTKEYS = new Set(["columns", "quantities"]);
+const ENUMS = () => ({field: REG.fields.map(f => f.name), cmap: REG.colormaps, limits: REG.limit_policies, xaxis: REG.xaxes, series: ["all", "past"], mode: ["proj", "slice"], axes: ["xy", "xz", "yz"],
+  weight: null, x: ["rbins"]});
+const LISTS = {scale: "dl-scale", post: "dl-post", center: "dl-center", align: "dl-align"};
+function knownColumns() {
+  const c = new Set(REG.pipeline_columns);
+  REG.scalars.forEach(s => (s.columns || []).forEach(x => c.add(x)));
+  L.derived.forEach(d => d.name && c.add(d.name));
+  return [...c];
+}
+
+// ---------------------------------------------------------------- state, validation, history
+let vtimer = null, ptimer = null, pctl = null, vseq = 0;
+window.__previews = 0;
+function changed(push = true, fromHist = false) {
+  dirty = true; $("sstat").firstChild.textContent = "unsaved changes";
+  const j = JSON.stringify(L);
+  if (push && !fromHist && j !== hist[hpos]) { hist = hist.slice(0, hpos + 1); hist.push(j); if (hist.length > 60) hist.shift(); hpos = hist.length - 1; }     // an edit that changes nothing (a second change event) is no new step
+  drawGrid();
+  clearTimeout(vtimer); vtimer = setTimeout(validate, 200);
+}
+async function validate() {
+  const seq = ++vseq, sent = JSON.stringify(L);
+  try {
+    const r = await (await api("/api/layout/validate", {layout: L})).json();
+    if (seq !== vseq) return;                                    // a newer edit is being checked
+    if (r.ok) { V = r.layout; VL = JSON.parse(sent); showErr(""); drawGrid(); drawInspector(); schedulePreview(); }
+    else { showErr(r.error); }
+  } catch (e) { if (seq === vseq) showErr(String(e.message || e)); }
+}
+function showErr(t) { const e = $("err"); e.textContent = t; e.classList.toggle("on", !!t); }
+function undo(d) { const k = hpos + d; if (k < 0 || k >= hist.length) return; hpos = k; L = JSON.parse(hist[k]); syncTop(); changed(false, true); drawInspector(); }
+
+// ---------------------------------------------------------------- grid
+function placement() {
+  return L.panel.map(p => {
+    const v = V && V.panel.find(q => q.id === p.id);
+    return {p, row: p.row ?? (v ? v.row : null), col: p.col ?? (v ? v.col : null), rs: p.rowspan ?? (v ? v.rowspan : 1), cs: p.colspan ?? (v ? v.colspan : 1)};
+  });
+}
+function geom() {
+  const W = $("gridwrap").clientWidth || 600, nc = L.ncols || 1, cw = W / nc, ch = Math.max(46, Math.min(90, cw * 0.55));
+  return {cw, ch, nc};
+}
+function drawGrid() {
+  const g = geom(), pl = placement(), wrap = $("gridwrap");
+  const nr = Math.max(1, ...pl.map(x => x.row === null ? 0 : x.row + x.rs)) + 1;
+  wrap.style.height = nr * g.ch + "px"; wrap.replaceChildren();
+  for (let r = 0; r < nr; r++) for (let c = 0; c < g.nc; c++)
+    { const c0 = el("div", {className: "gcell"}); Object.assign(c0.style, {left: c * g.cw + "px", top: r * g.ch + "px", width: g.cw + "px", height: g.ch + "px"}); wrap.append(c0); }
+  pl.forEach(x => {
+    if (x.row === null) return;
+    const b = el("div", {className: "pbox t-" + x.p.type + (x.p.id === SEL ? " sel" : "")});
+    b.dataset.id = x.p.id;
+    Object.assign(b.style, {left: x.col * g.cw + 2 + "px", top: x.row * g.ch + 2 + "px", width: x.cs * g.cw - 4 + "px", height: x.rs * g.ch - 4 + "px"});
+    const sub = x.p.type === "map" ? (x.p.product || x.p.field || "rho") : x.p.type === "profile" ? x.p.product || "" : x.p.type === "timeseries" ? [].concat(x.p.columns || []).join(", ") : (x.p.text || "").slice(0, 40);
+    b.append(el("div", {textContent: x.p.label || x.p.id}), el("div", {className: "t", textContent: x.p.type + (sub ? " · " + sub : "")}), el("div", {className: "h"}));
+    b.addEventListener("pointerdown", ev => startDrag(ev, x, ev.target.classList.contains("h") ? "size" : "move", b));
+    wrap.append(b);
+  });
+}
+function startDrag(ev, x, mode, box) {
+  ev.preventDefault();
+  if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();      // commit a half-typed setting before the inspector is redrawn
+  if (SEL !== x.p.id) { SEL = x.p.id; drawGrid(); drawInspector(); }
+  const pl = placement();
+  if (pl.some(q => q.row === null)) { showErr("fix the error first: the grid cannot place the panels until the layout validates"); return; }
+  const g = geom(), s = {x: ev.clientX, y: ev.clientY}, ghost = el("div", {className: "ghost"}); $("gridwrap").append(ghost);
+  let cand = {row: x.row, col: x.col, rs: x.rs, cs: x.cs}, ok = true;
+  const show = () => Object.assign(ghost.style, {left: cand.col * g.cw + "px", top: cand.row * g.ch + "px", width: cand.cs * g.cw + "px", height: cand.rs * g.ch + "px"});
+  show();
+  const move = e => {
+    const dc = Math.round((e.clientX - s.x) / g.cw), dr = Math.round((e.clientY - s.y) / g.ch);
+    cand = mode === "move" ? {row: Math.max(0, x.row + dr), col: Math.min(g.nc - x.cs, Math.max(0, x.col + dc)), rs: x.rs, cs: x.cs}
+                           : {row: x.row, col: x.col, rs: Math.max(1, x.rs + dr), cs: Math.min(g.nc - x.col, Math.max(1, x.cs + dc))};
+    ok = !pl.some(q => q.p !== x.p && q.row < cand.row + cand.rs && cand.row < q.row + q.rs && q.col < cand.col + cand.cs && cand.col < q.col + q.cs);
+    ghost.classList.toggle("no", !ok); show();
+  };
+  const up = () => {
+    removeEventListener("pointermove", move); removeEventListener("pointerup", up); ghost.remove();
+    if (!ok || (cand.row === x.row && cand.col === x.col && cand.rs === x.rs && cand.cs === x.cs)) return;
+    pl.forEach(q => { q.p.row = q.row; q.p.col = q.col; if (q.rs !== 1) q.p.rowspan = q.rs; if (q.cs !== 1) q.p.colspan = q.cs; });          // pin every panel: moving one must not reshuffle the others
+    Object.assign(x.p, {row: cand.row, col: cand.col});
+    cand.rs === 1 ? delete x.p.rowspan : x.p.rowspan = cand.rs; cand.cs === 1 ? delete x.p.colspan : x.p.colspan = cand.cs;
+    changed(); drawInspector();
+  };
+  addEventListener("pointermove", move); addEventListener("pointerup", up);
+}
+
+// ---------------------------------------------------------------- inspector
+function fieldRow(p, key, def) {
+  const set = key in p, val = set ? p[key] : def;
+  const row = el("div", {className: "field" + (set ? " set" : "")}), name = el("span", {textContent: key, className: set ? "mod" : "", title: key});
+  let inp;
+  const en = ENUMS()[key];
+  const commit = v => {
+    if (v === undefined) delete p[key]; else p[key] = v;
+    if (key === "product" && v) Object.keys(REG.panel_types.map).filter(k => ![...COMMON, "type", "product"].includes(k)).forEach(k => delete p[k]);
+    if (key === "id") SEL = v ?? SEL;
+    changed(); drawInspector();
+  };
+  const parse = txt => {
+    txt = txt.trim();
+    if (txt === "") return undefined;
+    if (key === "overlays") return txt.split(";").map(s => s.trim()).filter(Boolean);      // specs contain commas: ; separates them
+    if (LISTKEYS.has(key)) return txt.split(",").map(s => s.trim()).filter(Boolean);
+    if (NUMLIST.has(key)) { const a = txt.split(/[,\s]+/).map(Number); if (a.some(isNaN)) throw 0; return a; }
+    if (INTKEYS.has(key)) { const n = Number(txt); if (!Number.isInteger(n)) throw 0; return n; }
+    if (NUMKEYS.has(key) || typeof def === "number" || NUMTEXT.has(key)) { const n = Number(txt); if (!isNaN(n)) return n; if (NUMTEXT.has(key)) return txt; throw 0; }
+    return txt;
+  };
+  if (typeof def === "boolean") {
+    inp = el("input", {type: "checkbox", checked: !!val}); inp.onchange = () => commit(inp.checked);
+  } else if (en) {
+    inp = el("select"); inp.append(el("option", {value: "", textContent: set ? "" : String(def ?? "—")}));
+    en.forEach(o => inp.append(el("option", {value: o, textContent: o}))); inp.value = set ? String(val) : "";
+    inp.onchange = () => commit(inp.value === "" ? undefined : inp.value);
+  } else {
+    const shown = set ? (Array.isArray(val) ? val.join(key === "overlays" ? "; " : ", ") : String(val)) : "";
+    inp = el("input", {type: "text", value: shown, placeholder: key === "scale" && def === null ? "auto (log; asinh for signed fields; set by post)" : def === null || def === undefined ? "" : Array.isArray(def) ? def.join(", ") : String(def)});
+    if (LISTS[key]) inp.setAttribute("list", LISTS[key]);
+    inp.onchange = () => { try { inp.classList.remove("bad"); commit(parse(inp.value)); } catch (e) { inp.classList.add("bad"); } };
+  }
+  if (set) inp.classList.add("mod");
+  row.append(name, inp, el("button", {textContent: "↺", title: "reset to the default (remove the key)", onclick: () => commit(undefined)}));
+  return row;
+}
+function drawInspector() {
+  const box = $("fields"); box.replaceChildren();
+  const p = L.panel.find(q => q.id === SEL);
+  if (!p) { box.append(el("small", {textContent: "select a panel"})); return; }
+  const defs = REG.panel_types[p.type];
+  box.append(el("div", {className: "t", textContent: "type: " + p.type}));
+  COMMON.forEach(k => box.append(fieldRow(p, k, defs[k])));
+  const rest = Object.keys(defs).filter(k => ![...COMMON, "type"].includes(k));
+  const prodMode = p.type === "map" && p.product;
+  if (p.type === "map") {
+    box.append(el("h2", {textContent: "source"}), fieldRow(p, "product", null));
+    box.append(el("small", {textContent: prodMode ? "a product of the analyze config: its settings are used; clear it to set the map here" : "inline settings (or give a product name)"}));
+  }
+  if (p.type === "map" && !prodMode) {
+    const viewKeys = rest.filter(k => k !== "product");
+    const groups = [["view", ["field", "mode", "axes", "center", "align", "width", "npix", "cx", "cy", "z0", "weight", "post", "units"]],
+                    ["style", ["cmap", "scale", "limits", "pct", "vmin", "vmax", "viewport", "scalebar", "colorbar"]]];
+    const used = new Set(["product"]);
+    groups.forEach(([t, ks]) => { box.append(el("h2", {textContent: t})); ks.filter(k => viewKeys.includes(k)).forEach(k => { used.add(k); box.append(fieldRow(p, k, defs[k])); }); });
+    box.append(el("h2", {textContent: "more"}));
+    viewKeys.filter(k => !used.has(k)).forEach(k => box.append(fieldRow(p, k, defs[k])));
+  } else if (p.type !== "map") {
+    box.append(el("h2", {textContent: p.type}));
+    rest.forEach(k => box.append(fieldRow(p, k, defs[k])));
+    if (p.type === "timeseries") {
+      const sel = el("select"); sel.append(el("option", {value: "", textContent: "add a column…"})); knownColumns().forEach(c => sel.append(el("option", {value: c, textContent: c})));
+      sel.onchange = () => { if (sel.value) { p.columns = [].concat(p.columns || []).concat(sel.value); changed(); drawInspector(); } };
+      box.append(sel);
+      box.append(el("small", {textContent: "columns may be expressions: bh_m1 / bh_m2, log10(gas_mass)"}));
+    }
+  }
+}
+
+// ---------------------------------------------------------------- top-level form
+function syncTop() {
+  $("name").value = L.name ?? ""; $("title").value = L.title ?? ""; $("scope").value = L.scope ?? "snapshot"; $("ncols").value = L.ncols ?? 2;
+  $("cellw").value = L.cell ? L.cell[0] : ""; $("cellh").value = L.cell ? L.cell[1] : ""; syncFigure();
+  const d = $("derived"); d.replaceChildren();
+  L.derived.forEach((x, i) => {
+    const n = el("input", {type: "text", value: x.name || "", placeholder: "name"}), e = el("input", {type: "text", value: x.expr || "", placeholder: "expression"});
+    n.onchange = () => { x.name = n.value.trim(); changed(); }; e.onchange = () => { x.expr = e.value.trim(); changed(); };
+    d.append(el("div", {className: "dr"}, n, e, el("button", {textContent: "×", onclick: () => { L.derived.splice(i, 1); changed(); syncTop(); }})));
+  });
+}
+function syncFigure() {   // the [figure] options: one control per key, from the registry's fixed lists; an unset key shows its default
+  const box = $("figopts"); box.replaceChildren(); const F = L.figure || {};
+  const fsel = el("select", {title: "a format (formats/NAME.toml next to the layouts): the look (style, fonts, sizes) shared by layouts; the options below override it"});
+  fsel.append(el("option", {value: "", textContent: "(none)"})); (REG.formats || []).forEach(f => fsel.append(el("option", {value: f, textContent: f})));
+  fsel.value = L.format || ""; fsel.onchange = () => { if (fsel.value) L.format = fsel.value; else delete L.format; changed(); };
+  box.append(el("div", {className: "row"}, el("label", {textContent: "format", style: "flex:0 0 70px;margin:0;font-weight:bold"}), fsel));
+  for (const [k, d] of Object.entries(REG.figure || {})) {
+    let inp;
+    if (d.choices) { inp = el("select"); d.choices.forEach(c => inp.append(el("option", {value: String(c), textContent: String(c) + (c === d.default ? " (default)" : "")}))); inp.value = String(F[k] ?? d.default); }
+    else { inp = el("input", {type: "number", value: F[k] ?? d.default, min: 50, max: 1200, step: 10}); }
+    inp.onchange = () => {
+      let v = inp.value; if (typeof d.default === "boolean") v = v === "true"; else if (typeof d.default === "number") v = Math.trunc(Number(v));
+      L.figure = {...(L.figure || {})}; if (v === d.default) delete L.figure[k]; else L.figure[k] = v;
+      if (!Object.keys(L.figure).length) delete L.figure; changed();
+    };
+    box.append(el("div", {className: "row"}, el("label", {textContent: k, style: "flex:0 0 70px;margin:0"}), inp));
+  }
+}
+async function saveAs(url, name, mime, body) {   // a download under `name` (Edge saves or asks, as its download settings say)
+  if (!body) { const a = el("a", {href: url + "&as=" + encodeURIComponent(name)}); document.body.append(a); a.click(); a.remove(); return true; }
+  const r = await fetch(url, {method: "POST", headers: {...H, "Content-Type": "application/json"}, body}); if (!r.ok) throw new Error(await r.text());
+  const a = el("a", {href: URL.createObjectURL(await r.blob()), download: name}); document.body.append(a); a.click(); a.remove(); return true;
+}
+async function exportFig(fmt) {
+  if (!RUNS || !VL) return;
+  const sn = ((RUNS.runs[$("run").value || 0] || {snapshots: []}).snapshots[+$("snap").value] || {}).name || "snap";
+  const name = `${(VL.name || "figure")}_${sn.replace(/\.(hdf5|h5)$/, "")}.${fmt}`.replace(/[^A-Za-z0-9_.-]+/g, "_");
+  $("pstat").textContent = "exporting " + fmt + "…";
+  try {
+    const body = JSON.stringify({layout: VL, run: $("run").value || 0, snap: +$("snap").value, analysis: URLQ.get("analysis") || undefined, config: URLQ.get("config") || undefined, export: fmt});
+    const ok = await saveAs("/api/layout/preview", name, {pdf: "application/pdf", svg: "image/svg+xml", png: "image/png"}[fmt], body);
+    $("pstat").textContent = ok ? "saved " + name : "";
+  } catch (e) { $("pstat").textContent = ""; showErr("export: " + (e.message || e)); }
+}
+async function layoutMovie() {
+  const name = fileName || $("file").value.trim();
+  if (!name || dirty) { showErr("movie: save the layout first (the job reads the saved file)"); return; }
+  const info = $("mv_info");
+  const from = +$("mv_from").value || 0, to = $("mv_to").value === "" ? "end" : +$("mv_to").value;
+  let saveName = $("mv_name").value.trim() || `${name}_${RUNS.runs[+$("run").value || 0].label}_${from}-${to}`;
+  saveName = (/\.(mp4|mov|mkv)$/i.test(saveName) ? saveName : saveName + ".mp4").replace(/[^A-Za-z0-9_.-]+/g, "_");
+  try {
+    const r = await fetch("/api/jobs", {method: "POST", headers: {...H, "Content-Type": "application/json"}, body: JSON.stringify({kind: "layout_movie", name,
+      run: RUNS.runs[+$("run").value || 0].label, from: +$("mv_from").value || 0, to: $("mv_to").value === "" ? undefined : +$("mv_to").value,
+      every: +$("mv_every").value || 1, fps: +$("mv_fps").value || 12, backend: $("mv_pub").checked ? "mpl" : "bitmap"})});
+    if (!r.ok) throw new Error(await r.text());
+    const job = await r.json();
+    const poll = async () => {
+      const jl = (await (await fetch("/api/jobs?token=" + encodeURIComponent(TOKEN), {headers: H})).json()).jobs, j = jl.find(x => x.id === job.id);
+      if (!j) return;
+      const pr = j.progress ? ` ${j.progress[0]}/${j.progress[1]}` : "";
+      info.replaceChildren(el("small", {textContent: `movie: ${j.state}${pr}  ` + (j.log_tail || []).slice(-1).join("")}));
+      if (j.files && j.files.includes("movie.mp4")) {
+        const url = "/api/jobs/file?token=" + encodeURIComponent(TOKEN) + "&id=" + j.id + "&name=movie.mp4";
+        info.append(el("a", {href: url + "&as=" + encodeURIComponent(saveName), textContent: " download " + saveName}));
+      }
+      if (["starting", "queued", "running"].includes(j.state)) setTimeout(poll, 2000);
+    };
+    poll();
+  } catch (e) { showErr("movie: " + (e.message || e)); }
+}
+function bindTop() {
+  $("mv_go").onclick = layoutMovie;
+  document.querySelectorAll("[data-export]").forEach(b => b.onclick = () => exportFig(b.dataset.export));
+  $("pub").onchange = () => preview();
+  $("name").onchange = () => { L.name = $("name").value.trim(); if (!fileName && !$("file").value) $("file").value = L.name; changed(); };
+  $("title").onchange = () => { const v = $("title").value; v ? L.title = v : delete L.title; changed(); };
+  $("scope").onchange = () => { L.scope = $("scope").value; changed(); };
+  $("ncols").onchange = () => { L.ncols = Math.max(1, Math.trunc(Number($("ncols").value) || 1)); changed(); };
+  const cell = () => { const w = Number($("cellw").value), h = Number($("cellh").value); if (w && h) L.cell = [w, h]; else delete L.cell; changed(); };
+  $("cellw").onchange = $("cellh").onchange = cell;
+  $("addder").onclick = () => { L.derived.push({name: "", expr: ""}); syncTop(); };
+  document.querySelectorAll("[data-add]").forEach(b => b.onclick = () => addPanel(b.dataset.add));
+  $("dup").onclick = () => { const p = L.panel.find(q => q.id === SEL); if (!p) return; const c = clone(p); c.id = freshId(p.type); delete c.row; delete c.col; L.panel.push(c); SEL = c.id; changed(); drawInspector(); };
+  $("del").onclick = delPanel;
+  $("undo").onclick = () => undo(-1); $("redo").onclick = () => undo(1);
+  $("refresh").onclick = () => preview(); $("run").onchange = () => { fillSnap(); schedulePreview(); }; $("snap").oninput = () => { $("snaplab").textContent = snapName(); schedulePreview(); };
+  $("load").onclick = openFile; $("save").onclick = save; $("newb").onclick = () => { if (!okLeave()) return; L = emptyLayout(); fileName = ""; $("file").value = ""; SEL = null; V = VL = null; hist = []; hpos = -1; syncTop(); changed(); dirty = false; $("sstat").firstChild.textContent = ""; drawInspector(); };
+  addEventListener("keydown", e => {
+    const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName);
+    if (e.key === "Delete" && !typing) delPanel();
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !typing) { e.preventDefault(); undo(e.shiftKey ? 1 : -1); }
+  });
+  addEventListener("resize", () => { drawGrid(); fitPreview(); });
+  addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+}
+function freshId(t) { let k = 1; while (L.panel.some(p => p.id === t + k)) k++; return t + k; }
+function addPanel(t) {
+  const p = {id: freshId(t), type: t};
+  if (t === "timeseries") p.columns = [knownColumns().find(c => !["snapshot", "time", "time_myr", "index"].includes(c)) || "time"];
+  if (t === "text") p.text = "snapshot {snapshot}   t = {time}";
+  L.panel.push(p); SEL = p.id; changed(); drawInspector();
+}
+function delPanel() { const i = L.panel.findIndex(q => q.id === SEL); if (i < 0) return; L.panel.splice(i, 1); SEL = null; changed(); drawInspector(); }
+function okLeave() { return !dirty || confirm("Discard the unsaved changes?"); }
+
+// ---------------------------------------------------------------- files
+async function listFiles(select) {
+  REG = await (await api("/api/layout/registry")).json();
+  const s = $("files"); s.replaceChildren(el("option", {value: "", textContent: REG.layouts.length ? "— choose —" : "(no layouts in " + REG.dir + ")"}));
+  REG.layouts.forEach(l => s.append(el("option", {value: l.name, textContent: l.file})));
+  if (select) s.value = select;
+}
+async function openFile() {
+  const n = $("files").value; if (!n || !okLeave()) return;
+  try {
+    const r = await (await api("/api/layout?name=" + encodeURIComponent(n))).json();
+    L = r.raw; L.derived = L.derived || []; L.panel = L.panel || []; L.name = L.name || n; fileName = n; $("file").value = n; SEL = null; V = VL = null; hist = []; hpos = -1;
+    syncTop(); changed(); dirty = false; $("sstat").firstChild.textContent = "opened " + r.file; drawInspector();
+  } catch (e) { showErr(String(e.message || e)); }
+}
+async function save() {
+  const f = $("file").value.trim() || L.name;
+  try {
+    if (!L.name) L.name = f;
+    const r = await (await api("/api/layout/save", {name: f, layout: L})).json();
+    fileName = f; dirty = false; $("sstat").firstChild.textContent = "saved " + r.dir + "/" + r.file; await listFiles(f);
+  } catch (e) { showErr(String(e.message || e)); }
+}
+
+// ---------------------------------------------------------------- preview
+function snapName() { const r = RUNS.runs[$("run").value || 0], s = r && r.snapshots[$("snap").value]; return s ? (s.name || s.stem || "") + "  t = " + (+s.time).toPrecision(4) : ""; }
+function fillSnap() {
+  const r = RUNS.runs[$("run").value || 0], sn = $("snap");
+  if (!r) { $("snaplab").textContent = "(no runs open: choose folders in the viewer)"; return; }
+  sn.max = Math.max(0, r.n - 1); sn.value = Math.min(+sn.value, sn.max); $("snaplab").textContent = snapName();
+}
+function fitPreview() {                                          // a small picture is enlarged by a whole factor (crisp pixels), a large one shrinks to the column
+  const img = $("pimg"), avail = $("mid").clientWidth - 24, nat = img.naturalWidth;
+  if (!nat) return;
+  const k = nat >= avail ? avail / nat : Math.max(1, Math.floor(avail / nat));
+  img.style.width = Math.round(nat * k) + "px"; img.style.imageRendering = k > 1 ? "pixelated" : "auto";
+}
+function schedulePreview() { if (!$("auto").checked) return; clearTimeout(ptimer); ptimer = setTimeout(preview, 600); }
+async function preview() {
+  if (!RUNS || !VL || !RUNS.runs.length) return;
+  if (pctl) pctl.abort();
+  pctl = new AbortController();
+  $("pstat").textContent = "rendering…";
+  const t0 = performance.now();
+  try {
+    const r = await fetch("/api/layout/preview", {method: "POST", signal: pctl.signal, headers: {...H, "Content-Type": "application/json"},
+                                                  body: JSON.stringify({layout: VL, run: $("run").value || 0, snap: +$("snap").value, analysis: URLQ.get("analysis") || undefined, config: URLQ.get("config") || undefined,
+                                                                        backend: $("pub").checked ? "mpl" : undefined})});
+    if (!r.ok) throw new Error(await r.text());
+    const notes = JSON.parse(r.headers.get("X-Splosh-Notes") || "{}"), blob = await r.blob();
+    const img = $("pimg"); URL.revokeObjectURL(img.src); img.src = URL.createObjectURL(blob); img.hidden = false;
+    await img.decode().catch(() => {});
+    fitPreview();
+    $("notes").textContent = Object.entries(notes).map(([k, v]) => k + ": " + v).join("\n");
+    $("pstat").textContent = ((performance.now() - t0) / 1000).toFixed(1) + " s";
+    window.__previews++;
+  } catch (e) { if (e.name !== "AbortError") { $("pstat").textContent = ""; showErr("preview: " + (e.message || e)); } }
+}
+
+(async function init() {
+  await listFiles();
+  RUNS = await (await api("/api/runs")).json();
+  const rs = $("run"); RUNS.runs.forEach((r, i) => rs.append(el("option", {value: i, textContent: r.label})));
+  const wantRun = RUNS.runs.findIndex(r => r.label === URLQ.get("run")); if (wantRun >= 0) rs.value = wantRun;
+  const sc = $("scope"); REG.scopes.forEach(s => sc.append(el("option", {value: s, textContent: s})));
+  bindTop(); fillSnap(); syncTop();
+  const want = new URLSearchParams(location.search).get("open");
+  if (want) { $("files").value = want; await openFile(); } else { hist = [JSON.stringify(L)]; hpos = 0; drawGrid(); validate(); }
+  window.__ready = true;
+})().catch(e => showErr(String(e.message || e)));
+</script></body></html>

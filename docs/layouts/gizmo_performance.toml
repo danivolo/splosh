@@ -1,0 +1,72 @@
+# Performance of a GIZMO run from its own logs (cpu.txt, timebin.txt, timings.txt): any GIZMO run, no snapshot products needed.
+# The waiting share counts the timers GIZMO measures at a barrier after a loop (treeimbal + densimbal + hydimbal + bhimbal): a lower bound of the time spent waiting.
+#   splosh figure RUN --layout docs/layouts/gizmo_performance.toml --out perf.pdf      (or open it in the viewer's Figure tab)
+schema = "splosh-layout-1"
+name = "gizmo_performance"
+scope = "run"
+ncols = 2
+figure = {panel_in = 5.0}
+
+[[panel]]
+id = "wall"
+type = "timeseries"
+label = "wall clock (right: hours per unit of code time)"
+source = "cpu"
+columns = ["wall_h"]
+twin = ["h_per_code_time"]
+yscale = "lin"
+
+[[panel]]
+id = "modules"
+type = "timeseries"
+label = "share of the wall time per module (windows of 1/400 of the run)"
+source = "cpu"
+columns = ["frac_tree_gravity", "frac_hydro_fluids", "frac_domain", "frac_cooling_chem", "frac_blackholes", "frac_drift_splitmg", "frac_peano", "frac_misc"]
+yscale = "lin"
+
+[[panel]]
+id = "waiting"
+type = "timeseries"
+label = "waiting at the barriers (windows of 1/400 of the run)"
+source = "cpu"
+columns = ["wait", "frac_treeimbal", "frac_densimbal", "frac_hydimbal"]
+yscale = "lin"
+
+[[panel]]
+id = "balance"
+type = "timeseries"
+label = "tree walk: work-load balance (right: particles per second)"
+source = "timings"
+columns = ["balance"]
+twin = ["part_per_sec"]
+smooth = 0.01
+raw = false
+yscale = "log"
+twin_scale = "log"
+
+[[panel]]
+id = "dt"
+type = "timeseries"
+label = "system time step"
+source = "timebin"
+columns = ["dt_sys"]
+yscale = "log"
+
+[[panel]]
+id = "bins"
+type = "timeseries"
+label = "lowest and highest occupied time bin"
+source = "timebin"
+columns = ["bin_min", "bin_max"]
+yscale = "lin"
+
+[[panel]]
+id = "occupancy"
+type = "heatmap"
+label = "elements per time bin (cyan: the lowest occupied bin)"
+source = "timebin"
+prefix = "occ_"
+overlay = ["bin_min"]
+ylabel = "time bin"
+zlabel = "elements"
+colspan = 2

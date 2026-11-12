@@ -1,0 +1,50 @@
+schema = "splosh-layout-1"
+name = "overview"
+title = "run overview"
+scope = "snapshot"
+ncols = 2
+cell = [300, 260]
+
+[[derived]]
+name = "mass_ratio"
+expr = "bh_m1 / bh_m2"
+
+[[panel]]
+id = "dens"
+type = "map"
+product = "density"
+label = "column density"
+row = 0
+col = 0
+
+[[panel]]
+id = "temp"
+type = "map"
+label = "specific energy (inline view)"
+field = "u"
+center = "com"
+width = 4.0
+npix = 128
+limits = "frame"
+cmap = "inferno"
+
+[[panel]]
+id = "prof"
+type = "profile"
+product = "radial"
+quantities = ["u"]
+
+[[panel]]
+id = "ts"
+type = "timeseries"
+columns = ["gas_mass", "mass_ratio", "log10(rho_max)"]
+xaxis = "time"
+series = "past"
+colspan = 2
+x_gui_note = "free for a GUI"
+
+[[panel]]
+id = "note"
+type = "text"
+text = "snapshot {snapshot}, t = {time}"
+colspan = 2
