@@ -45,7 +45,7 @@ MANIFEST_SCHEMA = "splosh-analysis-1"
 KINDS = ("map", "profile", "scalar", "dashboard", "timeseries", "movie", "compare")
 _VIEW_FIELDS = tuple(View.__dataclass_fields__)
 _MAP_STYLE = {"cmap": "viridis", "scale": None, "limits": "global", "pct": None, "vmin": None, "vmax": None, "title": None, "scalebar": True, "colorbar": True, "viewport": None}
-_SIGNED = ("vx", "vy", "vz", "vlos", "vR", "vphi", "jz")
+_SIGNED = ("vx", "vy", "vz", "vlos", "vR", "vphi", "jz", "tau_bin")     # signed fields: RdBu_r, asinh, limits symmetric about 0
 _ALLOWED = {
     "map": {"name", *_VIEW_FIELDS, *_MAP_STYLE},
     "profile": {"name", "center", "align", "tilt", "quantities", "quantity", "weighting", "rmin", "rmax", "bins", "spacing", "geometry", "gamma", "xh", "mu", "bunit"},

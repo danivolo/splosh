@@ -184,7 +184,10 @@ def footer_lines(meta, source=None):
 
 def resolve_style(view, cmap, scale, sheet=False):
     """(cmap, scale, symmetric): None means the default of the view's transform (contrast: RdBu_r, linear, limits symmetric about 0; gradient: magma, linear), else viridis / log."""
+    from .analyze import _SIGNED
     st = transforms.style(view.post) or {}
+    if not st and view.field in _SIGNED:                    # a signed field (velocity components, tau_bin): diverging about 0
+        st = {"cmap": "RdBu_r", "scale": "asinh", "symmetric": True}
     cmap = cmap or st.get("cmap", "viridis")
     scale = imaging.parse_scale(scale or st.get("scale", "log"))
     if sheet and scale == "histeq":
