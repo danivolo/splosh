@@ -21,6 +21,7 @@ and `render_layout` draws it. One layout per file (TOML or JSON), e.g. `layouts/
     id = "ts"
     type = "timeseries"         # columns (names of scalars.csv columns, derived entries or expressions), xaxis time | time_myr | index, xoffset, series all | past,
     columns = ["gas_mass", "q"] # xlog, ylog, marker (a vertical line + dots at the snapshot's time)
+    stack = true                # optional: the columns are parts of a total, drawn as stacked shaded zones ("fraction": as fractions of the total)
 
 Keys starting with `x_` are free for a GUI's own use: they are kept as they are and never interpreted. The schema is versioned (`schema`); `registry()` lists everything a panel can refer to
 (fields, scalars including plugins, profile quantities, colour maps, ...) and `panel_types()` the keys of each panel type with their defaults."""
@@ -97,9 +98,10 @@ def panel_types():
     return {"map": {**_COMMON, "type": "map", "product": None, **view, **_MAP_STYLE},
             "profile": {**_COMMON, "type": "profile", "product": None, "quantities": None, "x": "rbins", "xlog": True, "ylog": True, **view, "bins": 48, "band": True},
             "timeseries": {**_COMMON, "type": "timeseries", "columns": [], "xaxis": "time", "xoffset": 0.0, "series": "all", "xlog": False, "ylog": False, "marker": True,
-                           "source": "snapshots", "ids": None, "smooth": 0.0, "raw": True, "yscale": None, "twin": [], "twin_scale": None, "hlines": []},
+                           "source": "snapshots", "ids": None, "smooth": 0.0, "raw": True, "yscale": None, "twin": [], "twin_scale": None, "hlines": [],
+                           "stack": False},
             "heatmap": {**_COMMON, "type": "heatmap", "source": None, "prefix": None, "ids": None, "xaxis": "time", "norm": "none", "zscale": "log", "cmap": "magma",
-                        "nx": 600, "overlay": [], "marker": True, "zlabel": None, "ylabel": None},
+                        "nx": 600, "overlay": [], "marker": True, "zlabel": None, "ylabel": None, "yscale": "lin"},
             "text": {**_COMMON, "type": "text", "text": ""}}
 
 
@@ -308,8 +310,8 @@ def validate_layout(layout):
         elif t == "heatmap":                             # a family of indexed columns of a series source against time (series.heat_tile)
             if not p["source"] or not p["prefix"]:
                 raise LayoutError(f"{where}: a heatmap panel needs `source` and `prefix` (columns <prefix><number>, e.g. timebin occ_)")
-            if p["xaxis"] not in XAXES or p["norm"] not in ("none", "column") or p["zscale"] not in ("log", "lin"):
-                raise LayoutError(f"{where}: xaxis one of {XAXES}, norm none|column, zscale log|lin")
+            if p["xaxis"] not in XAXES or p["norm"] not in ("none", "column") or p["zscale"] not in ("log", "lin", "symlog") or p["yscale"] not in ("lin", "log"):
+                raise LayoutError(f"{where}: xaxis one of {XAXES}, norm none|column, zscale log|lin|symlog, yscale lin|log")
             p["overlay"] = [p["overlay"]] if isinstance(p["overlay"], str) else list(p["overlay"] or [])
             if not (isinstance(p["nx"], int) and 10 <= p["nx"] <= 4000):
                 raise LayoutError(f"{where}: nx must be an integer between 10 and 4000")
@@ -338,6 +340,16 @@ def validate_layout(layout):
                 raise LayoutError(f"{where}: smooth must be a number, hlines a list of numbers, ids a list of integers")
             if p["smooth"] < 0:
                 raise LayoutError(f"{where}: smooth must be >= 0 (units of P0)")
+            st = p["stack"]
+            if st in (None, "", "none", "off"):
+                st = False
+            elif st == "stack":
+                st = True
+            if st not in (False, True, "fraction"):
+                raise LayoutError(f"{where}: stack must be true, false or \"fraction\", got {p['stack']!r}")
+            if st and (p["ylog"] or p["yscale"] in ("log", "symlog")):
+                raise LayoutError(f"{where}: stack draws a linear y axis (parts of a total); drop ylog / yscale log or symlog")
+            p["stack"] = st
         panels.append(p)
     out["panel"] = _place(out["name"], panels, out["ncols"])
     return out
@@ -509,8 +521,65 @@ def timeseries_data(panel, table, cur=None, marker=None):
     x = np.asarray(table[panel["xaxis"]], dtype=float) - float(panel["xoffset"])
     curves = [(c, x[sel], curve_values(c, table)[sel]) for c in panel["columns"]]
     on = panel["marker"] if marker is None else marker
-    return {"curves": curves, "xnow": float(x[cur]) if (cur is not None and on) else None, "xlabel": panel["xaxis"] + (f" - {panel['xoffset']:g}" if panel["xoffset"] else ""),
-            "xlog": panel["xlog"], "ylog": panel["ylog"]}
+    out = {"curves": curves, "xnow": float(x[cur]) if (cur is not None and on) else None, "xlabel": panel["xaxis"] + (f" - {panel['xoffset']:g}" if panel["xoffset"] else ""),
+           "xlog": panel["xlog"], "ylog": panel["ylog"]}
+    return stack_tile(out, panel.get("stack"))
+
+
+def stack_tile(tile, mode):
+    """A timeseries tile whose curves are the parts of a total (`stack = true | "fraction"`): the stacked curves become `tile['stack']` =
+    {'mode': 'sum' | 'fraction', 'x', 'bands': [(label, lo, hi, color or None)], 'total': array or None, 'total_label'}, drawn as shaded zones between
+    consecutive cumulative sums; the other curves (a twin axis, the faint raw curves under running means) stay in `curves`. All parts are interpolated onto the
+    x of the first one (NaN outside a part's own range: a gap). 'fraction' divides by the total. The total is kept (a line) only when it is not constant
+    (relative spread > 1e-6); in fraction mode it is drawn as total / max(total). Returns the tile (changed in place); `mode` false: unchanged."""
+    if not mode or not tile.get("curves"):
+        return tile
+    styles = tile.get("styles") or [{} for _ in tile["curves"]]
+    parts = [k for k, s in enumerate(styles) if not s.get("twin") and s.get("legend", True) and s.get("style") not in ("dots", "events")]
+    if not parts:
+        return tile
+    x = np.asarray(tile["curves"][parts[0]][1], float)
+    ok = np.isfinite(x)
+    x = x[ok]
+    order = np.argsort(x, kind="stable")
+    x = x[order]
+    ys = []
+    for k in parts:
+        xs, yv = np.asarray(tile["curves"][k][1], float), np.asarray(tile["curves"][k][2], float)
+        good = np.isfinite(xs) & np.isfinite(yv)
+        if not good.any():
+            ys.append(np.full(x.shape, np.nan))
+            continue
+        xs, yv = xs[good], yv[good]
+        o = np.argsort(xs, kind="stable")
+        xs, yv = xs[o], yv[o]
+        v = np.interp(x, xs, yv)
+        v[(x < xs[0]) | (x > xs[-1])] = np.nan
+        ys.append(v)
+    Y = np.vstack(ys)
+    total = Y.sum(axis=0)
+    frac = mode == "fraction"
+    with np.errstate(invalid="ignore", divide="ignore"):
+        Yd = Y / np.where(total != 0, total, np.nan) if frac else Y
+    cum = np.cumsum(Yd, axis=0)
+    lo = np.vstack([np.zeros_like(x), cum[:-1]])
+    bands = [(tile["curves"][k][0], lo[j], cum[j], styles[k].get("color")) for j, k in enumerate(parts)]
+    fin = total[np.isfinite(total)]
+    med = float(np.median(fin)) if fin.size else 0.0
+    varies = fin.size > 1 and float(np.max(np.abs(fin - med))) > 1e-6 * max(abs(med), 1e-300)
+    tot, tot_label = None, None
+    if varies:
+        mx = float(np.max(np.abs(fin)))
+        tot, tot_label = (total / mx, f"total / max (max {mx:.4g})") if frac else (total, "total")
+    tile["stack"] = {"mode": "fraction" if frac else "sum", "x": x, "bands": bands, "total": tot, "total_label": tot_label}
+    keep = [k for k in range(len(tile["curves"])) if k not in parts and not (styles[k].get("legend", True) is False and not styles[k].get("twin"))]
+    tile["curves"] = [tile["curves"][k] for k in keep]
+    if tile.get("styles"):
+        tile["styles"] = [styles[k] for k in keep]
+    tile["ylog"], tile["yscale"] = False, "lin"
+    if frac:
+        tile["ylabel"] = "fraction of the total"
+    return tile
 
 
 # ----------------------------------------------------------------------------- drawing
@@ -534,12 +603,30 @@ def _frame(canvas, x, y, w, h, fg):
         canvas[y:y + h, e] = fg.DIM
 
 
-def draw_curves(canvas, x, y, w, h, curves, s, label=None, xnow=None, xlog=False, ylog=False, xlabel=None):
-    """Several curves [(name, xs, ys)] in one framed panel: legend in the curve colours, y range at the right, x range at the bottom, optional marker at xnow. Only drawn ranges are labelled."""
+def _rgb(c, k):
+    """a style colour ('#rrggbb', a name matplotlib knows, or None) as an RGB tuple; None: the k-th of the palette"""
+    if isinstance(c, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", c):
+        return tuple(int(c[i:i + 2], 16) for i in (1, 3, 5))
+    return _COLORS[k % len(_COLORS)]
+
+
+def draw_curves(canvas, x, y, w, h, curves, s, label=None, xnow=None, xlog=False, ylog=False, xlabel=None, stack=None):
+    """Several curves [(name, xs, ys)] in one framed panel: legend in the curve colours, y range at the right, x range at the bottom, optional marker at xnow. Only drawn ranges are labelled.
+    `stack` (see `stack_tile`): shaded zones between cumulative curves under the curves, and the total as a white line."""
     from . import figures as fg
     cw, ch = fg.CELL_W * s, fg.CELL_H * s
     _frame(canvas, x, y, w, h, fg)
-    lines = ([(label, fg.FG)] if label else []) + [(n, _COLORS[k % len(_COLORS)]) for k, (n, _, _) in enumerate(curves) if len(curves) > 1 or n != label]
+    nb = len(stack["bands"]) if stack else 0
+    if stack:
+        ylog = False
+        sx = np.asarray(stack["x"], float)
+        extra = [(b[0], sx, b[2]) for b in stack["bands"]] + [("", sx, np.zeros_like(sx))]
+        if stack.get("total") is not None:
+            extra.append(("", sx, np.asarray(stack["total"], float)))
+    lines = ([(label, fg.FG)] if label else []) + [(b[0], _rgb(b[3], k)) for k, b in enumerate(stack["bands"] if stack else [])]
+    if stack and stack.get("total") is not None:
+        lines.append((stack["total_label"], (235, 235, 235)))
+    lines += [(n, _COLORS[(k + nb) % len(_COLORS)]) for k, (n, _, _) in enumerate(curves) if len(curves) > 1 or n != label or stack]
     for k, (txt, col) in enumerate(lines):
         fg.draw_text(canvas, x + 3 * s, y + 2 * s + k * (ch + s), txt[:max(4, (w // 2) // cw)], s, col)
     top = 2 * s + len(lines) * (ch + s)
@@ -547,12 +634,13 @@ def draw_curves(canvas, x, y, w, h, curves, s, label=None, xnow=None, xlog=False
     if Y1 - Y0 < 8:
         Y0 = y + ch + 4 * s
     data = []
-    for k, (n, xs, ys) in enumerate(curves):
+    for k, (n, xs, ys) in enumerate(list(curves) + (extra if stack else [])):
         xs, ys = np.asarray(xs, float), np.asarray(ys, float)
         ok = np.isfinite(xs) & np.isfinite(ys) & ((xs > 0) if xlog else True) & ((ys > 0) if ylog else True)
-        data.append((k, xs[ok], ys[ok]))
+        data.append((k + nb, xs[ok], ys[ok]))
     allx = np.concatenate([d[1] for d in data]) if data else np.array([])
     ally = np.concatenate([d[2] for d in data]) if data else np.array([])
+    data = data[:len(curves)]                               # the stack's extra entries only set the ranges
     if allx.size == 0:
         fg.draw_text(canvas, x + 3 * s, y + h // 2, "no data", s, fg.DIM)
         return
@@ -568,6 +656,32 @@ def draw_curves(canvas, x, y, w, h, curves, s, label=None, xnow=None, xlog=False
 
     def py(v):
         return Y1 - (ty(v) - y0) / (y1 - y0) * (Y1 - Y0)
+    if stack:                                               # each zone filled column by column (gaps where a part has no value), its upper edge drawn
+        cols = np.arange(int(np.ceil(X0)), int(X1) + 1)
+        xv = x0 + (cols - X0) / max(X1 - X0, 1e-300) * (x1 - x0)
+        inside = (xv >= sx.min()) & (xv <= sx.max()) if sx.size else np.zeros(cols.shape, bool)
+        for k, (_, lo_, hi_, col) in enumerate(stack["bands"]):
+            c = np.asarray(_rgb(col, k), float)
+            fill = tuple(int(v) for v in 0.45 * c + 0.55 * np.array([28, 28, 34]))
+            lo_, hi_ = np.asarray(lo_, float), np.asarray(hi_, float)
+            okb = np.isfinite(lo_) & np.isfinite(hi_)
+            if okb.sum() < 1:
+                continue
+            a = np.interp(xv, sx[okb], lo_[okb]); b = np.interp(xv, sx[okb], hi_[okb])
+            gap = np.interp(xv, sx, (~okb).astype(float)) > 0
+            for cx, va, vb, use in zip(cols, a, b, inside & ~gap):
+                if use:
+                    r0, r1 = sorted((int(round(float(py(va)))), int(round(float(py(vb))))))
+                    canvas[max(r0, Y0):min(r1, Y1) + 1, cx] = fill
+            pts = [(px(xx), py(vv)) for xx, vv in zip(sx[okb], hi_[okb])]
+            for (a0, b0), (a1, b1) in zip(pts[:-1], pts[1:]):
+                _draw_line(canvas, a0, b0, a1, b1, tuple(int(v) for v in c))
+        if stack.get("total") is not None:
+            tv = np.asarray(stack["total"], float)
+            okt = np.isfinite(tv)
+            pts = [(px(xx), py(vv)) for xx, vv in zip(sx[okt], tv[okt])]
+            for (a0, b0), (a1, b1) in zip(pts[:-1], pts[1:]):
+                _draw_line(canvas, a0, b0, a1, b1, (235, 235, 235))
     for k, xs, ys in data:
         col = _COLORS[k % len(_COLORS)]
         pts = list(zip(px(xs), py(ys)))
@@ -588,6 +702,12 @@ def draw_curves(canvas, x, y, w, h, curves, s, label=None, xnow=None, xlog=False
     fg.draw_text(canvas, x + w - 3 * s - len(ylo) * cw, y + h - 2 * s - ch, ylo, s, fg.DIM)
     xr = f"{fg.fmt_tick(float(allx.min()))} .. {fg.fmt_tick(float(max(allx.max(), xnow if xnow is not None else allx.max())))}" + (f"  {xlabel}" if xlabel else "")
     fg.draw_text(canvas, x + 3 * s, y + h - 2 * s - ch, xr[:max(4, (w - 3 * s) // cw // 2 + 6)], s, fg.DIM)
+
+
+def heat_cmap(heat):
+    """the colour map of a heatmap tile: a diverging one (RdBu_r) for zscale = symlog unless the panel names its own (anything but the default magma)"""
+    c = heat.get("cmap") or "magma"
+    return "RdBu_r" if heat.get("zscale") == "symlog" and c == "magma" else c
 
 
 def blank_tile(size, note, s):
@@ -659,9 +779,14 @@ def render_layout(layout, tiles, header="", title=None):
         elif "heat" in t:                                 # the heatmap as an image (time to the right, y up), with the current-time marker
             from . import imaging
             hz = np.asarray(t["heat"]["z"], float)[::-1]
-            fin = hz[np.isfinite(hz) & ((hz > 0) if t["heat"]["zscale"] == "log" else True)]
-            lo_, hi_ = (float(np.percentile(fin, 1)), float(np.max(fin))) if fin.size else (0.0, 1.0)
-            rgb, _ = imaging.colorize(hz.astype(np.float32), t["heat"]["cmap"], "log" if t["heat"]["zscale"] == "log" else "linear", lo_, hi_)
+            zs = t["heat"]["zscale"]
+            fin = hz[np.isfinite(hz) & ((hz > 0) if zs == "log" else True)]
+            if zs == "symlog":                            # diverging about 0: symmetric limits, linear within 1e-3 of the largest |z|
+                m_ = float(np.max(np.abs(fin))) if fin.size else 1.0
+                rgb, _ = imaging.colorize(hz.astype(np.float32), heat_cmap(t["heat"]), imaging.parse_scale("asinh:0.001"), -m_ or -1.0, m_ or 1.0)
+            else:
+                lo_, hi_ = (float(np.percentile(fin, 1)), float(np.max(fin))) if fin.size else (0.0, 1.0)
+                rgb, _ = imaging.colorize(hz.astype(np.float32), t["heat"]["cmap"], "log" if zs == "log" else "linear", lo_, hi_)
             canvas[y0:y0 + h, x0:x0 + w] = fg._fit(rgb, (h, w))
             fg.draw_text(canvas, x0 + 3 * s, y0 + 2 * s, lab, s, fg.FG)
             if t.get("xnow") is not None:
@@ -670,5 +795,6 @@ def render_layout(layout, tiles, header="", title=None):
                 if x0 <= xn < x0 + w:
                     canvas[y0:y0 + h, xn] = (255, 210, 60)
         else:
-            draw_curves(canvas, x0, y0, w, h, t["curves"], s, label=lab, xnow=t.get("xnow"), xlog=t.get("xlog", False), ylog=t.get("ylog", False), xlabel=t.get("xlabel"))
+            draw_curves(canvas, x0, y0, w, h, t["curves"], s, label=lab, xnow=t.get("xnow"), xlog=t.get("xlog", False), ylog=t.get("ylog", False), xlabel=t.get("xlabel"),
+                        stack=t.get("stack"))
     return canvas

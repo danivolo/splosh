@@ -75,5 +75,48 @@ A real SPLOSH documentation, in the spirit of SPLASH's manual, instead of the re
 - built as a static site (e.g. MkDocs) from `docs/`, so the same files read well on GitHub.
 Name in prose: SPLOSH; the program, package and repository: splosh.
 
+## 7. Customizable shortcuts (planned 2026-11-12, not built)
+Asked: every key and mouse binding of the viewer configurable by the user, with conflict detection, and the help generated from one table.
+
+**Today** [verified: viewer.html]: the dispatch is one `switch (e.key)` in the page's `keydown` handler (plus a few separate listeners: `ctrl+m`, `Esc` in menus,
+the mouse handlers of the panes and plots, the scan on `ctrl` / `shift` + wheel). A first step is done: `KEYMAP` in viewer.html is one table
+`[action ids, keys as shown, description]` grouped by section, and the help overlay (`h`) is generated from it (`fillHelp`). The switch does not read it yet.
+
+**1. One key-map table.** Replace `KEYMAP` by a table with one row per action:
+| field | example | |
+|---|---|---|
+| `id` | `snap.next`, `zoom.in`, `view.centre.cursor`, `panel.toggle` | stable, used by the overrides |
+| `group` | `Snapshots` | section of the help and of the editor |
+| `help` | "next snapshot; a number first steps that many" | |
+| `keys` | `["space"]`, `["ArrowRight"]`, `["shift+ArrowRight"]` | normalised chords: modifiers in a fixed order `ctrl+alt+shift+meta+KEY`, KEY = `KeyboardEvent.key` (shifted characters as typed: `A`, `?`, `{`, so `shift` is implied for them) |
+| `mouse` | `["button3"]`, `["middle"]`, `["ctrl+wheel"]`, `["shift+wheel"]`, `["right"]`, `["dblclick"]` | the mouse gestures the page knows (a fixed list: they need code, not just a name) |
+| `run` | `(p, e, n) => step(n)` | the action: the selected pane, the event, the count prefix (`9 space`) |
+| `where` | `map`, `plot`, `any`, `figure` | where it applies (`n`, `t`, `C` need the cursor on a map) |
+| `count` | true | takes the SPLASH count / `z` x10 prefix |
+The `keydown` handler becomes a lookup: normalise the event to a chord, find the row (`where` filters), call `run`; the count / `z` prefix and the
+"any key closes the help" rule stay in front of it. The menu bar's `data-key` items name an action id instead of synthesising a key event.
+
+**2. Defaults and overrides.** Defaults are the table (SPLASH's keys as in KEYS.md). The user's overrides are a small map `{action id: [chords]}` (an empty
+list unbinds), stored on the server's machine next to the recent folders (`~/.local/state/splosh/recent.json`, `server.RECENT_FILE`): a new
+`~/.local/state/splosh/keys.json` (env `SPLOSH_KEYS`), read and written by `GET / PUT /api/prefs/keys` (token-checked like every endpoint, JSON validated:
+known ids, well-formed chords, size limit). Not `localStorage`: the page's origin changes with the port on every start, so per-page storage would forget them
+(the same reason the recent folders are kept by the server). The page loads the overrides once at start, merges them over the defaults, and keeps a copy in
+`localStorage` only as a fallback when the server has none. Unknown ids in the file (an action removed in a later version) are kept and reported, not dropped.
+
+**3. Editor** (View > Keys..., or a button in the help overlay): the table grouped like the help, each row with its current chords as chips; click "+" and press a
+key (or a mouse gesture from the fixed list) to add one, x to remove, "default" to restore the row; "restore all" at the bottom. **Conflicts** are checked
+live: the same chord on two actions whose `where` overlap is marked red on both rows with the other action's name, and saving is refused until it is resolved
+(or one of them is unbound); chords the browser keeps for itself (`ctrl+w`, `ctrl+t`, `ctrl+n`, `F5`, `ctrl+l`) or that typing needs inside inputs are refused
+with a note; a shifted character with an explicit `shift+` is normalised first, so `?` and `shift+/` count as the same chord.
+
+**4. Help and menus from the table.** The help overlay lists each action with its *current* chords (overrides included; changed ones marked); the menu bar's
+`<kbd>` hints, the context menu's hints and KEYS.md's tables (a small script prints them from the table, so the doc cannot drift) use the same source.
+
+**5. Tests.** A unit test of the chord normalisation and the conflict check (in the browser smoke: set an override through `/api/prefs/keys`, reload, the new key
+does the action and the old one does not, the help shows the new key, a conflict blocks the save); a server test of the prefs endpoint (validation, atomic write).
+
+**Size:** a few hundred lines in viewer.html (most of it the editor), about 40 in server.py, the tests. The mouse gestures stay a fixed set with configurable
+modifiers; free mapping of arbitrary mouse buttons is not planned.
+
 ## Not planned
 Voronoi or Delaunay reconstruction of the MFM/MFV cells: treating cells as kernels with support H is the standard and the fast way (SPLASH does the same).

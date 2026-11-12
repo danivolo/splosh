@@ -7,6 +7,7 @@ analysis output.
   products (`products`, from `analyze.normalize_config`), else drawn blank with a note;
 - limits: `fixed` as given; `global` cannot be known from one snapshot, so the preview uses the frame's percentiles (noted); `frame` / `viewport` as in a pipeline run;
 - profile panels need their `[[profile]]` product from the config (computed on this snapshot);
+- time-series panels with `stack` (parts of a total) are turned into stacked zones by `layout.stack_tile`, for both renderers;
 - time-series panels use `table` (`read_scalars_table` of the run's analysis: column -> array over the snapshots, and the snapshot names) with the marker at the row of this
   snapshot (by file name; no marker, and a note, when the analysis does not have it); without a table they are blank with a note;
 - `notes` lists, per panel id, anything the editor should tell the user (a blank panel, an approximation);
@@ -205,12 +206,14 @@ def tiles_for(layout, path, load, store, products=None, table=None, time=None, c
                 ctx = _cached(cache, ("seriesctx", os.path.dirname(os.path.abspath(path))), lambda: SR.context_for_snapshot(path))
                 tnow = None if lo["scope"] == "run" else (time if time is not None else snapshot_times(path)[0])
                 tiles[pid] = SR.heat_tile(p, ctx, tnow=tnow)
+                if p.get("yscale", "lin") != "lin":                  # the panel's y scale (log-spaced radii), whatever the source passes on
+                    tiles[pid]["yscale"] = p["yscale"]
             elif p["type"] == "timeseries" and p.get("source", "snapshots") != "snapshots":     # a series source (series.py): GIZMO logs, plugin sources
                 from . import series as SR
                 from .runs import snapshot_times
                 ctx = _cached(cache, ("seriesctx", os.path.dirname(os.path.abspath(path))), lambda: SR.context_for_snapshot(path))
                 tnow = None if lo["scope"] == "run" else (time if time is not None else snapshot_times(path)[0])
-                tiles[pid] = SR.panel_tile(p, ctx, tnow=tnow)
+                tiles[pid] = lay.stack_tile(SR.panel_tile(p, ctx, tnow=tnow), p.get("stack"))
                 if tiles[pid].get("note"):
                     notes[pid] = tiles[pid]["note"]
             elif p["type"] == "timeseries":

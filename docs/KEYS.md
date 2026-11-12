@@ -81,6 +81,15 @@ Legend: **=** same key and meaning as SPLASH · **~** same key, SPLOSH's closest
 | `e` / `E` | set the movie range end / start to this snapshot (then File > Movie) | ~ (SPLASH: animation sequence end point) |
 | `h`, `F1` | the key list | = (`?` is a rotation key in SPLASH) |
 
+## Mouse and window (SPLOSH's own, 2026-11-12)
+| input | action |
+|---|---|
+| mouse back / forward buttons | previous / next snapshot (the browser's history navigation is prevented) |
+| `ctrl` or `shift` + wheel over the slider or a pane | scan the snapshot number (label, clock and a mark on the slider show the target); loads on releasing the key; `Esc` cancels |
+| middle click / middle drag | centre here / pan; double middle click: reset the view |
+| right click | a menu at that point (map: centre, zoom, reset, nearest black hole, track, inspect, copy coordinates / value; time series: go to that time, stack mode, copy); `shift`+right click: the browser's menu |
+| `q` | show / hide the side panel (also in Figure mode) |
+
 ## Not taken from SPLASH
 - `G` / `T` / `H` (move legend, title, vector legend), `ctrl+t` / `^` (annotations), `q` (quit): SPLOSH has fixed labels and no plot window to quit;
   annotations belong to the publication layouts (docs: the figures plan), not to the viewer.
@@ -90,4 +99,5 @@ Legend: **=** same key and meaning as SPLASH · **~** same key, SPLOSH's closest
 ## Decided
 1. Space = next snapshot (SPLASH); blink on `shift+space`.
 2. `0`-`9` are a SPLASH-style step count; panes by `Tab`.
-3. Right click is not bound (the browser's context menu stays).
+3. Right click was not bound at first (the browser's context menu stays); since 2026-11-12 it opens SPLOSH's menu and `shift`+right click gives the browser's.
+4. `q` (SPLASH: quit) hides the side panel: there is no window to quit, and hiding the panel is harmless if pressed by habit.

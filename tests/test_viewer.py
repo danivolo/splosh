@@ -39,7 +39,7 @@ def test_page_has_the_viewer_features():
     for needle in ('id="help"', 'id="diff"', 'id="panes"', 'id="link"', 'id="together"', 'id="units"', 'id="setA"', 'id="blink"', "unitText", "RdBu_r",
                    "X-Splosh-Meta", "/api/map", "/api/bh", "/api/lut", "/api/state", 'id="ovbox"', 'id="insp"', 'canvas class="ovl"', '"/overlay"', '"/inspect"'):
         assert needle in html, needle
-    for key in ("ArrowRight", '"?"', '" "', '"d"', '"l"', '"p"', '"Escape"'):          # the keys listed in the help are handled
+    for key in ("ArrowRight", '"?"', '" "', '"d"', '"l"', '"p"', '"Escape"', '"q"', "e.button === 3", '"contextmenu"', 'id="ctx"', 'id="snapghost"', "KEYMAP"):          # the keys listed in the help are handled
         assert key in html, key
     assert html.count('id="view"') == 0 and "p.cv.id = \"view\"" in html     # the first pane's canvas keeps the id the smoke test uses
 

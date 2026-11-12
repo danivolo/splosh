@@ -157,3 +157,95 @@ def test_layout_files_by_name_and_bad_references(tmp_path):
         analyze.load_config({"timeseries": [{"name": "t", "layout": {"name": "l", "panel": [{"id": "p", "type": "timeseries", "columns": ["x"]}]}}]})
     r = go(run, {"scalar": [{"name": "builtin"}], "timeseries": [{"name": "bad", "columns": ["nope_column"]}]})
     assert any("nope_column" in f[3] for f in r.failures)
+
+
+def _parts():
+    """three parts of a total (a circumbinary disc and two minidiscs) on the snapshot table; the total grows (accretion onto the system)"""
+    t = np.linspace(0.0, 10.0, 11)
+    return {"time": t, "time_myr": t, "index": np.arange(11.0), "cbd": 8.0 + 0.0 * t, "md1": 1.0 + 0.1 * t, "md2": 1.0 + 0.2 * t}
+
+
+@pytest.mark.parametrize("given,kept", [(True, True), ("stack", True), ("fraction", "fraction"), (False, False), ("none", False)])
+def test_stack_key_is_validated(given, kept):
+    d = _base()
+    d["panel"][1]["stack"] = given
+    assert lay.validate_layout(d)["panel"][1]["stack"] == kept
+    assert lay.validate_layout(_base())["panel"][1]["stack"] is False
+
+
+@pytest.mark.parametrize("edit,msg", [(dict(stack="pie"), "stack must be"), (dict(stack=True, ylog=True), "linear y axis"), (dict(stack="fraction", yscale="symlog"), "linear y axis")])
+def test_stack_errors(edit, msg):
+    d = _base()
+    d["panel"][1].update(edit)
+    with pytest.raises(lay.LayoutError, match=msg):
+        lay.validate_layout(d)
+
+
+def test_stacked_zones_are_cumulative_sums_and_the_total_shows_when_it_varies():
+    L = lay.validate_layout({"name": "s", "panel": [{"id": "m", "type": "timeseries", "columns": ["cbd", "md1", "md2"], "stack": True}]})
+    t = lay.timeseries_data(L["panel"][0], _parts(), cur=4)
+    st = t["stack"]
+    assert st["mode"] == "sum" and [b[0] for b in st["bands"]] == ["cbd", "md1", "md2"] and t["curves"] == []
+    tb = _parts()
+    assert np.allclose(st["bands"][0][1], 0) and np.allclose(st["bands"][0][2], tb["cbd"])
+    assert np.allclose(st["bands"][1][1], tb["cbd"]) and np.allclose(st["bands"][2][2], tb["cbd"] + tb["md1"] + tb["md2"])
+    assert np.allclose(st["total"], tb["cbd"] + tb["md1"] + tb["md2"]) and t["xnow"] == 4.0          # the marker is kept
+    F = lay.timeseries_data(dict(L["panel"][0], stack="fraction"), tb)["stack"]
+    assert F["mode"] == "fraction" and np.allclose(F["bands"][-1][2], 1.0) and np.allclose(F["bands"][0][2], 8.0 / (10.0 + 0.3 * tb["time"]))
+    assert np.isclose(np.max(F["total"]), 1.0) and "total / max" in F["total_label"]
+    zero = dict(tb, md2=2.0 - 0.1 * tb["time"], cbd=8.0 - 0.0 * tb["time"])                         # a zero-sum exchange: constant total, no total line
+    assert lay.timeseries_data(L["panel"][0], zero)["stack"]["total"] is None
+    plain = lay.timeseries_data(dict(L["panel"][0], stack=False), tb)
+    assert "stack" not in plain and len(plain["curves"]) == 3
+
+
+def test_stack_interpolates_parts_on_other_grids_and_keeps_twin_and_faint_curves():
+    x1, x2 = np.linspace(0, 1, 5), np.linspace(0, 1, 9)
+    tile = {"curves": [("a", x1, np.ones(5)), ("a raw", x1, np.ones(5)), ("b", x2, 2 * x2), ("r", x1, x1)],
+            "styles": [{"color": "#112233"}, {"legend": False, "alpha": 0.35}, {}, {"twin": True}], "ylog": False, "yscale": "auto"}
+    out = lay.stack_tile(tile, True)
+    assert [b[0] for b in out["stack"]["bands"]] == ["a", "b"] and out["stack"]["bands"][0][3] == "#112233"
+    assert np.allclose(out["stack"]["bands"][1][2], 1 + 2 * x1)                                     # b interpolated onto a's x
+    assert [c[0] for c in out["curves"]] == ["r"] and out["styles"] == [{"twin": True}] and out["yscale"] == "lin"
+
+
+def test_stacked_panel_renders_in_both_renderers():
+    pytest.importorskip("matplotlib")
+    import matplotlib
+    matplotlib.use("Agg")
+    from splosh import layout_mpl
+    L = lay.validate_layout({"name": "s", "ncols": 2, "cell": [260, 200], "panel": [{"id": "m", "type": "timeseries", "columns": ["cbd", "md1", "md2"], "stack": True},
+                                                                                   {"id": "f", "type": "timeseries", "columns": ["cbd", "md1", "md2"], "stack": "fraction"}]})
+    tiles = {p["id"]: lay.timeseries_data(p, _parts(), cur=3) for p in L["panel"]}
+    rgb = lay.render_layout(L, tiles, "t")
+    plain = lay.render_layout(L, {k: lay.timeseries_data(dict(p, stack=False), _parts(), cur=3) for k, p in zip(tiles, L["panel"])}, "t")
+    assert rgb.shape == plain.shape and len(np.unique(rgb.reshape(-1, 3), axis=0)) > len(np.unique(plain.reshape(-1, 3), axis=0))     # the shaded zones add colours
+    fig = layout_mpl.render(L, tiles)
+    ax = fig.axes[0]
+    assert len(ax.collections) == 3 and ax.get_ylim()[0] == 0 and any(l.get_label() == "total" for l in ax.lines)
+    assert fig.axes[1].get_ylim() == (0.0, 1.05) and fig.axes[1].get_ylabel() == "fraction of the total"
+
+
+def test_heatmap_symlog_and_log_y():
+    d = {"name": "h", "panel": [{"id": "h", "type": "heatmap", "source": "s", "prefix": "dT_", "zscale": "symlog", "yscale": "log"}]}
+    p = lay.validate_layout(d)["panel"][0]
+    assert p["zscale"] == "symlog" and p["yscale"] == "log"
+    with pytest.raises(lay.LayoutError, match="yscale"):
+        lay.validate_layout({"name": "h", "panel": [dict(d["panel"][0], yscale="sqrt")]})
+    assert lay.heat_cmap({"zscale": "symlog", "cmap": "magma"}) == "RdBu_r" and lay.heat_cmap({"zscale": "symlog", "cmap": "PuOr"}) == "PuOr"
+    y = np.geomspace(0.1, 10, 6)
+    z = np.outer(np.sin(y), np.linspace(-1, 1, 8))
+    tile = {"heat": {"x": np.linspace(0, 1, 9), "y": y, "z": z, "zscale": "symlog", "cmap": "magma", "norm": "none"}, "curves": [], "styles": [], "xnow": 0.5, "yscale": "log"}
+    L = lay.validate_layout(d)
+    rgb = lay.render_layout(L, {"h": tile}, "t")
+    assert rgb.dtype == np.uint8
+    pytest.importorskip("matplotlib")
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.colors as mc
+    from splosh import layout_mpl
+    fig = layout_mpl.render(L, {"h": tile})
+    ax = fig.axes[0]
+    assert ax.get_yscale() == "log" and isinstance(ax.collections[0].norm, mc.SymLogNorm) and ax.collections[0].norm.vmin == -ax.collections[0].norm.vmax
+    lo, hi = ax.get_ylim()
+    assert np.isclose(lo, y[0] ** 1.5 / y[1] ** 0.5) and np.isclose(hi, y[-1] ** 1.5 / y[-2] ** 0.5)

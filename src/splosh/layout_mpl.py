@@ -194,13 +194,20 @@ def _draw_heat(fig, ax, t):
         ye = np.concatenate([[y[0] - 0.5 * (y[1] - y[0])], 0.5 * (y[1:] + y[:-1]), [y[-1] + 0.5 * (y[-1] - y[-2])]])
     else:
         ye = np.array([y[0] - 0.5, y[0] + 0.5])
+    if t.get("yscale") == "log" and len(y) > 1 and (y > 0).all():     # log-spaced bin centres (radii): edges at the geometric midpoints
+        ye = np.concatenate([[y[0] ** 1.5 / y[1] ** 0.5], np.sqrt(y[1:] * y[:-1]), [y[-1] ** 1.5 / y[-2] ** 0.5]])
+        ax.set_yscale("log")
     pos = z.compressed()[z.compressed() > 0]
-    if hm.get("zscale") == "log" and pos.size:
+    if hm.get("zscale") == "symlog":                  # signed: diverging about 0, symmetric limits, linear within 1e-3 of the largest |z|
+        m = float(np.abs(z.compressed()).max()) if z.compressed().size else 1.0
+        m = m or 1.0
+        norm = mc.SymLogNorm(linthresh=1e-3 * m, vmin=-m, vmax=m)
+    elif hm.get("zscale") == "log" and pos.size:
         norm = mc.LogNorm(vmin=max(pos.min(), pos.max() * 1e-6), vmax=pos.max())
         z = np.ma.masked_less_equal(z, 0)
     else:
         norm = None
-    im = ax.pcolormesh(x, ye, z, cmap=hm.get("cmap", "magma"), norm=norm, shading="flat", rasterized=True)
+    im = ax.pcolormesh(x, ye, z, cmap=lay.heat_cmap(hm), norm=norm, shading="flat", rasterized=True)
     fig.colorbar(im, ax=ax, label=hm.get("label") or "", pad=0.01)
     for (name, xs, ys), s in zip(t.get("curves") or [], t.get("styles") or []):
         ax.plot(np.asarray(xs, float), np.asarray(ys, float), color=s.get("color", "c"), lw=s.get("lw", 1.0), label=name)
@@ -220,6 +227,26 @@ def _draw_curves(ax, t):
     axes = {False: ax}
     if any(s.get("twin") for s in styles):
         axes[True] = ax.twinx()
+    st = t.get("stack")
+    nb = 0
+    if st:                                           # parts of a total: shaded zones between the cumulative curves, the total as a line when it varies
+        sx = np.asarray(st["x"], float)
+        for k, (name, lo, hi, col) in enumerate(st["bands"]):
+            c = col or f"C{k % 10}"
+            ax.fill_between(sx, np.asarray(lo, float), np.asarray(hi, float), color=c, alpha=0.55, lw=0, label=name)
+            ax.plot(sx, np.asarray(hi, float), color=c, lw=0.8)
+        nb = len(st["bands"])
+        if st.get("total") is not None:
+            ax.plot(sx, np.asarray(st["total"], float), color="k", lw=1.4, ls="--", label=st.get("total_label") or "total")
+        if st["mode"] == "fraction":
+            ax.set_ylim(0, 1.05 if st.get("total") is not None else 1)
+        else:
+            lows = [np.nanmin(np.asarray(b[1], float)) for b in st["bands"] if np.isfinite(np.asarray(b[1], float)).any()]
+            if lows and min(lows) >= 0:
+                ax.set_ylim(bottom=0)
+        if sx.size:
+            ax.set_xlim(np.nanmin(sx), np.nanmax(sx))
+    styles = [dict(s, color=s.get("color") or (f"C{(k + nb) % 10}" if nb else None)) for k, s in enumerate(styles)]
     for (name, xs, ys), s in zip(t["curves"], styles):
         a = axes[bool(s.get("twin"))]
         xs, ys = np.asarray(xs, float), np.asarray(ys, float)
@@ -245,9 +272,9 @@ def _draw_curves(ax, t):
     labelled = [c for c, s in zip(t["curves"], styles) if s.get("legend", True)]
     if t.get("ylabel"):
         ax.set_ylabel(t["ylabel"])
-    elif len(labelled) == 1:
+    elif len(labelled) == 1 and not st:
         ax.set_ylabel(labelled[0][0])
-    if len(labelled) > 1:
+    if len(labelled) + (len(st["bands"]) + (st.get("total") is not None) if st else 0) > 1:
         h1, l1 = ax.get_legend_handles_labels()
         h2, l2 = axes[True].get_legend_handles_labels() if True in axes else ([], [])
         ax.legend(h1 + h2, l1 + l2, fontsize="x-small", frameon=True, framealpha=0.7, edgecolor="none", loc="best")

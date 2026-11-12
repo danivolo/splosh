@@ -206,6 +206,19 @@ and survives copying, but a change outside the sampled blocks of a same-size fil
 rules, colour map, log / linear / asinh, auto or fixed limits, hover read-out of the map value, black-hole markers, scale bar. Maps arrive as raw float32 (gzip if the browser accepts it), so changing
 colour map, stretch or limits never calls the server.
 
+Mouse (also in `docs/KEYS.md`; `h` in the page lists all keys, generated from the page's key table):
+- the mouse's back / forward buttons step to the previous / next snapshot (as left / right; the browser does not leave the page);
+- `ctrl` or `shift` + wheel over the snapshot slider or a pane scans the snapshot number: the target shows in the snapshot label, in the pane's clock and as a yellow mark
+  on the slider, and nothing is loaded until the key is released (`Esc` cancels). The page is not zoomed by ctrl+wheel there; a trackpad pinch (ctrl with fractional
+  deltas) still zooms the map;
+- middle click on a map: centre there (middle drag pans); a second middle click within 0.45 s: reset the view (`o`);
+- right click on a map: a menu at that point (centre here, zoom in / out about it, reset, centre on the nearest black hole, track the nearest particle, inspect,
+  copy the coordinates or the value; the header is the hover read-out there); on a time series: go to the snapshot nearest that time, whole run, lines / stacked /
+  fractions, copy t and y. Shift + right click gives the browser's own menu;
+- `q` shows / hides the side panel (also in Figure mode; View > side panel).
+- Signed fields (`vx vy vz vlos vR vphi jz tau_bin`) get limits symmetric about 0 and, when chosen, `RdBu_r` with asinh (the previous colours come back for an unsigned field).
+- `weight` (map controls): auto (mass for projections, volume for slices), mass, volume, column (the column density of the field; slice: rho q).
+
 Panes, blink, difference, keys (`?` or `h` in the page shows them):
 - Panes: `panes` selector or `p` (1 to 4). Each pane has its own snapshot, field, mode, axes, colour map, stretch and limits; the centre / align rule, pixels and units are shared. The selected pane (click, or keys `1`..`4`)
   is the one the controls edit. `link pan/zoom` (key `l`): the panes share centre and width, so pan, zoom, double click and `r` act on all of them, and the hover position is shown in every pane (cross-hair in the others). Unlinked, each pane has its own window.
@@ -286,6 +299,18 @@ Everything about the config is in `docs/analyze.example.toml` (annotated), the m
 Layouts are data: a dashboard or time-series figure is a versioned declarative file (`docs/layouts/overview.toml`: panels of type map | profile | timeseries | text on a grid, derived curves from safe
 expressions such as `bh_m1 / bh_m2`) read and written by `splosh.load_layout / save_layout / validate_layout`; `splosh.layout.registry()` lists what a panel can refer to (fields, scalars including
 plugin ones registered with `plugins.register_scalar`, profile quantities, colour maps). Keys starting with `x_` are kept and ignored, for a GUI's own use.
+
+**Parts of a total** (timeseries key `stack`): `stack = true` draws the columns as stacked shaded zones (between consecutive cumulative sums), e.g. the mass of a
+circumbinary disc and of the two minidiscs; `stack = "fraction"` divides by their sum (the zones fill 0..1). The total is drawn as a line when it is not constant
+(relative spread > 1e-6; with `"fraction"` as total / its maximum); a zero-sum exchange gets no total line. The parts are interpolated onto the first column's times
+(a part without a value there leaves a gap); `twin` columns and the faint raw curves under running means are not stacked; the y axis is linear (`ylog` or
+`yscale = log | symlog` with `stack` is an error); the current-time marker stays. Both renderers and the viewer's time-series pane (its `lines | stacked | fractions`
+selector, saved as the panel's `stack`) draw it (`layout.stack_tile`). [verified: tests/test_layout.py, tools/browser_smoke.py section_mouse]
+
+**Heatmap scales** (heatmap keys): `zscale = "log" | "lin" | "symlog"`; symlog is diverging about 0 for signed quantities (torque density dT/dR(R, t), Mdot(R, t), a
+butterfly diagram of B_phi(z, t)): limits -m..m with m the largest |z|, linear within 1e-3 m, colours `RdBu_r` unless the panel names a `cmap` other than the default
+magma. `yscale = "log"` for rows whose numbers are log-spaced radii: the row edges are the geometric midpoints and the y axis is logarithmic (the bitmap preview keeps
+rows of equal height). The viewer's heatmap pane has the same two selectors (`z log | lin | symlog`, `y lin | log`), saved in the panel.
 
 **Time in binary orbits.** For a run whose first snapshot holds two bound black holes, P0 = their orbital period there (vis-viva on the two lowest-ID black holes,
 dynamical `Masses`, G in the header's code units; `runs.binary_period`). The clocks show `t/P0`, the panes can be aligned by `orbits`, `/api/runs` gives `period` and

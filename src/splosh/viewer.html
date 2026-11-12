@@ -46,11 +46,11 @@ canvas.plot{position:absolute;left:0;top:0;width:100%;height:100%;display:none;b
 .pane.kprofile canvas.plot,.pane.kseries canvas.plot,.pane.kheatmap canvas.plot{display:block}.pane.kheatmap canvas.bar,.pane.kheatmap .orient{display:none}
 .pane.kheatmap .pk .ssrc,.pane.kheatmap .pk .sheat,.pane.kheatmap .pk .sids,.pane.kheatmap .pk .sx,.pane.kheatmap .pk .srel{display:inline-block}.pk .sheat{display:none}.pane.kprofile canvas.bar,.pane.kseries canvas.bar,.pane.kseries .orient,.pane.kprofile .orient{display:none}
 .pk{position:absolute;right:6px;bottom:4px;z-index:4;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:3px;font:11px sans-serif;opacity:.55;max-width:calc(100% - 12px)}.pk:hover,.pane:hover .pk{opacity:1}
-.pk:has(.scolmenu.on){opacity:1}.pane .pk select,.pane .pk button,.pane .pk label{width:auto;height:auto;margin:0;line-height:1.3;font:11px sans-serif;background:#000c;color:#ddd;border:1px solid #456;border-radius:3px;padding:1px 3px}.pk .ssrc,.pk .scolwrap,.pk .sids,.pk .ssm,.pk .sx,.pk .sy,.pk .srel,.pk .slog,.pk .sbuild{display:none}
+.pk:has(.scolmenu.on){opacity:1}.pane .pk select,.pane .pk button,.pane .pk label{width:auto;height:auto;margin:0;line-height:1.3;font:11px sans-serif;background:#000c;color:#ddd;border:1px solid #456;border-radius:3px;padding:1px 3px}.pk .ssrc,.pk .scolwrap,.pk .sids,.pk .ssm,.pk .sx,.pk .sy,.pk .srel,.pk .slog,.pk .sbuild,.pk .sstk,.pk .shz,.pk .shy{display:none}
 .pk .scolwrap{position:relative}.pk .scolmenu{display:none;position:absolute;right:0;top:100%;margin-top:2px;background:#10151c;border:1px solid #456;border-radius:4px;padding:6px 8px;max-height:60vh;overflow:auto;width:max-content;max-width:420px;z-index:9;text-align:left}
 .pk .scolmenu.on{display:block}.pk .scolmenu .grp{margin:4px 0}.pk .scolmenu .grp b{display:block;color:#9bd;font-size:11px;margin-bottom:1px}.pk .scolmenu label{display:block;border:0;background:none;padding:1px 0;white-space:nowrap}.pk .scolmenu i{color:#89a}
 .pk .sids label{border:0;background:none;padding:0 2px}
-.pane.kseries .pk .ssrc,.pane.kseries .pk .scolwrap,.pane.kseries .pk .sids,.pane.kseries .pk .ssm,.pane.kseries .pk .sx,.pane.kseries .pk .sy,.pane.kseries .pk .srel,.pane.kprofile .pk .slog{display:inline-block}
+.pane.kseries .pk .ssrc,.pane.kseries .pk .scolwrap,.pane.kseries .pk .sids,.pane.kseries .pk .ssm,.pane.kseries .pk .sx,.pane.kseries .pk .sy,.pane.kseries .pk .srel,.pane.kseries .pk .sstk,.pane.kheatmap .pk .shz,.pane.kheatmap .pk .shy,.pane.kprofile .pk .slog{display:inline-block}
 .pane.kseries.nodata .pk .sbuild{display:inline-block}.pane.kseries.nodata .pk .scolwrap,.pane.kseries.nodata .pk .sids,.pane.kseries.nodata .pk .ssm{display:none}
 .pane.kprofile .pk,.pane.kseries .pk,.pane.kheatmap .pk{top:5px;bottom:auto;opacity:.8}
 .readout{position:absolute;left:6px;bottom:4px;font:12px ui-monospace,monospace;background:#000b;padding:2px 6px;max-width:calc(100% - 12px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
@@ -116,7 +116,12 @@ body.mapsonly #menubar{transform:translateY(-100%);transition:transform .15s}bod
 #pk_list .ct{color:#8a8;width:110px;text-align:right}#pk_dir{font:12px ui-monospace,monospace;color:#fc8;word-break:break-all}#pk_msg{color:#e98;font:12px ui-monospace,monospace;min-height:1em}
 #help{position:fixed;inset:0;background:#000d;display:none;align-items:center;justify-content:center;z-index:10}
 #help.on{display:flex}#help div{background:#1a1f26;border:1px solid #456;padding:14px 22px;max-width:min(560px,94vw);max-height:92vh;overflow:auto}
-#help h2{margin:0 0 8px;font-size:15px}#help table{border-collapse:collapse}#help td{padding:2px 10px 2px 0;vertical-align:top}#help td:first-child{font:12px ui-monospace,monospace;color:#fc8;white-space:nowrap}
+#help h2{margin:0 0 8px;font-size:15px}#help td.grp{color:#9bd;font:bold 12px sans-serif;padding-top:8px}
+body:has(#panel.hid) #grip{display:none}#snaprow{position:relative}#snapghost{position:absolute;top:2px;bottom:2px;width:4px;margin-left:-2px;background:#fc4;border-radius:2px;pointer-events:none;display:none;box-shadow:0 0 4px #fc4}
+#snaplab.scrub,.clock.scrub{color:#fc4}#ctx{position:fixed;z-index:60;display:none;background:#1a1f26;border:1px solid #456;border-radius:4px;padding:3px 0;min-width:220px;box-shadow:0 4px 14px #000a;font:12px sans-serif}
+#ctx.on{display:block}#ctx .hd{padding:3px 10px 5px;color:#9ab;font:11px ui-monospace,monospace;white-space:pre-wrap;border-bottom:1px solid #333;margin-bottom:3px;max-width:340px}
+#ctx a{display:flex;justify-content:space-between;gap:16px;padding:3px 10px;color:#dde;text-decoration:none;cursor:pointer}#ctx a:hover{background:#2a3a4a}#ctx a kbd{color:#fc8;font:11px ui-monospace,monospace}#ctx hr{border:0;border-top:1px solid #333;margin:3px 0}
+#help table{border-collapse:collapse}#help td{padding:2px 10px 2px 0;vertical-align:top}#help td:first-child{font:12px ui-monospace,monospace;color:#fc8;white-space:nowrap}
 small{color:#789}
 @media (max-width:760px){#grip{display:none}body{flex-direction:column}#panel{width:auto;max-height:38vh;border-right:0;border-bottom:1px solid #333}#stage.n2{grid-template-columns:minmax(0,1fr)}}
 </style></head><body>
@@ -136,9 +141,9 @@ small{color:#789}
   <div id="tabs"><button data-tab="explore" class="on" title="the maps, profiles and time series: what to look at">Explore</button><button data-tab="figure" title="the panes as a figure (a layout): grid, labels, the figure options, publication look, export, movie">Figure</button></div>
   <div id="explore">
   <label>snapshot (selected pane) <span id="snaplab"></span></label>
-  <div class="row"><button id="prev">&lt;</button><input type="range" id="snap" min="0" max="0" value="0"><button id="next">&gt;</button></div>
+  <div class="row" id="snaprow" title="ctrl or shift + wheel: scan the snapshots (loaded when you release the key)"><button id="prev">&lt;</button><input type="range" id="snap" min="0" max="0" value="0"><button id="next">&gt;</button><div id="snapghost"></div></div>
   <div class="wrow"><div style="flex:2 1 150px"><label>field</label><select id="field" class="hid"></select><button id="fieldbtn" title="choose the field (grouped)"><span id="fieldlab">rho</span><span>&#9662;</span></button></div>
-    <div><label>mode</label><select id="mode"><option value="proj">projection</option><option value="slice">slice</option><option value="volume">volume (opacity)</option></select></div><div><label>axes (los = 3rd)</label><select id="axes"><option>xy</option><option>xz</option><option>yz</option></select></div></div>
+    <div><label>mode</label><select id="mode"><option value="proj">projection</option><option value="slice">slice</option><option value="volume">volume (opacity)</option></select></div><div><label title="how the field is averaged: auto = mass for projections, volume for slices; mass = the density-weighted mean along the line of sight; volume = the volume-weighted mean; column = the column density of the field (projection: sum m q W / area, e.g. torque per unit area for a specific torque; slice: rho q)">weight</label><select id="weight"><option value="auto">auto</option><option value="mass">mass</option><option value="volume">volume</option><option value="column">column</option></select></div><div><label>axes (los = 3rd)</label><select id="axes"><option>xy</option><option>xz</option><option>yz</option></select></div></div>
   <div id="z0row"><label>slice plane z0</label><input type="number" id="z0" value="0" step="0.1"></div>
   <div id="kapparow"><label title="volume rendering: opacity per unit mass (code length^2 / mass); tau = kappa x column density. Empty or 0: automatic (tau = 1 at the window's mean column density). Larger: only the front layer shows">opacity kappa (volume)</label><input type="text" id="kappa" placeholder="auto"></div>
   <div class="rules"><div><label>centre</label><input type="text" id="center" value="bh"></div><div><label>align</label><input type="text" id="align" value="none"></div>
@@ -233,29 +238,8 @@ small{color:#789}
   <div id="pk_list"></div><div id="pk_msg"></div>
   <div class="row"><small style="flex:1" id="pk_sel">nothing selected (tick folders; each one becomes a run)</small><button id="pk_add">add as runs</button><button id="pk_open">open</button><button id="pk_close">close</button></div>
 </div></div>
-<div id="help"><div><h2>splosh keys <small>(as SPLASH where it has one)</small></h2><table>
-<tr><td>space / b</td><td>next / previous snapshot; a number first steps that many (9 space); z first: x10</td></tr>
-<tr><td>left / right</td><td>previous / next snapshot (all panes if "step all panes", Shift inverts); Home / End: first / last</td></tr>
-<tr><td>Enter, ctrl+m</td><td>play / pause through the snapshots</td></tr>
-<tr><td>+ - _</td><td>zoom in / out (x2), out by 20 %; drag, wheel, double click: pan, zoom about the cursor, centre here</td></tr>
-<tr><td>o, C, n</td><td>reset the view; centre on the cursor; centre on the black hole nearest the cursor</td></tr>
-<tr><td>t</td><td>track the particle nearest the cursor (centre rule ids:ID); t away from the map: tracking off</td></tr>
-<tr><td>a, l, s</td><td>automatic colour limits; log / linear; lock the limits for all snapshots</td></tr>
-<tr><td>m M i</td><td>next / previous colour map, invert it</td></tr>
-<tr><td>f F</td><td>next / previous field</td></tr>
-<tr><td>x, u d (U D)</td><td>projection / slice; move the slice plane up / down one pixel (ten)</td></tr>
-<tr><td>k K</td><td>volume rendering: less / more opacity</td></tr>
-<tr><td>, . &lt; &gt;</td><td>rotate about the line of sight by 15 / 30 degrees</td></tr>
-<tr><td>[ ] { }</td><td>rotate about the horizontal axis by 15 / 30 degrees</td></tr>
-<tr><td>/ \ ? |</td><td>rotate about the vertical axis by 15 / 30 degrees</td></tr>
-<tr><td>v V w</td><td>vectors and streamlines: fewer / more, default</td></tr>
-<tr><td>p, c, click</td><td>inspect the particles at the cursor (with their smoothing circles); Esc / Backspace clears; R clears the selection</td></tr>
-<tr><td>r</td><td>render again</td></tr>
-<tr><td>A, B, shift+space, ~</td><td>store state A / B; blink between them; difference off, A - B, log10(A/B)</td></tr>
-<tr><td>Tab, P, L</td><td>next pane (shift: previous); number of panes 1-4; link / unlink pan and zoom</td></tr>
-<tr><td>e, E</td><td>movie range: end / start at this snapshot (long jobs)</td></tr>
-<tr><td>`</td><td>maps only: hide the side panel and the menu bar (it comes back at the top edge); again: all back</td></tr>
-<tr><td>h, F1</td><td>this help (any key closes it)</td></tr></table>
+<div id="ctx"></div>
+<div id="help"><div><h2>splosh keys <small>(as SPLASH where it has one)</small></h2><table id="helptab"></table>
 <p><small>Hover shows the value of the map under the cursor in the chosen unit system (also for slices and derived fields); with linked panes every pane reports the same position. Click or press a key to close.</small></p></div></div>
 <script>
 try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith("astroview.") && localStorage.getItem("splosh." + k.slice(10)) === null) localStorage.setItem("splosh." + k.slice(10), localStorage.getItem(k)); } } catch (e) {}   // settings remembered under the old name (astroview)
@@ -282,13 +266,13 @@ async function ensureLut(name) { if (!S.luts[name]) S.luts[name] = await api("/a
 // ---- panes ---------------------------------------------------------------------------------------------------------------------------------
 function newLimits() { return {auto: true, lock: false, vmin: NaN, vmax: NaN}; }
 function makePane(src) {
-  const p = {run: 0, missing: null, snap: 0, field: "rho", mode: "proj", axes: "xy", z0: "0", cmap: "viridis", scale: "log", post: "none", postarg: "", soft: 0.1, prev: null, view: {cx: 0, cy: 0, width: 10}, diff: "off", blink: null,
+  const p = {run: 0, missing: null, snap: 0, field: "rho", mode: "proj", weight: "auto", axes: "xy", z0: "0", cmap: "viridis", scale: "log", post: "none", postarg: "", soft: 0.1, prev: null, view: {cx: 0, cy: 0, width: 10}, diff: "off", blink: null,
              nl: newLimits(), dl: newLimits(), lims: {n: [0, 1], d: [0, 1]}, lim: [0, 1], map: null, off: null, markers: [], seq: 0, timer: null, cross: null,
              kind: "map", scol: "", ylog: true, ovo: ovDefault(), ov: null, ovSeq: 0, ph: {x: "density", y: "u", xlog: true, ylog: true, w: "mass", on: false, grid: null, meta: null, seq: 0},
              selCrit: null, selOnly: false, selHi: true, selItem: null, selMsg: "", ovBusy: false, ovMsg: "", insp: null, inspSeq: 0, inspMsg: "", clickTimer: null, downAt: null};
-  if (src) { for (const k of ["run", "snap", "field", "mode", "axes", "z0", "cmap", "scale", "diff", "post", "postarg", "soft"]) p[k] = src[k]; p.prev = src.prev ? {...src.prev} : null; p.missing = src.missing; p.view = S.linked ? src.view : {...src.view}; Object.assign(p.nl, src.nl); Object.assign(p.dl, src.dl); p.ovo = {...src.ovo}; }
+  if (src) { for (const k of ["run", "snap", "field", "mode", "weight", "axes", "z0", "cmap", "scale", "diff", "post", "postarg", "soft"]) p[k] = src[k]; p.prev = src.prev ? {...src.prev} : null; p.missing = src.missing; p.view = S.linked ? src.view : {...src.view}; Object.assign(p.nl, src.nl); Object.assign(p.dl, src.dl); p.ovo = {...src.ovo}; }
   const i = S.panes.length, cell = document.createElement("div"); cell.className = "cell";
-  cell.innerHTML = '<div class="pane"><canvas class="view" width="768" height="768"></canvas><canvas class="ovl" width="768" height="768"></canvas><canvas class="bar" width="64" height="256"></canvas><div class="cap"></div><div class="badge"></div><div class="spin" title="loading tiles"></div><div class="clock"></div><div class="nosnap"></div><div class="readout"></div><div class="ptag"></div><canvas class="plot" width="768" height="768"></canvas><div class="pk"><select class="kind" title="what this pane shows"><option value="map">map</option><option value="profile">radial profile</option><option value="series">time series</option><option value="heatmap">heatmap</option></select><select class="sheat" title="the family of columns (name + number) drawn against time"></select><select class="ssrc" title="data source: the snapshot scalars, GIZMO logs (energy.txt, blackholes.txt), plugin sources (black-hole logs, binary orbit)"></select><span class="scolwrap"><button class="scolbtn" title="columns to draw">columns ▾</button><div class="scolmenu"></div></span><span class="sids"></span><select class="ssm" title="running mean (centred window), in binary periods P0"><option value="0">no mean</option><option value="0.01">mean 0.01 P0</option><option value="0.1">mean 0.1 P0</option><option value="1">mean 1 P0</option></select><select class="sx" title="time axis"><option value="orb">t/P0</option><option value="myr">Myr</option><option value="t">code t</option></select><select class="sy" title="y axis: auto = log when positive over more than 100x, symlog when both signs span decades"><option value="auto">y auto</option><option value="lin">y lin</option><option value="log">y log</option><option value="symlog">y symlog</option></select><button class="srel" title="read the files again (a running simulation wrote more)">↻</button><label class="slog" title="logarithmic y axis"><input type="checkbox" class="ylog" checked> log y</label><button class="sbuild" title="compute the built-in scalars of every snapshot in a background job (to RUN/analysis_viewer/series)">build</button></div><div class="orient"><canvas width="220" height="220" title="drag: turn the view (rendered when you let go); click an axis tip: look along it"></canvas><div class="obtn"><button data-o="face" title="tilt none">face-on</button><button data-o="edge" title="incl:90">edge-on</button><button data-o="L" title="tilt L: the gas disc face-on">disc</button><button data-o="Lbh" title="tilt Lbh: the BH orbit face-on">orbit</button></div></div></div>';
+  cell.innerHTML = '<div class="pane"><canvas class="view" width="768" height="768"></canvas><canvas class="ovl" width="768" height="768"></canvas><canvas class="bar" width="64" height="256"></canvas><div class="cap"></div><div class="badge"></div><div class="spin" title="loading tiles"></div><div class="clock"></div><div class="nosnap"></div><div class="readout"></div><div class="ptag"></div><canvas class="plot" width="768" height="768"></canvas><div class="pk"><select class="kind" title="what this pane shows"><option value="map">map</option><option value="profile">radial profile</option><option value="series">time series</option><option value="heatmap">heatmap</option></select><select class="sheat" title="the family of columns (name + number) drawn against time"></select><select class="ssrc" title="data source: the snapshot scalars, GIZMO logs (energy.txt, blackholes.txt), plugin sources (black-hole logs, binary orbit)"></select><span class="scolwrap"><button class="scolbtn" title="columns to draw">columns ▾</button><div class="scolmenu"></div></span><span class="sids"></span><select class="ssm" title="running mean (centred window), in binary periods P0"><option value="0">no mean</option><option value="0.01">mean 0.01 P0</option><option value="0.1">mean 0.1 P0</option><option value="1">mean 1 P0</option></select><select class="sx" title="time axis"><option value="orb">t/P0</option><option value="myr">Myr</option><option value="t">code t</option></select><select class="sy" title="y axis: auto = log when positive over more than 100x, symlog when both signs span decades"><option value="auto">y auto</option><option value="lin">y lin</option><option value="log">y log</option><option value="symlog">y symlog</option></select><select class="sstk" title="the columns as parts of a total (e.g. the mass of a circumbinary disc and of two minidiscs): stacked shaded zones, or fractions of the total; the total is drawn as a line when it is not constant"><option value="">lines</option><option value="stack">stacked</option><option value="fraction">fractions</option></select><select class="shz" title="colours: log; linear; symlog = diverging about 0 (signed quantities: torque density, Mdot, B_phi), linear within 1e-3 of the largest |z|"><option value="log">z log</option><option value="lin">z lin</option><option value="symlog">z symlog</option></select><select class="shy" title="y axis of the rows (the numbers in the column names): linear, or log for log-spaced radii (row edges at the geometric midpoints)"><option value="lin">y lin</option><option value="log">y log</option></select><button class="srel" title="read the files again (a running simulation wrote more)">↻</button><label class="slog" title="logarithmic y axis"><input type="checkbox" class="ylog" checked> log y</label><button class="sbuild" title="compute the built-in scalars of every snapshot in a background job (to RUN/analysis_viewer/series)">build</button></div><div class="orient"><canvas width="220" height="220" title="drag: turn the view (rendered when you let go); click an axis tip: look along it"></canvas><div class="obtn"><button data-o="face" title="tilt none">face-on</button><button data-o="edge" title="incl:90">edge-on</button><button data-o="L" title="tilt L: the gas disc face-on">disc</button><button data-o="Lbh" title="tilt Lbh: the BH orbit face-on">orbit</button></div></div></div>';
   p.cell = cell; p.el = cell.firstChild; p.cv = p.el.querySelector("canvas.view"); p.ctx = p.cv.getContext("2d"); p.bar = p.el.querySelector("canvas.bar"); p.ovcv = p.el.querySelector("canvas.ovl"); p.ovctx = p.ovcv.getContext("2d");
   p.orient = p.el.querySelector(".orient canvas"); attachOrient(p);
   p.cap = p.el.querySelector(".cap"); p.badge = p.el.querySelector(".badge"); p.spin = p.el.querySelector(".spin"); p.clock = p.el.querySelector(".clock"); p.nosnap = p.el.querySelector(".nosnap"); p.readout = p.el.querySelector(".readout");
@@ -409,9 +393,16 @@ void main() {
   };
 })();
 S.GL = GL;
+const SIGNED = new Set(["vx", "vy", "vz", "vlos", "vR", "vphi", "jz", "tau_bin"]);   // signed fields (analyze._SIGNED): limits symmetric about 0, RdBu_r + asinh by default
+function signedStyle(p, from, to) {   // a signed field gets the diverging colours; the previous ones come back for an unsigned field (unless the user chose others meanwhile)
+  if (SIGNED.has(to) && !SIGNED.has(from) && p.post === "none") { p.sprev = {cmap: p.cmap, scale: p.scale}; p.cmap = "RdBu_r"; p.scale = "asinh"; p.nl.auto = true; p.nl.lock = false; }
+  else if (!SIGNED.has(to) && SIGNED.has(from) && p.sprev) { if (p.cmap === "RdBu_r" && p.scale === "asinh") { p.cmap = p.sprev.cmap; p.scale = p.sprev.scale; } p.sprev = null; }
+  else return;
+  ensureLut(p.cmap).then(() => { bake(p); draw(p); }); if (p === sel()) { $("cmap").value = p.cmap; $("scale").value = p.scale; }
+}
 function bake(p) {   // float map -> offscreen RGBA canvas (colour map, scale and limits are applied here, so changing them never hits the server)
   const m = p.map; if (!m) return;
-  const diff = p.diff !== "off", sym = diff || p.post.startsWith("resid"), lut = diff ? S.luts["RdBu_r"] : S.luts[p.cmap]; if (!lut) return;
+  const diff = p.diff !== "off", sym = diff || p.post.startsWith("resid") || (p.post === "none" && SIGNED.has(p.field)), lut = diff ? S.luts["RdBu_r"] : S.luts[p.cmap]; if (!lut) return;
   const n = m.n, L = diff ? p.dl : p.nl, key = diff ? "d" : "n", scale = diff ? (p.scale === "asinh" ? "asinh" : "linear") : p.scale;
   if (sym) {   // symmetric about zero (a difference of two maps, a contrast map), its own limits
     if (L.auto && !L.lock) { const r = percentile(m.data, [diff ? 0.995 : 0.99], true); const a = r && r[0] > 0 ? r[0] : 1e-30; p.lims[key] = [-a, a]; }
@@ -541,7 +532,7 @@ S.postSpec = postSpec;
 function paneParams(p, st) {
   const s = st || p;
   const fx = p.fix || {};                                         // view keys of its own (a pane opened from a layout whose panels differ)
-  return {...(S.runs.length > 1 ? {run: S.runs[s.run].label} : {}), snap: s.snap, field: s.field, mode: s.mode, axes: s.axes, z0: s.z0, center: fx.center ?? $("center").value, align: fx.align ?? $("align").value,
+  return {...(S.runs.length > 1 ? {run: S.runs[s.run].label} : {}), snap: s.snap, field: s.field, mode: s.mode, ...(s.weight && s.weight !== "auto" ? {weight: s.weight} : {}), axes: s.axes, z0: s.z0, center: fx.center ?? $("center").value, align: fx.align ?? $("align").value,
           tilt: S.tiltPreview || (fx.tilt ?? $("tilt").value), npix: S.tiltPreview ? 128 : (fx.npix ?? $("npix").value), units: fx.units ?? $("units").value, ...(fx.hscale ? {hscale: fx.hscale} : {}), width: p.view.width, cx: p.view.cx, cy: p.view.cy, ...(postSpec(s) !== "none" ? {post: postSpec(s)} : {}),
           ...(s.mode === "volume" && +$("kappa").value > 0 ? {kappa: +$("kappa").value} : {}),
           ...(p.selOnly && p.selCrit ? {sel: JSON.stringify(p.selCrit)} : {})};
@@ -713,7 +704,7 @@ function setSection(id, on) {
 }
 function buildViewMenu() {
   const v = viewPrefs();
-  $("viewmenu").innerHTML = `<a class="it ${document.body.classList.contains("mapsonly") ? "ck" : "unck"}" href="#" id="m_mapsonly"><span>maps only (hide all panels)</span><kbd>\`</kbd></a><hr>` + SECTIONS.map(([id, label, def]) => `<a class="it ${(v[id] ?? def) ? "ck" : "unck"}" href="#" data-sec="${id}"><span>${label}</span>${""}</a>`).join("");
+  $("viewmenu").innerHTML = `<a class="it ${document.body.classList.contains("mapsonly") ? "ck" : "unck"}" href="#" id="m_mapsonly"><span>maps only (hide all panels)</span><kbd>\`</kbd></a><hr>` + SECTIONS.map(([id, label, def]) => `<a class="it ${(v[id] ?? def) ? "ck" : "unck"}" href="#" data-sec="${id}"><span>${label}</span>${id === "panel" ? "<kbd>q</kbd>" : ""}</a>`).join("");
   $("m_mapsonly").addEventListener("click", e => { e.preventDefault(); mapsOnly(!document.body.classList.contains("mapsonly")); });
   $("viewmenu").querySelectorAll("[data-sec]").forEach(a => a.addEventListener("click", e => { e.preventDefault(); const id = a.dataset.sec; setSection(id, id === "orient" ? !document.body.classList.contains("orient-on") : $(id).classList.contains("hid")); }));
 }
@@ -930,7 +921,7 @@ function drawProfile(p, c, W) {
 // one curve per id (black hole), running mean in orbits, x axis t / Myr / t/P0, y auto (log when positive and > 100x, symlog when both signs span decades),
 // wheel = zoom in time (the window is fetched again at full detail), double click = whole run, click = the snapshot nearest that time
 const SER_COLORS = ["#6bf", "#fa4", "#7d8", "#f68", "#c9f", "#ee6", "#4dd", "#f9c"];
-function serState(p) { return p.ser || (p.ser = {src: "", cols: [], ids: null, smooth: 0, xaxis: "orb", yscale: "auto", win: null, hover: null}); }
+function serState(p) { return p.ser || (p.ser = {src: "", cols: [], ids: null, smooth: 0, xaxis: "orb", yscale: "auto", win: null, hover: null, stack: "", hz: "log", hy: "lin"}); }
 function serCache() { return S.ser || (S.ser = {list: {}, desc: {}, curves: {}}); }
 function serGet(store, key, url, params, onDone) {   // one request per key; the entry is {loading} -> {data} | {error}
   if (store[key]) return store[key];
@@ -1028,6 +1019,7 @@ function drawSeries(p, c, W) {
   if (wrapped.length) { const nw = f => wrapped.reduce((n, k) => { let prev = null; for (const y of k.y) { if (y == null) continue; const v = f(y); if (prev != null && Math.abs(v - prev) > 180) n++; prev = v; } return n; }, 0);
     if (nw(y => ((y % 360) + 360) % 360) < nw(y => y)) { for (const k of wrapped) k.y = k.y.map(y => y == null ? y : ((y % 360) + 360) % 360); } }
   const win = st.win || D.t_range, inWin = t => t >= win[0] && t <= win[1];
+  if (st.stack) return drawStack(p, c, W, D, cv, X, top, win, multiId, multiCol);
   const ys = []; for (const k of cv) k.t.forEach((t, i) => { if (t != null && inWin(t) && k.y[i] != null) ys.push(k.y[i]); });
   const sc = autoScale(ys, st.yscale), ylog = sc === "log", ysym = sc && sc.sym;
   let yr = range(ys, ylog); if (!yr) return plotMessage(c, W, ["no values in this window" + (ylog ? " (none positive for log y)" : "")]);
@@ -1079,6 +1071,71 @@ function drawSeries(p, c, W) {
   c.fillText(`${what}${ysym ? "; symlog, linear below " + fmt(ysym) : ""}${D.note ? "; " + D.note : ""}`, A.L, A.T - 6, A.w);
   p.plotAxes = A; p.serX = X;
 }
+// ---- a time series whose columns are parts of a total (layout key `stack`, layout.stack_tile): shaded zones between the cumulative sums, optionally as
+// fractions of the total; the total as a white dashed line when it is not constant (fractions: total / its maximum); values at the snapshot / under the cursor
+function interpOn(ts, ys, grid) {   // linear interpolation of (ts, ys) (ts increasing, nulls skipped) at the increasing grid; NaN outside or across a gap
+  const T = [], Y = []; ts.forEach((t, i) => { if (t != null && ys[i] != null && Number.isFinite(ys[i])) { T.push(t); Y.push(ys[i]); } });
+  const out = new Float64Array(grid.length).fill(NaN); let j = 0;
+  grid.forEach((g, i) => { if (!T.length || g < T[0] || g > T[T.length - 1]) return; while (j < T.length - 2 && T[j + 1] < g) j++;
+    const a = T[j], b = T[Math.min(j + 1, T.length - 1)]; out[i] = b > a ? Y[j] + (Y[Math.min(j + 1, T.length - 1)] - Y[j]) * (g - a) / (b - a) : Y[j]; });
+  return out;
+}
+function stackParts(cv) {   // the curves that are the parts: the running means where there are some, never dots / events
+  return cv.filter(k => k.style !== "dots" && k.style !== "events" && (k.smooth || !cv.some(m => m.smooth && m.column === k.column && m.id === k.id)));
+}
+S.stackOf = (cv, frac) => stackOf(cv, frac);
+function stackOf(cv, frac) {   // {grid, lo[], hi[], total, varies, max} of the parts (on the first part's times)
+  const parts = stackParts(cv); if (!parts.length) return null;
+  const grid = parts[0].t.filter(t => t != null), Y = parts.map(k => interpOn(k.t, k.y, grid)), n = grid.length;
+  const total = new Float64Array(n); for (let i = 0; i < n; i++) total[i] = Y.reduce((a, y) => a + y[i], 0);
+  const lo = [], hi = []; let acc = new Float64Array(n);
+  for (const y of Y) { const nxt = acc.map((a, i) => a + (frac ? y[i] / total[i] : y[i])); lo.push(acc); hi.push(nxt); acc = nxt; }
+  const fin = [...total].filter(Number.isFinite).sort((a, b) => a - b), med = fin.length ? fin[fin.length >> 1] : 0, mx = fin.length ? Math.max(...fin.map(Math.abs)) : 0;
+  const varies = fin.length > 1 && Math.max(...fin.map(v => Math.abs(v - med))) > 1e-6 * Math.max(Math.abs(med), 1e-300);
+  return {parts, grid, lo, hi, Y, total, varies, max: mx};
+}
+function drawStack(p, c, W, D, cv, X, top, win, multiId, multiCol) {
+  const st = serState(p), frac = st.stack === "fraction", K = stackOf(cv, frac);
+  if (!K) return plotMessage(c, W, ["nothing to stack (dots / events only)"]);
+  const inWin = t => t >= win[0] && t <= win[1], tot = K.varies ? (frac ? [...K.total].map(v => v / K.max) : [...K.total]) : null;
+  const ys = [0]; K.grid.forEach((t, i) => { if (!inWin(t)) return; for (const h of K.hi) ys.push(h[i]); if (tot) ys.push(tot[i]); });
+  let yr = frac ? [0, tot ? Math.max(1.05, ...ys.filter(Number.isFinite)) : 1] : range(ys, false);
+  if (!yr) return plotMessage(c, W, ["no values in this window"]);
+  const unit = [...new Set(st.cols.map(k => (D.columns[k] || {}).unit).filter(Boolean))].join(", ");
+  const A = plotFrame(c, W, {x: [X.f(win[0]), X.f(win[1])], y: yr, top, xlabel: X.label + (st.win ? "   (zoomed: double click = whole run)" : ""),
+    ylabel: frac ? "fraction of the total" : (multiCol ? "sum of the parts" : ((D.columns[st.cols[0]] || {}).label || st.cols[0])) + (unit ? " [" + unit + "]" : "")});
+  const colorOf = (k, j) => multiCol ? SER_COLORS[st.cols.indexOf(k.column) % SER_COLORS.length] : SER_COLORS[(multiId ? Math.max(0, (D.ids || []).indexOf(k.id)) : j) % SER_COLORS.length];
+  c.save(); c.beginPath(); c.rect(A.L, A.T, A.w, A.h); c.clip();
+  K.parts.forEach((k, j) => {   // the zone between the cumulative curves j-1 and j, in runs of finite values
+    const col = colorOf(k, j), lo = K.lo[j], hi = K.hi[j]; let run = [];
+    const flush = () => { if (run.length > 1) { c.beginPath(); run.forEach((i, m) => { const x = A.X(X.f(K.grid[i])), y = A.Y(hi[i]); m ? c.lineTo(x, y) : c.moveTo(x, y); });
+      for (let m = run.length - 1; m >= 0; m--) c.lineTo(A.X(X.f(K.grid[run[m]])), A.Y(lo[run[m]])); c.closePath(); c.globalAlpha = 0.5; c.fillStyle = col; c.fill();
+      c.globalAlpha = 1; c.strokeStyle = col; c.lineWidth = 1.2; c.beginPath(); run.forEach((i, m) => { const x = A.X(X.f(K.grid[i])), y = A.Y(hi[i]); m ? c.lineTo(x, y) : c.moveTo(x, y); }); c.stroke(); } run = []; };
+    for (let i = 0; i < K.grid.length; i++) { if (Number.isFinite(lo[i]) && Number.isFinite(hi[i])) run.push(i); else flush(); }
+    flush();
+  });
+  if (tot) { c.strokeStyle = "#fff"; c.lineWidth = 1.6; c.setLineDash([6, 3]); c.beginPath(); let on = false;
+    K.grid.forEach((t, i) => { if (!Number.isFinite(tot[i])) { on = false; return; } const x = A.X(X.f(t)), y = A.Y(tot[i]); on ? c.lineTo(x, y) : c.moveTo(x, y); on = true; }); c.stroke(); c.setLineDash([]); }
+  const snap = S.runs[p.run].snaps[p.snap], tNow = p.missing ? null : +snap.time, tLook = st.hover != null ? st.hover : tNow;
+  if (tNow != null && inWin(tNow)) { const x = A.X(X.f(tNow)); c.strokeStyle = "#fc4"; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x, A.T); c.lineTo(x, A.T + A.h); c.stroke(); }
+  if (st.hover != null) { const x = A.X(X.f(st.hover)); c.strokeStyle = "#fff8"; c.setLineDash([4, 3]); c.lineWidth = 1; c.beginPath(); c.moveTo(x, A.T); c.lineTo(x, A.T + A.h); c.stroke(); c.setLineDash([]); }
+  let b = -1; if (tLook != null) { let bd = Infinity; K.grid.forEach((t, i) => { const d = Math.abs(t - tLook); if (d < bd) { bd = d; b = i; } }); }
+  const lines = K.parts.map((k, j) => { const v = b >= 0 ? K.Y[j][b] : null, f = b >= 0 ? K.Y[j][b] / K.total[b] : null;
+    if (b >= 0 && Number.isFinite(K.hi[j][b])) { c.fillStyle = st.hover != null ? "#fff" : "#fc4"; c.beginPath(); c.arc(A.X(X.f(K.grid[b])), A.Y(K.hi[j][b]), 3, 0, 6.2832); c.fill(); }
+    return [colorOf(k, j), [], curveName(k, D, multiId, multiCol), Number.isFinite(v) ? `${fmt(v)}  (${(100 * f).toFixed(1)} %)` : null]; });
+  if (tot) lines.push(["#fff", [6, 3], frac ? `total / max (max ${fmt(K.max)})` : "total", b >= 0 && Number.isFinite(K.total[b]) ? fmt(frac ? K.total[b] / K.max : K.total[b]) : null]);
+  else lines.push(["#789", [2, 3], "total (constant)", K.total.length && Number.isFinite(K.total[0]) ? fmt(K.total[Math.max(0, b)]) : null]);
+  c.restore();
+  c.font = "11px ui-monospace,monospace"; let ly = A.T + 13;
+  for (const [col, dash, name, val] of lines.slice(0, 12)) {
+    c.strokeStyle = col; c.lineWidth = dash.length ? 2 : 6; c.setLineDash(dash); c.beginPath(); c.moveTo(A.L + 6, ly - 4); c.lineTo(A.L + 22, ly - 4); c.stroke(); c.setLineDash([]);
+    const txt = `${name}${val != null ? " = " + val : ""}`; c.lineWidth = 3; c.strokeStyle = "#0b0e12"; c.strokeText(txt, A.L + 27, ly, A.w - 33); c.fillStyle = "#dde"; c.fillText(txt, A.L + 27, ly, A.w - 33); ly += 14;
+  }
+  c.font = "11px sans-serif"; c.fillStyle = "#89a";
+  const what = st.hover != null ? `values at t = ${X.f(st.hover).toPrecision(5)}` : tNow != null ? `values at this snapshot (t = ${X.f(tNow).toPrecision(5)}, yellow line)` : "no snapshot at this time";
+  c.fillText(`${what}; ${frac ? "fractions of the total" : "stacked"}${D.note ? "; " + D.note : ""}`, A.L, A.T - 6, A.w);
+  p.plotAxes = A; p.serX = X;
+}
 function heatFamilies(D) { const f = {}; for (const k of Object.keys(D.columns || {})) { const m = k.match(/^(.*?_)(\d+)$/); if (m) (f[m[1]] = f[m[1]] || []).push(k); } return Object.keys(f).filter(k => f[k].length >= 3); }
 function drawHeat(p, c, W) {   // a family of columns <prefix><number> against time, as an image (log colours), the current snapshot's time, hover values
   const st = serState(p), Ls = serList(p.run);
@@ -1092,24 +1149,31 @@ function drawHeat(p, c, W) {   // a family of columns <prefix><number> against t
   const key = p.run + "|heat|" + JSON.stringify(params), Ge = serGet(C.curves, key, "/api/series", params, serRedraw(p.run));
   if (Ge.error) return plotMessage(c, W, ["could not read the grid:", Ge.error]);
   if (!Ge.data) return plotMessage(c, W, ["reading the grid..."]);
-  const G = Ge.data, lut = S.luts.magma; if (!lut) { ensureLut("magma").then(() => draw(p)); return plotMessage(c, W, ["loading the colour table..."]); }
+  const zs = st.hz || "log", cmap = zs === "symlog" ? "RdBu_r" : "magma", G = Ge.data, lut = S.luts[cmap]; if (!lut) { ensureLut(cmap).then(() => draw(p)); return plotMessage(c, W, ["loading the colour table..."]); }
   const X = serX(p, D.period), ny = G.y.length, nx = G.z.length ? G.z[0].length : 0;
-  let mx = 0; for (const row of G.z) for (const v of row) if (v != null && v > mx) mx = v;
-  const lo = mx * 1e-6, top = document.body.classList.contains("figmode") ? 30 : Math.max(46, (p.el.querySelector(".pk").offsetHeight || 20) + 26);
-  const A = plotFrame(c, W, {x: [X.f(G.x[0]), X.f(G.x[G.x.length - 1])], y: [G.y[0] - 0.5, G.y[ny - 1] + 0.5], top, xlabel: X.label, ylabel: st.heat.replace(/_$/, "")});
+  let mx = 0, mn = Infinity, ma = 0; for (const row of G.z) for (const v of row) if (v != null && Number.isFinite(v)) { if (v > mx) mx = v; if (v < mn) mn = v; if (Math.abs(v) > ma) ma = Math.abs(v); }
+  const lo = mx * 1e-6, lt = 1e-3 * (ma || 1), top = document.body.classList.contains("figmode") ? 30 : Math.max(46, (p.el.querySelector(".pk").offsetHeight || 20) + 26);
+  const ylog = st.hy === "log" && ny > 1 && G.y.every(v => v > 0), Y = G.y;     // row edges: midpoints (geometric ones on a log axis); one row: +-0.5
+  const ye = ny < 2 ? [Y[0] - 0.5, Y[0] + 0.5] : ylog ? [Y[0] ** 1.5 / Y[1] ** 0.5, ...Y.slice(1).map((v, j) => Math.sqrt(v * Y[j])), Y[ny - 1] ** 1.5 / Y[ny - 2] ** 0.5]
+                                         : [Y[0] - 0.5 * (Y[1] - Y[0]), ...Y.slice(1).map((v, j) => 0.5 * (v + Y[j])), Y[ny - 1] + 0.5 * (Y[ny - 1] - Y[ny - 2])];
+  const A = plotFrame(c, W, {x: [X.f(G.x[0]), X.f(G.x[G.x.length - 1])], y: [ye[0], ye[ny]], ylog, top, xlabel: X.label, ylabel: st.heat.replace(/_$/, "")});
+  const tcol = zs === "symlog" ? v => { const f = Math.sign(v) * Math.log10(1 + Math.abs(v) / lt) / Math.log10(1 + (ma || 1) / lt); return 0.5 * (1 + f); }
+             : zs === "lin" ? v => (v - mn) / (mx - mn || 1) : v => v > lo ? Math.log(v / lo) / Math.log(mx / lo) : NaN;
   const off = document.createElement("canvas"); off.width = nx; off.height = ny; const g = off.getContext("2d"), img = g.createImageData(nx, ny);
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-    const v = G.z[j][i], o = ((ny - 1 - j) * nx + i) * 4;
-    if (v == null || !(v > lo)) { img.data[o + 3] = 0; continue; }
-    const q = lut[Math.max(0, Math.min(255, Math.round(255 * Math.log(v / lo) / Math.log(mx / lo))))]; img.data[o] = q[0]; img.data[o + 1] = q[1]; img.data[o + 2] = q[2]; img.data[o + 3] = 255;
+    const v = G.z[j][i], o = ((ny - 1 - j) * nx + i) * 4, t = v == null ? NaN : tcol(v);
+    if (!Number.isFinite(t)) { img.data[o + 3] = 0; continue; }
+    const q = lut[Math.max(0, Math.min(255, Math.round(255 * t)))]; img.data[o] = q[0]; img.data[o + 1] = q[1]; img.data[o + 2] = q[2]; img.data[o + 3] = 255;
   }
-  g.putImageData(img, 0, 0); c.imageSmoothingEnabled = false; c.drawImage(off, A.L, A.T, A.w, A.h);
+  g.putImageData(img, 0, 0); c.imageSmoothingEnabled = false;
+  for (let j = 0; j < ny; j++) { const y0 = A.Y(ye[j + 1]), y1 = A.Y(ye[j]); c.drawImage(off, 0, ny - 1 - j, nx, 1, A.L, y0, A.w, Math.max(1, y1 - y0)); }
   const snap = S.runs[p.run].snaps[p.snap], tNow = p.missing ? null : +snap.time;
   if (tNow != null) { const x = A.X(X.f(tNow)); if (x >= A.L && x <= A.L + A.w) { c.strokeStyle = "#fc4"; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x, A.T); c.lineTo(x, A.T + A.h); c.stroke(); } }
   c.font = "11px sans-serif"; c.fillStyle = "#89a";
-  let txt = `${st.heat}* of ${st.src}: log colours, ${(mx / 1e6).toPrecision(2)}e6..${mx.toPrecision(3)} (black: below 1e-6 of the maximum)`;
+  let txt = zs === "symlog" ? `${st.heat}* of ${st.src}: symlog colours, -${fmt(ma)}..${fmt(ma)} (linear within ${fmt(lt)})`
+          : zs === "lin" ? `${st.heat}* of ${st.src}: linear colours, ${fmt(mn)}..${fmt(mx)}` : `${st.heat}* of ${st.src}: log colours, ${(mx / 1e6).toPrecision(2)}e6..${mx.toPrecision(3)} (black: below 1e-6 of the maximum)`;
   if (st.hover != null && st.hoverY != null) {
-    const i = Math.max(0, Math.min(nx - 1, Math.floor((st.hover - G.x[0]) / (G.x[G.x.length - 1] - G.x[0]) * nx))), j = Math.round(st.hoverY - G.y[0]);
+    const i = Math.max(0, Math.min(nx - 1, Math.floor((st.hover - G.x[0]) / (G.x[G.x.length - 1] - G.x[0]) * nx))), j = ye.findIndex((e, k) => k < ny && st.hoverY >= e && st.hoverY < ye[k + 1]);
     if (j >= 0 && j < ny) txt = `t = ${X.f(st.hover).toPrecision(5)}, ${st.heat}${G.y[j]}: ${fmt(G.z[j][i])}`;
   }
   c.fillText(txt, A.L, A.T - 6, A.w);
@@ -1133,6 +1197,9 @@ function attachPlot(p) {
   pk.querySelector(".sheat").onchange = e => { st.heat = e.target.value; draw(p); };
   pk.querySelector(".sx").onchange = e => { st.xaxis = e.target.value; draw(p); };
   pk.querySelector(".sy").onchange = e => { st.yscale = e.target.value; draw(p); };
+  pk.querySelector(".sstk").onchange = e => { st.stack = e.target.value; draw(p); if (FIG.pub) pubSchedule(); };
+  pk.querySelector(".shz").onchange = e => { st.hz = e.target.value; draw(p); };
+  pk.querySelector(".shy").onchange = e => { st.hy = e.target.value; draw(p); };
   pk.querySelector(".srel").onclick = () => { serForget(p.run); fillSeriesControls(p); draw(p); };
   pk.querySelector(".sbuild").onclick = async () => {
     const C = serCache(); C.building = C.building || {}; C.building[p.run] = true; draw(p); await jobPost({kind: "series", run: S.runs[p.run].label});
@@ -1182,7 +1249,7 @@ function figChanged() { FIG.dirty = true; $("fg_stat").textContent = "unsaved ch
 const VIEW_KEYS = ["center", "align", "tilt", "npix", "units", "hscale"];
 function viewKeys(p) {   // the pane's view as layout keys (map.View fields)
   const q = paneParams(p), o = {field: q.field, mode: q.mode, axes: q.axes, center: q.center, align: q.align, tilt: q.tilt || "none", units: q.units, npix: +q.npix, width: +q.width};
-  if (+q.cx) o.cx = +q.cx; if (+q.cy) o.cy = +q.cy; if (q.mode === "slice") o.z0 = +q.z0 || 0; if (q.post) o.post = q.post; if (q.kappa) o.kappa = +q.kappa;
+  if (q.weight) o.weight = q.weight; if (+q.cx) o.cx = +q.cx; if (+q.cy) o.cy = +q.cy; if (q.mode === "slice") o.z0 = +q.z0 || 0; if (q.post) o.post = q.post; if (q.kappa) o.kappa = +q.kappa;
   if (p.fix && p.fix.hscale) o.hscale = +p.fix.hscale;
   return o;
 }
@@ -1193,11 +1260,13 @@ function panelOf(p, i) {   // a pane as a layout panel
   const ex = p.extra || {};
   if (p.kind === "series") {
     const st = serState(p);
-    return {...ex, ...base, type: "timeseries", source: st.src || "snapshots", columns: st.cols.length ? st.cols : (ex.columns || []), ...(st.ids ? {ids: st.ids} : {}), ...(st.smooth ? {smooth: st.smooth} : {}),
-            xaxis: {orb: "orb", myr: "time_myr", t: "time"}[st.xaxis] || "time", ...(st.yscale !== "auto" ? {yscale: st.yscale} : {})};
+    const o = {...ex, ...base, type: "timeseries", source: st.src || "snapshots", columns: st.cols.length ? st.cols : (ex.columns || []), ...(st.ids ? {ids: st.ids} : {}), ...(st.smooth ? {smooth: st.smooth} : {}),
+            xaxis: {orb: "orb", myr: "time_myr", t: "time"}[st.xaxis] || "time", ...(st.yscale !== "auto" && !st.stack ? {yscale: st.yscale} : {})};
+    if (st.stack) { o.stack = st.stack === "fraction" ? "fraction" : true; if (o.yscale === "log" || o.yscale === "symlog") delete o.yscale; delete o.ylog; } else delete o.stack;
+    return o;
   }
   if (p.kind === "profile") return {...ex, ...base, type: "profile", ...viewKeys(p), ylog: !!p.ylog};
-  if (p.kind === "heatmap") { const st = serState(p); return {...ex, ...base, type: "heatmap", source: st.src, prefix: st.heat || ex.prefix, xaxis: {orb: "orb", myr: "time_myr", t: "time"}[st.xaxis] || "time"}; }
+  if (p.kind === "heatmap") { const st = serState(p); return {...ex, ...base, type: "heatmap", source: st.src, prefix: st.heat || ex.prefix, xaxis: {orb: "orb", myr: "time_myr", t: "time"}[st.xaxis] || "time", zscale: st.hz || "log", yscale: st.hy || "lin"}; }
   const m = {...ex, ...base, type: "map", ...viewKeys(p), cmap: p.cmap, scale: paneScale(p), overlays: ovSpecs(p.ovo)};
   if (!p.nl.auto && Number.isFinite(p.lim[0]) && Number.isFinite(p.lim[1])) Object.assign(m, {limits: "fixed", vmin: p.lim[0], vmax: p.lim[1]});
   else if (!m.limits || m.limits === "fixed") { m.limits = "frame"; delete m.vmin; delete m.vmax; }
@@ -1236,14 +1305,16 @@ async function openLayout(name) {
     p.lid = q.id; p.label = rq.label || ""; p.pos = rq.row != null && rq.col != null ? {row: rq.row, col: rq.col, rs: rq.rowspan || 1, cs: rq.colspan || 1} : null;
     p.span = p.pos ? null : {rs: rq.rowspan || 1, cs: rq.colspan || 1};
     p.extra = Object.fromEntries(Object.entries(rq).filter(([k2]) => !["id", "label", "row", "col", "rowspan", "colspan", "type"].includes(k2)));
-    if (q.type === "heatmap") { const st = serState(p); st.src = q.source; st.heat = q.prefix; st.xaxis = {orb: "orb", time_myr: "myr", time: "t"}[q.xaxis] || "t"; st.win = null; setKind(p, "heatmap"); return; }
+    if (q.type === "heatmap") { const st = serState(p); st.src = q.source; st.heat = q.prefix; st.xaxis = {orb: "orb", time_myr: "myr", time: "t"}[q.xaxis] || "t"; st.win = null;
+      st.hz = q.zscale || "log"; st.hy = q.yscale || "lin"; p.el.querySelector(".shz").value = st.hz; p.el.querySelector(".shy").value = st.hy; setKind(p, "heatmap"); return; }
     if (q.type === "timeseries") {
       const st = serState(p); st.src = q.source || "snapshots"; st.cols = [...q.columns]; st.ids = q.ids || null; st.smooth = +q.smooth || 0;
       st.xaxis = {orb: "orb", time_myr: "myr", time: "t", index: "t"}[q.xaxis] || "orb"; st.yscale = q.yscale || (q.ylog ? "log" : "auto"); st.win = null;
-      ["ssm", "sx", "sy"].forEach(c => { const e = p.el.querySelector("." + c); if (e) e.value = String({ssm: st.smooth, sx: st.xaxis, sy: st.yscale}[c]); });
+      st.stack = q.stack === "fraction" ? "fraction" : q.stack ? "stack" : "";
+      ["ssm", "sx", "sy", "sstk"].forEach(c => { const e = p.el.querySelector("." + c); if (e) e.value = String({ssm: st.smooth, sx: st.xaxis, sy: st.yscale, sstk: st.stack}[c]); });
       setKind(p, "series"); return;
     }
-    p.field = q.field; p.mode = q.mode; p.axes = q.axes; p.z0 = String(q.z0 ?? 0); p.view = S.linked && k ? S.panes[0].view : {...p.view};
+    p.field = q.field; p.mode = q.mode; p.weight = q.weight || "auto"; p.axes = q.axes; p.z0 = String(q.z0 ?? 0); p.view = S.linked && k ? S.panes[0].view : {...p.view};
     p.view.width = q.width; p.view.cx = q.cx || 0; p.view.cy = q.cy || 0;
     p.fix = {}; for (const kk of VIEW_KEYS) if (kk === "hscale" ? q.hscale && q.hscale !== 1 : String(q[kk]) !== String(byId[firstMap.id][kk])) p.fix[kk] = q[kk];
     if (q.type === "profile") { p.ylog = q.ylog !== false; setKind(p, "profile"); return; }
@@ -1593,7 +1664,7 @@ S.inspectAt = inspectAt;
 // ---- controls <-> selected pane -----------------------------------------------------------------------------------------------------------
 function showControls() {
   const p = sel(); $("snap").value = p.snap; snapLabel(p); $("run").value = p.run; updateClocks();
-  for (const k of ["field", "mode", "axes", "z0", "cmap", "scale", "diff", "post", "postarg", "soft"]) $(k).value = p[k];
+  for (const k of ["field", "mode", "weight", "axes", "z0", "cmap", "scale", "diff", "post", "postarg", "soft"]) $(k).value = p[k] ?? "auto";
   $("width").value = (+p.view.width).toPrecision(4); if (p.map) showLimits(p); ovToControls(p); showInsp(p); phToControls(p);
   $("status").textContent = p.map ? $("status").textContent : ""; syncFieldBtn(); modeRows();
   if (document.body.classList.contains("figmode")) figToControls();
@@ -1665,7 +1736,7 @@ function setLinked(on) {
 }
 
 // ---- blink and difference -----------------------------------------------------------------------------------------------------------------
-function stateOf(p) { const o = {view: {...p.view}}; for (const k of ["run", "snap", "field", "mode", "axes", "z0", "cmap", "scale", "post", "postarg", "soft"]) o[k] = p[k]; return o; }
+function stateOf(p) { const o = {view: {...p.view}}; for (const k of ["run", "snap", "field", "mode", "weight", "axes", "z0", "cmap", "scale", "post", "postarg", "soft"]) o[k] = p[k]; return o; }
 function describe(s) { return s ? `${S.runs.length > 1 ? S.runs[s.run].label + "/" : ""}${S.runs[s.run].snaps[s.snap].name.replace(/\.(hdf5|h5)$/, "")} ${s.field} ${s.mode} ${s.axes}` : "-"; }
 function updateAB() { $("abinfo").textContent = `A: ${describe(S.A)}\nB: ${describe(S.B)}`; }
 function storeState(which) {
@@ -1726,10 +1797,12 @@ let drag = null;
 function eventPane(e) { for (const p of S.panes) { if (p.kind !== "map") continue; const r = p.cv.getBoundingClientRect(); if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) return p; } return null; }
 function attachPane(p) {
   const cv = p.cv;
-  cv.addEventListener("mousedown", e => { if (e.altKey) { selectPane(S.panes.indexOf(p)); S.altDrag = {p, x: e.clientX, y: e.clientY, tilt0: $("tilt").value || "none", terms: []}; p.downAt = null; e.preventDefault(); return; }
+  cv.addEventListener("mousedown", e => { if (e.button === 2 || e.button > 2) return;     // right: the context menu; back / forward: snapshots
+    if (e.button === 1) { e.preventDefault(); selectPane(S.panes.indexOf(p)); p.downAt = null; drag = {p, x: e.clientX, y: e.clientY, cx: p.view.cx, cy: p.view.cy, mid: true}; cv.style.cursor = "grabbing"; return; }   // middle: pan, or a click (window mouseup)
+    if (e.altKey) { selectPane(S.panes.indexOf(p)); S.altDrag = {p, x: e.clientX, y: e.clientY, tilt0: $("tilt").value || "none", terms: []}; p.downAt = null; e.preventDefault(); return; }
     p.downAt = [e.clientX, e.clientY]; selectPane(S.panes.indexOf(p)); drag = {p, x: e.clientX, y: e.clientY, cx: p.view.cx, cy: p.view.cy}; cv.style.cursor = "grabbing"; });
   cv.addEventListener("mouseleave", hoverEnd);
-  cv.addEventListener("wheel", e => {
+  cv.addEventListener("wheel", e => {     // (ctrl / shift + wheel scan the snapshots: the window's capturing listener takes those first)
     e.preventDefault(); selectPane(S.panes.indexOf(p)); const r = cv.getBoundingClientRect(), k = cv.width / r.width, px = (e.clientX - r.left) * k, py = (e.clientY - r.top) * k;
     const [wx, wy] = toWorld(p, px, py), f = Math.exp(e.deltaY * 0.0015); p.view.width = Math.min(1e6, Math.max(1e-6, p.view.width * f));
     const [nx, ny] = toWorld(p, px, py); p.view.cx += wx - nx; p.view.cy += wy - ny; $("width").value = (+p.view.width).toPrecision(4); drawAll(); requestView(200);
@@ -1743,7 +1816,16 @@ function attachPane(p) {
   });
   cv.addEventListener("dblclick", e => { clearTimeout(p.clickTimer); const r = cv.getBoundingClientRect(), k = cv.width / r.width; const [wx, wy] = toWorld(p, (e.clientX - r.left) * k, (e.clientY - r.top) * k); p.view.cx = wx; p.view.cy = wy; drawAll(); requestView(30); });
 }
-window.addEventListener("mouseup", () => { if (drag) { const p = drag.p; drag = null; p.cv.style.cursor = "grab"; requestView(); } });
+window.addEventListener("mouseup", e => {
+  if (!drag) return; const d = drag, p = d.p; drag = null; p.cv.style.cursor = "grab";
+  if (d.mid && e.button === 1 && Math.hypot(e.clientX - d.x, e.clientY - d.y) <= 4) {     // a middle click: centre here; a second one soon after: reset the view
+    const now = performance.now(), again = S.midClick && S.midClick.p === p && now - S.midClick.t < 450; S.midClick = again ? null : {p, t: now};
+    if (again) return resetView(p);
+    const r = p.cv.getBoundingClientRect(), k = p.cv.width / r.width, [wx, wy] = toWorld(p, (e.clientX - r.left) * k, (e.clientY - r.top) * k);
+    p.view.cx = d.cx; p.view.cy = d.cy; return centreAt(p, [wx, wy]);
+  }
+  requestView();
+});
 window.addEventListener("mousemove", e => {
   if (drag) { const p = drag.p, r = p.cv.getBoundingClientRect(), k = p.cv.width / r.width, s = p.cv.width / p.view.width; p.view.cx = drag.cx - (e.clientX - drag.x) * k / s; p.view.cy = drag.cy + (e.clientY - drag.y) * k / s; drawAll(); }
   const p = drag ? drag.p : eventPane(e); if (!p) return;
@@ -1827,6 +1909,11 @@ function altDragEnd() {
 window.addEventListener("mousemove", altDragMove); window.addEventListener("mouseup", altDragEnd);
 function fieldOrder() { const {top, groups} = fieldGroups(); return [...top, ...groups.flatMap(([g, l]) => fieldRows(g, l).flat())]; }
 function cursorWorld() { const c = S.cursor; return c && c.p === sel() ? [c.wx, c.wy] : null; }
+function resetView(p) { Object.assign(p.view, {cx: S.def.cx, cy: S.def.cy, width: S.def.width}); showControls(); drawAll(); requestView(30); }
+function centreAt(p, w) { p.view.cx = w[0]; p.view.cy = w[1]; drawAll(); requestView(30); }
+function centreOnBH(p, w) { const ms = p.markers || []; if (!ms.length) return false; const m = ms.reduce((a, b) => Math.hypot(a.x - w[0], a.y - w[1]) <= Math.hypot(b.x - w[0], b.y - w[1]) ? a : b); centreAt(p, [m.x, m.y]); return true; }
+function trackAt(p, w) { return inspectAt(p, w[0], w[1]).then(() => { const q = p.insp && p.insp.res.particles[0]; if (q && q.id !== undefined) { $("center").value = "ids:" + q.id; $("center").sync(); Object.assign(p.view, {cx: 0, cy: 0}); requestAll(30); } }); }
+function togglePanel() { setSection("panel", $("panel").classList.contains("hid")); setTimeout(() => { S.panes.forEach(q => drawOv(q)); window.dispatchEvent(new Event("resize")); }, 50); }
 function zoom(f) { const p = sel(); p.view.width *= f; $("width").value = (+p.view.width).toPrecision(4); drawAll(); requestView(30); }
 S.playing = null;
 function play(on) {
@@ -1856,12 +1943,12 @@ window.addEventListener("keydown", e => {
     case "a": { const L = p.diff !== "off" ? p.dl : p.nl; L.auto = true; L.lock = false; $("auto").checked = true; $("lock").checked = false; bake(p); draw(p); showLimits(p); return done(); }
     case "l": p.scale = p.scale === "log" ? "linear" : "log"; $("scale").value = p.scale; bake(p); draw(p); return done();
     case "s": { const L = p.diff !== "off" ? p.dl : p.nl; L.lock = !L.lock; $("lock").checked = L.lock; bake(p); draw(p); return done(); }
-    case "o": Object.assign(p.view, {cx: S.def.cx, cy: S.def.cy, width: S.def.width}); showControls(); drawAll(); requestView(30); return done();
+    case "o": resetView(p); return done();
     case "r": S.panes.forEach(q => { q.seq++; }); requestAll(0); return done();                         // SPLASH: replot
-    case "C": { const w = cursorWorld(); if (w) { p.view.cx = w[0]; p.view.cy = w[1]; drawAll(); requestView(30); } return done(); }
-    case "n": { const w = cursorWorld(), ms = p.markers || []; if (w && ms.length) { const m = ms.reduce((a, b) => Math.hypot(a.x - w[0], a.y - w[1]) <= Math.hypot(b.x - w[0], b.y - w[1]) ? a : b); p.view.cx = m.x; p.view.cy = m.y; drawAll(); requestView(30); } return done(); }
+    case "C": { const w = cursorWorld(); if (w) centreAt(p, w); return done(); }
+    case "n": { const w = cursorWorld(); if (w) centreOnBH(p, w); return done(); }
     case "t": { const w = cursorWorld(); if (/^ids:/.test($("center").value) && !w) { $("center").value = S.def.center; $("center").sync(); requestAll(30); return done(); }
-                if (w) inspectAt(p, w[0], w[1]).then(() => { const q = p.insp && p.insp.res.particles[0]; if (q && q.id !== undefined) { $("center").value = "ids:" + q.id; $("center").sync(); Object.assign(p.view, {cx: 0, cy: 0}); requestAll(30); } }); return done(); }
+                if (w) trackAt(p, w); return done(); }
     case "p": case "c": { const w = cursorWorld(); if (w) inspectAt(p, w[0], w[1]); return done(); }   // SPLASH: closest particle / its circle
     case "R": $("ph_clear").click(); return done();
     case "Escape": case "Backspace": S.panes.forEach(clearInsp); closeFieldMenu(); return done();
@@ -1886,18 +1973,142 @@ window.addEventListener("keydown", e => {
     case "B": storeState("B"); return done();
     case "~": setDiff({off: "sub", sub: "ratio", ratio: "off", rel: "off"}[p.diff]); return done();
     case "`": mapsOnly(!document.body.classList.contains("mapsonly")); return done();
+    case "q": togglePanel(); return done();
     case "e": $("jb_to").value = p.snap; setSection("jobbox", true); return done();
     case "E": $("jb_from").value = p.snap; setSection("jobbox", true); return done();
     case "h": case "F1": toggleHelp(true); return done();
   }
 });
+// ---- the key map: one table of the shortcuts (action ids, keys, what they do); the help overlay is generated from it. The dispatch is still the switch
+// above (docs/LATER.md, "Customizable shortcuts": the next step makes the switch read this table and lets the user override the keys).
+const KEYMAP = [
+  ["Snapshots"],
+  [["snap.next", "snap.prev"], "space / b", "next / previous snapshot; a number first steps that many (9 space); z first: x10"],
+  [["snap.next1", "snap.prev1"], "right / left", "next / previous snapshot (all panes if \"step all panes\", Shift inverts); Home / End: first / last"],
+  [["snap.navbuttons"], "mouse back / forward", "previous / next snapshot (the browser does not leave the page)"],
+  [["snap.scan"], "ctrl or shift + wheel", "over the snapshot slider or a pane: scan the snapshots (the target shows in the time label and on the slider); it loads when you release the key, Esc cancels"],
+  [["play"], "Enter, ctrl+m", "play / pause through the snapshots"],
+  ["View"],
+  [["zoom.in", "zoom.out", "zoom.out20"], "+ - _", "zoom in / out (x2), out by 20 %; drag, wheel, double click: pan, zoom about the cursor, centre here"],
+  [["view.centre.mid", "view.reset.mid"], "middle click / drag", "centre here / pan; double middle click: reset the view"],
+  [["menu"], "right click", "a menu at that point: centre, zoom, nearest black hole, track, inspect, copy the coordinates or the value (series: go to that time, stack); shift+right click: the browser's menu"],
+  [["view.reset", "view.centre", "view.bh"], "o, C, n", "reset the view; centre on the cursor; centre on the black hole nearest the cursor"],
+  [["track"], "t", "track the particle nearest the cursor (centre rule ids:ID); t away from the map: tracking off"],
+  ["Colours and rendering"],
+  [["lim.auto", "scale.log", "lim.lock"], "a, l, s", "automatic colour limits; log / linear; lock the limits for all snapshots"],
+  [["cmap.next", "cmap.prev", "cmap.invert"], "m M i", "next / previous colour map, invert it"],
+  [["field.next", "field.prev"], "f F", "next / previous field"],
+  [["mode.slice", "slice.up", "slice.down"], "x, u d (U D)", "projection / slice; move the slice plane up / down one pixel (ten)"],
+  [["kappa.less", "kappa.more"], "k K", "volume rendering: less / more opacity"],
+  [["rot.los"], ", . < >", "rotate about the line of sight by 15 / 30 degrees"],
+  [["rot.h"], "[ ] { }", "rotate about the horizontal axis by 15 / 30 degrees"],
+  [["rot.v"], "/ \\ ? |", "rotate about the vertical axis by 15 / 30 degrees"],
+  [["vec.fewer", "vec.more", "vec.default"], "v V w", "vectors and streamlines: fewer / more, default"],
+  [["inspect", "inspect.clear", "sel.clear"], "p, c, click", "inspect the particles at the cursor (with their smoothing circles); Esc / Backspace clears; R clears the selection"],
+  [["render"], "r", "render again"],
+  ["Panes and compare"],
+  [["state.A", "state.B", "blink", "diff"], "A, B, shift+space, ~", "store state A / B; blink between them; difference off, A - B, log10(A/B)"],
+  [["pane.next", "panes.cycle", "link"], "Tab, P, L", "next pane (shift: previous); number of panes 1-4; link / unlink pan and zoom"],
+  [["movie.end", "movie.start"], "e, E", "movie range: end / start at this snapshot (long jobs)"],
+  ["Window"],
+  [["panel"], "q", "show / hide the side panel (also in Figure mode)"],
+  [["mapsonly"], "`", "maps only: hide the side panel and the menu bar (it comes back at the top edge); again: all back"],
+  [["help"], "h, F1", "this help (any key closes it)"],
+];
+S.KEYMAP = KEYMAP;
+function fillHelp() { $("helptab").innerHTML = KEYMAP.map(r => r.length === 1 ? `<tr><td class="grp" colspan="2">${esc(r[0])}</td></tr>` : `<tr data-act="${r[0].join(" ")}"><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join(""); }
+setTimeout(fillHelp, 0);                                                  // (esc is defined further down)
+// ---- the mouse's back / forward buttons step the snapshots (and never navigate the page away)
+for (const t of ["mousedown", "mouseup", "auxclick", "pointerdown", "pointerup"]) window.addEventListener(t, e => {
+  if (e.button !== 3 && e.button !== 4) return;
+  e.preventDefault(); e.stopPropagation();
+  if (t === "mousedown") { closeCtx(); step(e.button === 3 ? -1 : 1); }
+}, true);
+// ---- right click: a small menu at the point (shift + right click: the browser's own menu)
+function closeCtx() { $("ctx").classList.remove("on"); }
+function copyText(t) {
+  const ok = () => { S.copied = t; notify("copied: " + esc(t), "", 2000); };
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(ok, () => fallback()); else fallback();
+  function fallback() { const a = document.createElement("textarea"); a.value = t; document.body.appendChild(a); a.select(); try { document.execCommand("copy"); ok(); } catch (e) {} a.remove(); }
+}
+function openCtx(x, y, head, items) {
+  const m = $("ctx");
+  m.innerHTML = (head ? `<div class="hd">${esc(head)}</div>` : "") + items.map((it, i) => it ? `<a data-i="${i}"><span>${esc(it[0])}</span>${it[2] ? `<kbd>${esc(it[2])}</kbd>` : ""}</a>` : "<hr>").join("");
+  m.querySelectorAll("a").forEach(a => a.addEventListener("click", ev => { ev.preventDefault(); closeCtx(); items[+a.dataset.i][1](); }));
+  m.classList.add("on"); const r = m.getBoundingClientRect();
+  m.style.left = Math.max(2, Math.min(x, innerWidth - r.width - 4)) + "px"; m.style.top = Math.max(2, Math.min(y, innerHeight - r.height - 4)) + "px";
+}
+function mapMenu(p, e) {
+  const r = p.cv.getBoundingClientRect(), k = p.cv.width / r.width, w = toWorld(p, (e.clientX - r.left) * k, (e.clientY - r.top) * k), [wx, wy] = w;
+  const val = p.map ? valueAt(p, wx, wy) : null, xy = `${wx.toPrecision(6)} ${wy.toPrecision(6)}`;
+  const zoomAt = f => { p.view.cx = wx; p.view.cy = wy; p.view.width = Math.min(1e6, Math.max(1e-6, p.view.width * f)); $("width").value = (+p.view.width).toPrecision(4); drawAll(); requestView(30); };
+  const items = [["Centre here", () => centreAt(p, w), "C / middle click"], ["Zoom in here (x2)", () => zoomAt(0.5)], ["Zoom out here (x2)", () => zoomAt(2)], ["Reset the view", () => resetView(p), "o"], null];
+  if ((p.markers || []).length) items.push(["Centre on the nearest black hole", () => centreOnBH(p, w), "n"]);
+  items.push(["Track the nearest particle", () => trackAt(p, w), "t"], ["Inspect the particles here", () => inspectAt(p, wx, wy), "p"]);
+  if (/^ids:/.test($("center").value)) items.push(["Stop tracking", () => { $("center").value = S.def.center; $("center").sync(); requestAll(30); }]);
+  items.push(null, ["Copy the coordinates (x y)", () => copyText(xy)]);
+  if (val && Number.isFinite(val.v)) items.push(["Copy the value", () => copyText(String(val.v))]);
+  openCtx(e.clientX, e.clientY, p.map ? readoutText(p, wx, wy) : `x ${xy}`, items);
+}
+function plotMenu(p, e) {
+  const A = p.plotAxes, st = serState(p); if (!A || !p.serX) return false;
+  const r = p.plot.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, t = p.serX.inv(A.inv(px)), y = A.invY ? A.invY(py) : null;
+  const sn = S.runs[p.run].snaps; let b = 0; sn.forEach((s, i) => { if (Math.abs(s.time - t) < Math.abs(sn[b].time - t)) b = i; });
+  const items = [[`Go to the snapshot nearest this time (${b + 1})`, () => { selectPane(S.panes.indexOf(p)); setSnap(b); }, "click"]];
+  if (st.win) items.push(["Whole run (reset the time zoom)", () => { st.win = null; drawPlot(p); }, "double click"]);
+  if (p.kind === "series") { items.push(null); for (const [v, lab] of [["", "Lines"], ["stack", "Stacked (parts of a total)"], ["fraction", "Fractions of the total"]]) items.push([(st.stack === v ? "✓ " : " ") + lab, () => { st.stack = v; p.el.querySelector(".sstk").value = v; drawPlot(p); if (FIG.pub) pubSchedule(); }]); }
+  items.push(null, ["Copy t (code time) and y", () => copyText(`${t.toPrecision(7)} ${y != null ? y.toPrecision(6) : ""}`.trim())]);
+  openCtx(e.clientX, e.clientY, `t = ${t.toPrecision(6)} (code)${y != null ? "   y = " + y.toPrecision(5) : ""}`, items); return true;
+}
+document.addEventListener("contextmenu", e => {
+  if (e.shiftKey) return;                                                 // the browser's menu
+  const el = e.target.closest && e.target.closest(".pane"); if (!el || e.target.closest(".pk")) return;
+  const p = S.panes.find(q => q.el === el); if (!p) return;
+  if (p.kind === "map") { e.preventDefault(); selectPane(S.panes.indexOf(p)); mapMenu(p, e); }
+  else if ((p.kind === "series" || p.kind === "heatmap") && e.target === p.plot) { e.preventDefault(); selectPane(S.panes.indexOf(p)); if (!plotMenu(p, e)) closeCtx(); }
+});
+document.addEventListener("mousedown", e => { if (!(e.target.closest && e.target.closest("#ctx"))) closeCtx(); }, true);
+window.addEventListener("blur", closeCtx); window.addEventListener("resize", closeCtx);
+// ---- ctrl or shift + wheel over the snapshot slider or a pane: scan the snapshot number; it loads when the key is released (Esc cancels)
+S.scrub = null;
+const isPinch = e => e.ctrlKey && !e.shiftKey && e.deltaMode === 0 && !Number.isInteger(e.deltaY);     // a trackpad pinch (ctrl + fractional deltas): stays a zoom
+function showScrub() {
+  const sc = S.scrub; if (!sc) return; const p = sc.p, r = S.runs[p.run], s = r.snaps[sc.target], n = r.snaps.length;
+  $("snaplab").textContent = `→ ${S.runs.length > 1 ? r.label + "  " : ""}${sc.target + 1}/${n}  ${s.name}  t=${(+s.time).toPrecision(5)}   (release to load)`; $("snaplab").classList.add("scrub");
+  p.clock.textContent = "→ " + (S.runs.length > 1 ? r.label + "  " : "") + `${sc.target + 1}/${n}  ` + fmtTime(s); p.clock.classList.add("scrub");
+  const sl = $("snap"), g = $("snapghost"), th = 8, f = n > 1 ? sc.target / (n - 1) : 0;
+  g.style.left = (sl.offsetLeft + th + f * (sl.offsetWidth - 2 * th)) + "px"; g.style.display = "block";
+}
+function endScrub(commit) {
+  const sc = S.scrub; if (!sc) return; S.scrub = null;
+  $("snapghost").style.display = "none"; $("snaplab").classList.remove("scrub"); S.panes.forEach(q => q.clock.classList.remove("scrub"));
+  const i = S.panes.indexOf(sc.p); if (i < 0) return;
+  if (commit && sc.target !== sc.p.snap) { selectPane(i); setSnap(sc.target); } else { showControls(); updateClocks(); }
+}
+window.addEventListener("wheel", e => {
+  if (!(e.ctrlKey || e.shiftKey) || e.altKey || isPinch(e) || !e.target.closest) return;
+  const row = e.target.closest("#snaprow"), el = e.target.closest("#stage .pane");
+  if (!row && (!el || e.target.closest(".pk"))) return;
+  e.preventDefault(); e.stopPropagation();                                 // no page zoom (ctrl), no map zoom, no horizontal scroll (shift)
+  const q = el && S.panes.find(x => x.el === el); if (q && q !== sel() && !S.scrub) selectPane(S.panes.indexOf(q));
+  const p = S.scrub ? S.scrub.p : sel(), n = S.runs[p.run].snaps.length;
+  if (!S.scrub) S.scrub = {p, target: p.snap, acc: 0};
+  const sc = S.scrub; let d = e.deltaY || e.deltaX; if (e.deltaMode === 1) d *= 40; else if (e.deltaMode === 2) d *= 800;
+  let k = 0; if (Math.abs(d) >= 50) k = Math.sign(d); else { sc.acc += d; if (Math.abs(sc.acc) >= 100) { k = Math.sign(sc.acc); sc.acc = 0; } }    // one snapshot per notch
+  sc.target = Math.max(0, Math.min(n - 1, sc.target + k)); showScrub();
+}, {passive: false, capture: true});
+window.addEventListener("keyup", e => { if (S.scrub && (e.key === "Control" || e.key === "Shift") && !e.ctrlKey && !e.shiftKey) endScrub(true); }, true);
+window.addEventListener("keydown", e => { if (e.key === "Escape" && $("ctx").classList.contains("on")) { closeCtx(); e.preventDefault(); e.stopImmediatePropagation(); return; }
+  if (S.scrub && e.key === "Escape") { endScrub(false); e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+window.addEventListener("mousemove", e => { if (S.scrub && !e.ctrlKey && !e.shiftKey) endScrub(true); }, true);   // the release was missed (focus elsewhere)
+window.addEventListener("blur", () => endScrub(true));
 document.addEventListener("click", e => { if (e.target.tagName === "BUTTON") e.target.blur(); });
 for (const id of ["vv", "vB", "sv", "sB", "pbh", "pstar", "pdm", "con", "dsc"]) $("ov_" + id).addEventListener("change", ovFromControls);
 for (const id of ["grid", "density", "arrows", "extra", "cn", "cstep"]) $("ov_" + id).addEventListener("change", e => { ovFromControls(); if (e.target.tagName === "SELECT") e.target.blur(); });
 $("insp").addEventListener("click", e => { const c = e.target.closest(".card"), p = sel(); if (!c || !p.insp) return; p.insp.sel = +c.dataset.k; showInsp(p); drawOv(p); });
 $("snap").addEventListener("input", e => setSnap(+e.target.value));
 $("prev").onclick = () => step(-1); $("next").onclick = () => step(1);
-for (const id of ["field", "mode", "axes", "z0"]) $(id).addEventListener("change", e => { const p = sel(); p[id] = $(id).value; p.blink = null; updateBadge(p); request(30); if (e.target.tagName === "SELECT") e.target.blur(); });
+for (const id of ["field", "mode", "weight", "axes", "z0"]) $(id).addEventListener("change", e => { const p = sel(); if (id === "field") signedStyle(p, p.field, $(id).value); p[id] = $(id).value; p.blink = null; updateBadge(p); request(30); if (e.target.tagName === "SELECT") e.target.blur(); });
 for (const id of ["center", "align", "tilt", "kappa", "npix", "units"]) $(id).addEventListener("change", e => { requestAll(30); if (e.target.tagName === "SELECT") e.target.blur(); });
 $("width").addEventListener("change", () => { sel().view.width = +$("width").value; drawAll(); requestView(30); });
 $("cmap").addEventListener("change", async e => { const p = sel(); p.cmap = $("cmap").value; await ensureLut(p.cmap); bake(p); draw(p); e.target.blur(); });

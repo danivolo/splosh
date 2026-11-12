@@ -338,6 +338,7 @@ def run(pg, url, a, check):
     pg.keyboard.press("Escape")
     check(not pg.locator("#help").is_visible(), "a key closes the help")
 
+    section_mouse(pg, check, shot, wait, idle)
     section_explore(pg, url, a, check, shot, wait, idle)
 
     # ---- narrow window
@@ -457,6 +458,158 @@ def section_layout(pg, url, a, check):
     check([p["id"] for p in got["raw"]["panel"]] == [p["id"] for p in ev("L.panel")] and got["raw"]["panel"][0]["colspan"] == 2 and "cmap" not in got["raw"]["panel"][0], "layout editor: save writes the minimal layout and it reads back")
     check(not errs, f"layout editor: no page errors {errs[:3]}")
     ed.close()
+
+
+def section_mouse(pg, check, shot, wait, idle):
+    """mouse back / forward buttons, ctrl / shift + wheel scanning, middle click, the right-click menu, the side-panel key, a stacked time series (needs 3 snapshots, 1 pane)"""
+    ev = pg.evaluate
+    idle()
+    ev("() => setSnap(0)")
+    wait("window.__splosh.idx === 0")
+    idle()
+    box = pg.locator("canvas.view").first.bounding_box()
+    cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+    btn = "(b) => document.querySelector('canvas.view').dispatchEvent(new MouseEvent('mousedown', {button: b, bubbles: true, cancelable: true}))"
+    up = "(b) => [document.querySelector('canvas.view').dispatchEvent(new MouseEvent('mouseup', {button: b, bubbles: true, cancelable: true})), document.querySelector('canvas.view').dispatchEvent(new MouseEvent('auxclick', {button: b, bubbles: true, cancelable: true}))]"
+    n0 = ev(btn, 4)
+    ups = ev(up, 4)
+    wait("window.__splosh.idx === 1")
+    idle()
+    ev(btn, 3); ev(up, 3)
+    wait("window.__splosh.idx === 0")
+    idle()
+    check(n0 is False and ups == [False, False], "mouse forward / back buttons step the snapshots, the browser's navigation prevented")
+    # ---- shift + wheel over the map: scan, load on release
+    r0, w0 = ev("window.__splosh.requests"), ev("window.__splosh.view.width")
+    pg.mouse.move(cx, cy)
+    pg.keyboard.down("Shift")
+    pg.mouse.wheel(0, 100)
+    pg.mouse.wheel(0, 100)
+    pg.mouse.wheel(0, 100)                                      # past the last snapshot: clamped
+    lab = ev("document.getElementById('snaplab').textContent")
+    ghost = ev("getComputedStyle(document.getElementById('snapghost')).display")
+    clock = ev("document.querySelector('.clock').textContent")
+    held = ev("[window.__splosh.idx, window.__splosh.requests, window.__splosh.view.width]")
+    pg.keyboard.up("Shift")
+    wait("window.__splosh.idx === 2")
+    idle()
+    check(lab.startswith("\u2192") and "3/3" in lab and ghost == "block" and "3/3" in clock and held == [0, r0, w0],
+          f"shift+wheel scans the snapshots without loading or zooming (label {lab!r}, clock {clock!r}, ghost {ghost}, held {held})")
+    check(ev("window.__splosh.map.meta.snapshot === window.__splosh.snaps[2].name") and ev("getComputedStyle(document.getElementById('snapghost')).display") == "none",
+          "releasing shift loads the scanned snapshot")
+    # ---- ctrl + wheel over the slider: no page zoom, Esc cancels
+    sl = pg.locator("#snap").bounding_box()
+    pg.mouse.move(sl["x"] + sl["width"] / 2, sl["y"] + sl["height"] / 2)
+    z0 = ev("[window.visualViewport.scale, window.devicePixelRatio, window.innerWidth]")
+    prevented = ev("() => { const e = new WheelEvent('wheel', {deltaY: -100, ctrlKey: true, bubbles: true, cancelable: true}); document.getElementById('snap').dispatchEvent(e); return e.defaultPrevented; }")
+    pg.keyboard.down("Control")
+    pg.mouse.wheel(0, -100)
+    lab = ev("document.getElementById('snaplab').textContent")
+    pg.keyboard.up("Control")
+    wait("window.__splosh.idx === 0")
+    idle()
+    check(prevented and "1/3" in lab and ev("[window.visualViewport.scale, window.devicePixelRatio, window.innerWidth]") == z0,
+          f"ctrl+wheel over the slider scans (label {lab!r}), the page does not zoom (default prevented: {prevented})")
+    pg.mouse.move(cx, cy)
+    pg.keyboard.down("Shift")
+    pg.mouse.wheel(0, 100)
+    pg.keyboard.press("Escape")
+    pg.keyboard.up("Shift")
+    pg.wait_for_timeout(300)
+    check(ev("window.__splosh.idx") == 0 and "\u2192" not in ev("document.getElementById('snaplab').textContent"), "Esc cancels a scan")
+    # ---- a plain wheel still zooms the map
+    w0 = ev("window.__splosh.view.width")
+    pg.mouse.wheel(0, -300)
+    wait(f"window.__splosh.view.width < {w0} * 0.9")
+    pg.keyboard.press("o")
+    idle()
+    check(True, "a plain wheel still zooms the map")
+    # ---- middle click: centre here; double middle click: reset the view
+    v0 = ev("({...window.__splosh.view})")
+    px, py = box["x"] + box["width"] * 0.75, box["y"] + box["height"] * 0.25
+    want = ev(f"(() => {{ const p = window.__splosh.panes[0], r = p.cv.getBoundingClientRect(), k = p.cv.width / r.width; return toWorld(p, ({px} - r.left) * k, ({py} - r.top) * k); }})()")
+    pg.mouse.click(px, py, button="middle")
+    v1 = ev("({...window.__splosh.view})")
+    check(abs(v1["cx"] - want[0]) < 1e-3 * v0["width"] and abs(v1["cy"] - want[1]) < 1e-3 * v0["width"] and v1["width"] == v0["width"],
+          f"middle click centres the view there ({v0['cx']:.3g}, {v0['cy']:.3g}) -> ({v1['cx']:.3g}, {v1['cy']:.3g}), wanted ({want[0]:.3g}, {want[1]:.3g})")
+    pg.wait_for_timeout(600)
+    ev("() => { window.__splosh.view.width *= 0.5; }")
+    pg.mouse.click(cx, cy, button="middle")
+    pg.mouse.click(cx, cy, button="middle")
+    v2 = ev("({...window.__splosh.view})")
+    d = ev("window.__splosh.def")
+    check(v2["width"] == d["width"] and v2["cx"] == d["cx"] and v2["cy"] == d["cy"], f"double middle click resets the view {v2}")
+    idle()
+    # ---- right click: the menu; shift + right click: the browser's
+    pg.mouse.click(px, py, button="right")
+    vis = pg.locator("#ctx").is_visible()
+    txt = pg.locator("#ctx").inner_text()
+    shot("context_menu")
+    w0 = ev("window.__splosh.view.width")
+    pg.locator("#ctx a", has_text="Zoom in here").click()
+    v3 = ev("({...window.__splosh.view})")
+    check(vis and "Centre here" in txt and "Copy the coordinates" in txt and "x " in txt and abs(v3["width"] - 0.5 * w0) < 1e-9 * w0 and abs(v3["cx"] - want[0]) < 1e-3 * w0 and not pg.locator("#ctx").is_visible(),
+          "right click opens the map menu at the point; Zoom in here zooms about it")
+    pg.mouse.click(px, py, button="right")
+    pg.keyboard.press("Escape")
+    closed = not pg.locator("#ctx").is_visible()
+    pg.mouse.click(px, py, button="right")
+    pg.locator("#ctx a", has_text="Copy the coordinates").click()
+    pg.wait_for_timeout(300)
+    copied = ev("'copied: ' + (window.__splosh.copied || '')")
+    sh = ev("() => { const e = new MouseEvent('contextmenu', {shiftKey: true, bubbles: true, cancelable: true, clientX: 300, clientY: 300}); document.querySelector('canvas.view').dispatchEvent(e); return e.defaultPrevented; }")
+    check(closed and copied.startswith("copied: ") and sh is False and not pg.locator("#ctx").is_visible(), f"Esc closes the menu; copy ({copied!r}); shift+right click keeps the browser's menu")
+    pg.keyboard.press("o")
+    idle()
+    # ---- q: the side panel, also in Figure mode
+    wb = pg.locator("#stage").bounding_box()["width"]
+    pg.mouse.move(cx, cy)
+    pg.keyboard.press("q")
+    pg.wait_for_timeout(400)
+    hidden = ev("document.getElementById('panel').classList.contains('hid')") and not pg.locator("#grip").is_visible()
+    wa = pg.locator("#stage").bounding_box()["width"]
+    pg.keyboard.press("q")
+    pg.wait_for_timeout(300)
+    back = pg.locator("#panel").is_visible()
+    pg.click("#tabs [data-tab=figure]")
+    pg.keyboard.press("q")
+    pg.wait_for_timeout(300)
+    fig_hidden = not pg.locator("#panel").is_visible()
+    pg.keyboard.press("q")
+    pg.wait_for_timeout(300)
+    pg.click("#tabs [data-tab=explore]")
+    check(hidden and wa > wb + 100 and back and fig_hidden and pg.locator("#panel").is_visible() and "q" in pg.locator("#helptab").inner_text(),
+          f"q hides and shows the side panel (stage {wb:.0f} -> {wa:.0f} px), also in Figure mode; listed in the help")
+    idle()
+    # ---- a stacked time series: the parts' cumulative sums (S.stackOf), drawn without errors, kept in the layout panel
+    K = ev("(() => { const k = window.__splosh.stackOf([{column: 'a', t: [0, 1, 2], y: [1, 1, 1]}, {column: 'b', t: [0, 0.5, 1, 2], y: [1, 2, 3, 5]}], false);"
+           " const f = window.__splosh.stackOf([{column: 'a', t: [0, 1, 2], y: [1, 1, 1]}, {column: 'b', t: [0, 1, 2], y: [1, 3, 3]}], true);"
+           " return [Array.from(k.hi[1]), k.varies, Array.from(f.hi[0]), Array.from(f.hi[1])]; })()")
+    check(K[0] == [2, 4, 6] and K[1] is True and K[2] == [0.5, 0.25, 0.25] and K[3] == [1, 1, 1], f"stackOf: cumulative sums on the first part's times, fractions {K}")
+    ev("() => setKind(window.__splosh.panes[0], 'series')")
+    pg.wait_for_timeout(1500)
+    pg.select_option(".pane .sstk", "fraction")
+    pg.wait_for_timeout(800)
+    lay_panel = ev("panelOf(window.__splosh.panes[0], 0)")
+    shot("series_fraction")
+    pg.select_option(".pane .sstk", "")
+    lay_off = ev("panelOf(window.__splosh.panes[0], 0)")
+    check(lay_panel.get("stack") == "fraction" and "stack" not in lay_off, f"the series pane's stack option goes into its layout panel ({lay_panel.get('stack')!r})")
+    ev("() => setKind(window.__splosh.panes[0], 'map')")
+    idle()
+    # ---- a signed field: symmetric limits, RdBu_r + asinh; an unsigned one gets its colours back
+    st0 = ev("[window.__splosh.panes[0].cmap, window.__splosh.panes[0].scale]")
+    pick_field(pg, "vx")
+    wait("window.__splosh.map.meta.view.field === 'vx'")
+    idle()
+    pg.wait_for_timeout(300)
+    sv = ev("[window.__splosh.panes[0].cmap, window.__splosh.panes[0].scale, window.__splosh.lim[0], window.__splosh.lim[1], document.getElementById('cmap').value]")
+    pick_field(pg, "rho")
+    wait("window.__splosh.map.meta.view.field === 'rho'")
+    idle()
+    back = ev("[window.__splosh.panes[0].cmap, window.__splosh.panes[0].scale]")
+    check(sv[0] == "RdBu_r" and sv[1] == "asinh" and sv[4] == "RdBu_r" and abs(sv[2] + sv[3]) <= 1e-9 * abs(sv[3]) and sv[3] > 0 and back == st0,
+          f"signed field vx: RdBu_r, asinh, limits symmetric about 0 {sv[2:4]}; rho gets {back} back")
 
 
 def section_explore(pg, url, a, check, shot, wait, idle):

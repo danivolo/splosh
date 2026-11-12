@@ -69,7 +69,10 @@ def test_whole_smoke_passes(smoke_output):
                                      ("slice of the derived field pressure", 1), ("slice of the derived field mach", 1), ("keyboard help", 1), ("no console errors", 1), ("narrow window", 1),
                                      ("layout editor", 12), ("centre rule menu", 1), ("overlay", 6), ("phase diagram of the window", 1), ("the lasso became", 1), ("highlight:", 1), ("map of only the selection", 1), ("clear selection", 1), ("GPU colouring", 3), ("volume mode", 1), ("pixel histogram", 1), ("dragging the upper handle", 1), ("asinh F", 1), ("valueAtT", 1), ("histeq", 1), ("contrast map", 1), ("post=resid", 1), ("no tiles while a transform", 1), ("contours overlay items", 1), ("gradient map", 1), ("restores the colours", 1), ("inspect", 3), ("Esc clears", 1), ("double click centres", 1), ("no B field", 1),
                                      ("tiled composite equals", 1), ("panning by one tile", 1), ("placeholder", 1), ("prefetch", 1), ("difference mode never", 1), ("tiny window", 1), ("seam", 1),
-                                     ("step all panes", 1), ("clocks", 1), ("no snapshot at this time", 1), ("offset 1.5", 1), ("page's nearest-snapshot rule", 1), ("index alignment", 2), ("a pane can show the other run", 1), ("independent /api/map?run=", 1)])
+                                     ("step all panes", 1), ("clocks", 1), ("no snapshot at this time", 1), ("offset 1.5", 1), ("page's nearest-snapshot rule", 1), ("index alignment", 2), ("a pane can show the other run", 1), ("independent /api/map?run=", 1),
+                                     ("mouse forward / back", 1), ("scans the snapshots without loading", 1), ("releasing shift loads", 1), ("the page does not zoom", 1), ("Esc cancels a scan", 1),
+                                     ("plain wheel still zooms", 1), ("middle click", 2), ("right click opens the map menu", 1), ("shift+right click keeps", 1), ("hides and shows the side panel", 1),
+                                     ("stackOf", 1), ("stack option goes into its layout panel", 1), ("signed field vx", 1)])
 def test_group_ran_and_passed(smoke_output, word, n):
     _, out = smoke_output
     got = lines(out, word)
