@@ -2249,6 +2249,11 @@ function notify(html, kind, ms) {
 }
 function jobNotice(j) {
   const what = esc(j.kind.replace("_", " ") + ": " + j.label);
+  if (j.kind === "products" && j.state === "done") {      // the background products of an opened run: a short notice, and the time-series panes read them again
+    notify(`<b>finished</b> ${what}`, "ok", 5000);
+    for (let r = 0; r < S.runs.length; r++) { serForget(r); serRedraw(r)(); }
+    return;
+  }
   if (j.state === "done") {
     const f = (j.files || []).find(x => /\.mp4$/.test(x)) || (j.files || [])[0];
     const n = notify(`<b>finished</b> ${what}` + (f ? `<div><a href="#" class="dl">download ${esc(f === "movie.mp4" && jobName(j.id) || f)}</a></div>` : ""), "ok");
