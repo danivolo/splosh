@@ -49,3 +49,32 @@ def test_workers_respect_memory(tmp_path, monkeypatch):
     f = _snap(tmp_path / "s.hdf5")
     monkeypatch.setattr(P, "_mem_available", lambda: 10 * os.path.getsize(f))
     assert P.workers_for([f], max_workers=64) == 1                                            # 4x the snapshot each: room for one
+
+
+def test_viewer_starts_one_products_job_per_run(toy, tmp_path, monkeypatch):
+    """job_products: a job `splosh products RUN --names ...` when results are missing; the same job back while it runs; nothing when all is current;
+    auto_products starts it from a thread when runs are opened."""
+    from splosh.mapstore import MapStore
+    from splosh.server import ViewerState
+    run, paths, calls = toy
+    st = ViewerState([str(run / "output")], store=MapStore(str(tmp_path / "store")), jobs_dir=str(tmp_path / "jobs"))
+    submitted = []
+
+    def fake_submit(kind, args, outputs=(), label="", write=None):
+        job = {"id": f"j{len(submitted)}", "kind": kind, "label": label, "args": args, "outputs": [], "dir": str(tmp_path), "state": "running", "created": len(submitted)}
+        st.jobs.jobs[job["id"]] = job
+        submitted.append(job)
+        return st.jobs.public(job)
+    monkeypatch.setattr(st.jobs, "submit", fake_submit)
+    names, n = st.products_status(0, ["toy"])
+    assert names == ["toy"] and n == 3
+    r = st.job_products({"run": "0", "names": ["toy"]})
+    assert submitted[0]["args"][:2] == ["products", str(run)] and submitted[0]["args"][2:] == ["--names", "toy"] and len(r["jobs"]) == 1
+    assert st.job_products({"run": "0", "names": ["toy"]})["note"] == "already computing" and len(submitted) == 1
+    submitted[0]["state"] = "done"
+    P.compute(str(run), ["toy"], paths, workers=1, log=lambda m: None)
+    assert st.job_products({"run": "0", "names": ["toy"]}) == {"jobs": [], "note": "every product is current"}
+    st.auto_products = True
+    plugins.PRODUCTS["toy"]["version"] = 5                                                     # out of date again
+    st.start_auto_products().join(30)
+    assert len(submitted) == 2 and "[automatic]" in submitted[1]["label"]

@@ -268,6 +268,13 @@ Remote data (data on a login node, browser on your laptop):
 
 If the server runs on a compute node (it listens only on that node's loopback, so a plain `-L port:<node>:port` through the login node does not reach it): `ssh -J <user>@<login-node> -L 8765:localhost:8765 <user>@<compute-node>`.
 
+## Snapshot products (`splosh products RUN [--names a,b] [--workers N]`, products.py)
+Quantities a plugin computes once per snapshot (`plugins.register_product`; see ADAPTING.md), stored in `<run>/analysis_viewer/products/<name>/` under a key (the
+snapshot's signature, the product's version and parameters) and read as the time-series source `prod_<name>` (a family `<prefix><number>` is a heatmap against
+time). `splosh serve` computes what is missing in the background when a run is opened (a `products` job in the job list, on a free node when `--slurm` is set;
+`--no-auto-products` turns it off; `POST /api/jobs {kind: "products", run}` starts it by hand). Parallel over snapshots: at most the physical cores, and as many
+processes as leave ~4x a snapshot's size of memory to each.
+
 ## Analysis pipeline and run comparison
 `splosh analyze RUN [--config analyze.toml] [--out DIR] [--jobs N] [--only NAMES] [--every N] [--force] [--dry-run]` computes, per snapshot, the products a TOML config declares and keeps them in a
 tree (default `RUN/analysis`): maps (`NAME/SNAP.png` + the float32 map in `.maps`), radial profiles (`.npz`, `.csv`), scalar diagnostics (one `scalars.csv`), dashboards, run-wide time-series

@@ -13,7 +13,7 @@
     GET /api/png?snap=I&...       the same map as a PNG (cmap, scale, vmin, vmax)
     GET /api/lut?name=viridis     256x3 colour table
     GET /api/browse?dir=REL[&deep=1]   folders under the browsable root (--root, default home) with their snapshot counts; deep: every folder below with snapshots
-    GET /api/jobs, POST /api/jobs {kind: movie | prefetch, ...}, POST /api/jobs/cancel {id}, GET /api/jobs/file?id=&name=   long jobs (jobs.py): a free node at once
+    GET /api/jobs, POST /api/jobs {kind: movie | prefetch | products {run, names?}, ...}, POST /api/jobs/cancel {id}, GET /api/jobs/file?id=&name=   long jobs (jobs.py): a free node at once
                                   (serve --slurm "srun options"), else here; their folders under --jobs-dir
     POST /api/open {paths: [REL, ...], add: false}   serve these folders as the runs (replacing the current ones, or adding); `serve` without paths starts empty
     GET /layout                   the layout editor page (layout.html); GET /api/layout/registry (what a panel can use, layouts in the directory), GET /api/layout?name=N (file as written)
@@ -81,7 +81,7 @@ class ViewerState:
     """`paths`: directories, files or `label=path` (grouped into runs by runs.group_runs: each directory / label is a run, loose files form one). `self.paths` / `self.times` are those of the
     first run (the single-run view of earlier versions); `self.runs` lists all runs. No paths: the server starts without runs and the page asks for a folder
     (`browse` / `open_runs`, limited to the directory tree under `root`, default the home directory)."""
-    def __init__(self, paths, store=None, defaults=None, keep=3, token=None, layouts=None, analysis=None, config=None, threads=None, root=None, slurm=None, node_wait=10, jobs_dir=None, ffmpeg=None, partial="auto"):
+    def __init__(self, paths, store=None, defaults=None, keep=3, token=None, layouts=None, analysis=None, config=None, threads=None, root=None, slurm=None, node_wait=10, jobs_dir=None, ffmpeg=None, partial="auto", auto_products=False):
         if partial not in ("auto", "on", "off"):
             raise ValueError("partial must be auto, on or off")
         self.partial = partial                   # region.py: read only the gas a zoomed view needs (auto: snapshots of >= PARTIAL_MIN gas particles)
@@ -92,6 +92,7 @@ class ViewerState:
         self.jobs = JobManager(jobs_dir or os.path.join(os.path.expanduser("~"), ".cache", "splosh", "jobs"), slurm=slurm, wait=node_wait,
                                local_threads=lambda: self.threads, env={"SPLOSH_FFMPEG": self.ffmpeg} if self.ffmpeg else {})
         self.runs = []
+        self.auto_products = bool(auto_products)  # start a background `products` job for every opened run with snapshot products not computed yet
         paths = [paths] if isinstance(paths, str) else list(paths or [])
         if paths:
             self.runs = self._make_runs(paths)
@@ -202,7 +203,49 @@ class ViewerState:
             self._snaps.clear()
             self.__dict__.pop("_tile_renderers", None)
             self._preview_cache.clear()
+        self.start_auto_products()
         return [{"label": r.label, "n": len(r.paths)} for r in self.runs]
+
+    # ---- snapshot products (products.py): computed in the background when a run is opened
+    def products_status(self, run, names=None):
+        """(names that apply to the run, number of (product, snapshot) results missing)."""
+        from . import products as PR
+        plugins.load_plugins()
+        paths = self.runs[run].paths
+        names = [n for n in (names or sorted(PR.PRODUCTS)) if n in PR.PRODUCTS and PR.applicable(n, paths)]
+        return names, len(PR.missing(self._rundir(run), names, paths))
+
+    def job_products(self, b):
+        """compute a run's snapshot products in the background (`splosh products RUN`; the series sources prod_<name> fill in as it goes). One job per run at
+        a time: a second request while one is queued or running returns that one."""
+        run = self.run_index({"run": [str(b.get("run", ""))]})
+        R, rundir = self.runs[run], self._rundir(run)
+        for j in self.jobs.list():
+            if j.get("kind") == "products" and j.get("rundir") == rundir and j.get("state") in ("starting", "queued", "running"):
+                return {"jobs": [j], "note": "already computing"}
+        names, n = self.products_status(run, b.get("names"))
+        if not n:
+            return {"jobs": [], "note": "every product is current" if names else "no snapshot product applies to this run"}
+        job = self.jobs.submit("products", ["products", rundir, "--names", ",".join(names)],
+                               label=f"{R.label}: {', '.join(names)} ({n} result(s) to compute)" + (" [automatic]" if b.get("auto") else ""))
+        self.jobs.jobs[job["id"]]["rundir"] = rundir
+        return {"jobs": [self.jobs.public(self.jobs.jobs[job["id"]])]}
+
+    def start_auto_products(self):
+        """with auto_products: a background thread checks every open run and starts the products job where results are missing (checking reads every stored
+        result's key, a few seconds for a long run, so it does not hold up the request that opened the runs)."""
+        if not self.auto_products:
+            return None
+
+        def go():
+            for k in range(len(self.runs)):
+                try:
+                    self.job_products({"run": str(k), "auto": True})
+                except Exception as e:                       # a run whose products cannot be checked must not stop the others
+                    print(f"splosh: automatic products for run {k}: {type(e).__name__}: {e}", flush=True)
+        t = threading.Thread(target=go, daemon=True)
+        t.start()
+        return t
 
     # ---- long jobs (jobs.py): a movie of a pane, every snapshot of the panes into the store
     def _view_args(self, pane):
@@ -865,7 +908,9 @@ def make_handler(state):
                         return self._send(200, json.dumps(state.job_series(body)), "application/json")
                     if kind == "layout_movie":
                         return self._send(200, json.dumps(state.job_layout_movie(body)), "application/json")
-                    raise ValueError("kind: movie, layout_movie, analyze, series or prefetch")
+                    if kind == "products":
+                        return self._send(200, json.dumps(state.job_products(body)), "application/json")
+                    raise ValueError("kind: movie, layout_movie, analyze, series, products or prefetch")
                 if u.path == "/api/jobs/cancel":
                     return self._send(200, json.dumps(state.jobs.cancel(body["id"])), "application/json")
                 if u.path == "/api/open":
@@ -1031,6 +1076,7 @@ def make_server(paths, host="127.0.0.1", port=0, token=None, store=None, default
     if host not in ("127.0.0.1", "localhost", "::1"):
         raise ValueError("splosh serve binds to localhost only (use ssh -L to reach it)")
     state = ViewerState(paths, store=store, defaults=defaults, token=token, **kw)
+    state.start_auto_products()
     srv = ThreadingHTTPServer((host, port), make_handler(state))
     srv.daemon_threads = True
     return srv, state

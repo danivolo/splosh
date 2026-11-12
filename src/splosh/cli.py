@@ -305,7 +305,8 @@ def cmd_serve(a):
     from .mapstore import MapStore
     from .server import serve
     serve(a.paths, host=a.host, port=a.port, token=a.token, store=MapStore(a.store), defaults=view_from_args(a), layouts=a.layouts, analysis=a.analysis, config=a.config,
-          threads=a.threads, root=a.root, slurm=a.slurm, node_wait=a.node_wait, jobs_dir=a.jobs_dir, ffmpeg=a.ffmpeg, exit_when_orphaned=a.exit_when_orphaned, idle_exit=a.idle_exit, partial=a.partial)
+          threads=a.threads, root=a.root, slurm=a.slurm, node_wait=a.node_wait, jobs_dir=a.jobs_dir, ffmpeg=a.ffmpeg, exit_when_orphaned=a.exit_when_orphaned, idle_exit=a.idle_exit, partial=a.partial,
+          auto_products=not a.no_auto_products)
 
 
 def cmd_overlays(a):
@@ -427,6 +428,7 @@ def main(argv=None):
     p.add_argument("--ffmpeg", help="path of ffmpeg for the movie jobs when it is not on PATH")
     p.add_argument("--root", help="the folder tree the page may browse and open (default: the home directory)")
     p.add_argument("--threads", type=int, help="cores for rendering (default: all of the pool; the pool size is NUMBA_NUM_THREADS, the page can change the count up to it)")
+    p.add_argument("--no-auto-products", action="store_true", help="do not compute the plugins' snapshot products in the background when a run is opened")
     p.add_argument("--partial", choices=["auto", "on", "off"], default="auto", help="read only the gas a zoomed view needs (a chunk index per snapshot next to the store): auto = for snapshots of >= 2e6 gas particles ($SPLOSH_PARTIAL_MIN)")
     p.add_argument("--exit-when-orphaned", action="store_true", help="stop when the parent process goes away (started over ssh: the session closed)")
     p.add_argument("--idle-exit", type=float, metavar="MIN", help="stop after MIN minutes without a request")
