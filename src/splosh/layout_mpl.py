@@ -208,7 +208,17 @@ def _draw_heat(fig, ax, t):
     else:
         norm = None
     im = ax.pcolormesh(x, ye, z, cmap=lay.heat_cmap(hm), norm=norm, shading="flat", rasterized=True)
-    fig.colorbar(im, ax=ax, label=hm.get("label") or "", pad=0.01)
+    cb = fig.colorbar(im, ax=ax, label=hm.get("label") or "", pad=0.01)
+    if hm.get("zscale") == "symlog" and isinstance(norm, mc.SymLogNorm):     # ticks: 0 and every other decade on each side (the default crowds them around 0)
+        m = norm.vmax
+        dec = [10.0 ** k for k in range(int(np.floor(np.log10(m))), int(np.floor(np.log10(norm.linthresh))) - 1, -2) if 10.0 ** k > norm.linthresh][:3]
+        cb.set_ticks(sorted([-d for d in dec] + [0.0] + dec))
+        cb.ax.yaxis.set_major_formatter(__import__("matplotlib.ticker", fromlist=["x"]).FuncFormatter(lambda v, _: "0" if v == 0 else f"{v:.0e}".replace("e-0", "e-").replace("e+0", "e")))
+    if ax.get_yscale() == "log":                      # plain numbers on a log axis of radii (0.5, 1, 2, 5 rather than 5x10^-1)
+        import matplotlib.ticker as mt
+        ax.yaxis.set_major_locator(mt.LogLocator(base=10, subs=(1.0, 2.0, 5.0)))
+        ax.yaxis.set_major_formatter(mt.FuncFormatter(lambda v, _: f"{v:g}"))
+        ax.yaxis.set_minor_formatter(mt.NullFormatter())
     for (name, xs, ys), s in zip(t.get("curves") or [], t.get("styles") or []):
         ax.plot(np.asarray(xs, float), np.asarray(ys, float), color=s.get("color", "c"), lw=s.get("lw", 1.0), label=name)
     if t.get("curves"):
