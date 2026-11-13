@@ -34,8 +34,47 @@ def _key(path, name, params):
     return hashlib.sha1(json.dumps([snapshot_hash(path), name, p["version"], params], sort_keys=True, default=str).encode()).hexdigest()
 
 
-def params_of(name, overrides=None):
-    return {**PRODUCTS[name]["params"], **(overrides or {})}
+PARAMS_FILE = "params.toml"     # <run>/analysis_viewer/products/params.toml: a run's own product parameters, a table per product
+
+
+_RUN_PARAMS = {}
+
+
+def run_params(run_dir, name=None):
+    """the run's own product parameters: {product: {param: value}} from <run>/analysis_viewer/products/params.toml (or .json), {} without one
+    (cached by modification time); with `name` only that product's table."""
+    if run_dir is None:
+        return {}
+    d = product_dir(run_dir, "")
+    out = {}
+    for f in (os.path.join(d, PARAMS_FILE), os.path.join(d, "params.json")):
+        try:
+            mt = os.path.getmtime(f)
+        except OSError:
+            continue
+        if _RUN_PARAMS.get(f, (None,))[0] != mt:
+            if f.endswith(".json"):
+                with open(f) as fh:
+                    got = json.load(fh)
+            else:
+                from .analyze import read_toml
+                got = read_toml(f)
+            _RUN_PARAMS[f] = (mt, {k: dict(v) for k, v in got.items() if isinstance(v, dict)})
+        out = _RUN_PARAMS[f][1]
+        break
+    return dict(out.get(name) or {}) if name is not None else out
+
+
+def params_of(name, overrides=None, run_dir=None):
+    """a product's parameters: its defaults, then the run's own (params.toml, when `run_dir` is given), then `overrides`."""
+    return {**PRODUCTS[name]["params"], **run_params(run_dir, name), **(overrides or {})}
+
+
+def default_names(run_dir):
+    """the products a run computes without naming them: every product, except the opt-in ones (registered with auto = False, e.g. those that render
+    maps) unless the run's params.toml has a table for them."""
+    have = run_params(run_dir)
+    return sorted(n for n, p in PRODUCTS.items() if p.get("auto", True) or n in have)
 
 
 def result_path(run_dir, name, path):
@@ -44,7 +83,7 @@ def result_path(run_dir, name, path):
 
 def load_result(run_dir, name, path, params=None):
     """the stored result of a product for one snapshot ({"scalars", "arrays", "time"}) when it is current, else None."""
-    params = params_of(name, params)
+    params = params_of(name, params, run_dir)
     f = result_path(run_dir, name, path)
     try:
         with np.load(f, allow_pickle=False) as z:
@@ -59,7 +98,7 @@ def load_result(run_dir, name, path, params=None):
 def compute_one(run_dir, name, path, params=None):
     """compute a product for one snapshot and store it (atomically). Returns the result."""
     from .runs import snapshot_times
-    params = params_of(name, params)
+    params = params_of(name, params, run_dir)
     t0 = _time.perf_counter()
     res = PRODUCTS[name]["fn"](path, params) or {}
     scalars = {k: (float(v) if v is not None and np.isfinite(v) else None) for k, v in (res.get("scalars") or {}).items()}
@@ -218,7 +257,7 @@ def main(a):
         raise SystemExit(f"no snapshots in {a.run}")
     from .analyze import run_root
     run_dir = run_root(os.path.dirname(os.path.abspath(paths[0])))
-    names = [n for n in (a.names.split(",") if a.names else sorted(PRODUCTS)) if n]
+    names = [n for n in (a.names.split(",") if a.names else default_names(run_dir)) if n]
     unknown = [n for n in names if n not in PRODUCTS]
     if unknown:
         raise SystemExit(f"unknown product(s) {unknown}; registered: {sorted(PRODUCTS)} (plugin errors: {plugins.errors()})")
