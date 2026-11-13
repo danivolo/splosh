@@ -37,6 +37,8 @@ the run) and read as the series source `prod_disc`. What every column means is i
 - `type = "parray"`: a 2D array a product stores per snapshot (`product`, `array`, `xedges`, `yedges`: names of its arrays), summed over `windows`;
   `norm = "column"` (each x a distribution) or none; `ytransform` none | log10 | slog. E.g. P(alpha | R) summed over time.
 
+In the viewer, `radial` and `spectrum` are also pane kinds ("radial profile (time-averaged)", "spectrum"), saved to and opened from layouts.
+
 Ready layouts in docs/layouts: `disc_profiles`, `disc_budget`, `disc_morphology`, `disc_mhd`, `resolution`.
 
 Checks: tests/test_disc.py (a Keplerian disc with Sigma ~ 1/R and H/R = 0.1: slope, H/R, v_phi/v_K, vertical support, Gaussian profile, no inflow; an eccentric
