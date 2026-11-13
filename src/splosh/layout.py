@@ -34,7 +34,7 @@ import re
 import numpy as np
 
 SCHEMA = "splosh-layout-1"
-PANEL_TYPES_NAMES = ("map", "profile", "timeseries", "heatmap", "text")
+PANEL_TYPES_NAMES = ("map", "profile", "timeseries", "heatmap", "radial", "spectrum", "text")
 SCOPES = ("snapshot", "run")
 XAXES = ("time", "time_myr", "index", "orb")      # orb: t / P0 (the binary period at the first snapshot)
 _COMMON = {"id": None, "type": None, "row": None, "col": None, "rowspan": 1, "colspan": 1, "label": None}
@@ -102,6 +102,10 @@ def panel_types():
                            "stack": False},
             "heatmap": {**_COMMON, "type": "heatmap", "source": None, "prefix": None, "ids": None, "xaxis": "time", "norm": "none", "zscale": "log", "cmap": "magma",
                         "nx": 600, "overlay": [], "marker": True, "zlabel": None, "ylabel": None, "yscale": "lin"},
+            "radial": {**_COMMON, "type": "radial", "source": None, "prefix": None, "prefixes": None, "divide": None, "windows": 1, "xaxis": "orb", "slope": False,
+                       "band": True, "scale": 1.0, "xscale": "log", "yscale": None, "hlines": [], "xlabel": None, "ylabel": None, "labels": None},
+            "spectrum": {**_COMMON, "type": "spectrum", "source": None, "columns": [], "ids": None, "fmin": None, "fmax": None, "nf": 2000, "detrend": None,
+                         "tmin": None, "tmax": None, "vlines": []},
             "text": {**_COMMON, "type": "text", "text": ""}}
 
 
@@ -315,6 +319,20 @@ def validate_layout(layout):
             p["overlay"] = [p["overlay"]] if isinstance(p["overlay"], str) else list(p["overlay"] or [])
             if not (isinstance(p["nx"], int) and 10 <= p["nx"] <= 4000):
                 raise LayoutError(f"{where}: nx must be an integer between 10 and 4000")
+        elif t == "radial":                              # families <prefix><R> of a source averaged over time windows, against R (series.radial_tile)
+            if not p["source"] or not (p["prefix"] or p["prefixes"]):
+                raise LayoutError(f"{where}: a radial panel needs `source` and `prefix` (or `prefixes`), e.g. prod_disc sigma_")
+            p["prefixes"] = [p["prefixes"]] if isinstance(p["prefixes"], str) else (list(p["prefixes"]) if p["prefixes"] else None)
+            w = p["windows"]
+            ok = (isinstance(w, int) and not isinstance(w, bool) and 1 <= w <= 12) or (isinstance(w, str) and re.fullmatch(r"last:[0-9.]+", w)) or \
+                 (isinstance(w, list) and all(isinstance(x, (list, tuple)) and len(x) == 2 for x in w))
+            if not ok or p["xaxis"] not in ("orb", "time") or p["xscale"] not in ("log", "lin"):
+                raise LayoutError(f"{where}: windows = N (1-12) | \"last:K\" | [[a, b], ...]; xaxis orb|time; xscale log|lin")
+        elif t == "spectrum":                            # Lomb-Scargle power spectra of series columns (series.spectrum_tile)
+            cols = [p["columns"]] if isinstance(p["columns"], str) else list(p["columns"] or [])
+            if not p["source"] or not cols:
+                raise LayoutError(f"{where}: a spectrum panel needs `source` and `columns`")
+            p["columns"] = cols
         elif t == "timeseries":
             cols = [p["columns"]] if isinstance(p["columns"], str) else list(p["columns"])
             if not cols:

@@ -1,0 +1,57 @@
+# Shape of a circumbinary disc (snapshot product `disc`): eccentricity of the gas orbits and its periapsis (precession), the m = 1 lump, the cavity, the
+# minidiscs' extent in their Roche lobes, and the variability of the accretion (power spectrum, frequency in orbits^-1).
+
+schema = "splosh-layout-1"
+name = "disc_morphology"
+scope = "run"
+ncols = 2
+figure = {panel_in = 5.0}
+
+[[panel]]
+type = "radial"
+id = "ecc"
+label = "disc eccentricity e_d(R)"
+source = "prod_disc"
+prefix = "ecc_"
+windows = 4
+xlabel = "R / a"
+
+[[panel]]
+type = "timeseries"
+xaxis = "orb"
+id = "e_disc"
+label = "disc eccentricity (1.5-5 a) and m = 1 lump (2-4 a)"
+source = "prod_disc"
+columns = ["e_disc", "A1_lump"]
+
+[[panel]]
+type = "timeseries"
+xaxis = "orb"
+id = "varpi"
+label = "disc periapsis and lump phase [deg]"
+source = "prod_disc"
+columns = ["varpi_disc", "phi_lump"]
+
+[[panel]]
+type = "timeseries"
+xaxis = "orb"
+id = "cavity"
+label = "cavity radius [a]"
+source = "prod_disc"
+columns = ["r_cav"]
+
+[[panel]]
+type = "timeseries"
+xaxis = "orb"
+id = "mini"
+label = "minidisc extent: radii holding 50 / 90% of the lobe gas [R_L]"
+source = "prod_disc"
+columns = ["r50_mini0", "r90_mini0", "r50_mini1", "r90_mini1"]
+
+[[panel]]
+type = "spectrum"
+id = "mdot_psd"
+label = "accretion variability (GIZMO blackholes.txt)"
+source = "blackholes"
+columns = ["mdot_total"]
+vlines = [1.0, 2.0, 0.2]

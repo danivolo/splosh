@@ -178,7 +178,20 @@ def _source(name):
             for c in cols:
                 if len(cols[c]) < k + 1:
                     cols[c].append(np.nan)
-        meta = {c: {"style": "linepoints", **(PRODUCTS[name].get("meta") or {}).get(c, {})} for c in cols}
+        pm = PRODUCTS[name].get("meta") or {}
+        fams = sorted((k for k in pm if k.endswith("_")), key=len, reverse=True)       # "sigma_": the label of the family sigma_<R>
+        def _m(c):
+            if c in pm:
+                return pm[c]
+            for f in fams:
+                if c.startswith(f):
+                    try:
+                        float(c[len(f):])
+                        return pm[f]
+                    except ValueError:
+                        pass
+            return {}
+        meta = {c: {"style": "linepoints", **_m(c)} for c in cols}
         return Table([r["time"] for r in rows], cols, meta=meta,
                      note=None if len(rows) == len(ctx.get("snapshots") or []) else f"{len(rows)} of {len(ctx.get('snapshots') or [])} snapshots computed so far")
     return fn
@@ -189,8 +202,10 @@ def register_sources():
     for name, p in PRODUCTS.items():
         sname = "prod_" + name
         if sname not in plugins.SERIES:
+            import zlib
+            mh = zlib.crc32(json.dumps(p.get("meta") or {}, sort_keys=True, default=str).encode()) % 1000      # new labels: the cached table is rebuilt
             plugins.register_series(sname, _source(name), _source_files(name), label=p["label"] + " (per snapshot)", defaults=p.get("defaults") or [],
-                                    version=p["version"], priority=3)
+                                    version=p["version"] * 1000 + mh, priority=3)
 
 
 def main(a):
@@ -209,3 +224,6 @@ def main(a):
         raise SystemExit(f"unknown product(s) {unknown}; registered: {sorted(PRODUCTS)} (plugin errors: {plugins.errors()})")
     names = [n for n in names if applicable(n, paths)]
     compute(run_dir, names, paths, workers=a.workers, log=lambda m: print(m, file=sys.stderr, flush=True))
+
+
+from . import disc  # noqa: E402,F401  (the core product `disc`: disc profiles, angular-momentum budget, eccentricity, minidiscs)

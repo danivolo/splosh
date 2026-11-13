@@ -208,6 +208,12 @@ def tiles_for(layout, path, load, store, products=None, table=None, time=None, c
                 tiles[pid] = SR.heat_tile(p, ctx, tnow=tnow)
                 if p.get("yscale", "lin") != "lin":                  # the panel's y scale (log-spaced radii), whatever the source passes on
                     tiles[pid]["yscale"] = p["yscale"]
+            elif p["type"] in ("radial", "spectrum"):          # time-averaged radial profiles / power spectra of a series source
+                from . import series as SR
+                ctx = _cached(cache, ("seriesctx", os.path.dirname(os.path.abspath(path))), lambda: SR.context_for_snapshot(path))
+                tiles[pid] = (SR.radial_tile if p["type"] == "radial" else SR.spectrum_tile)(p, ctx)
+                if tiles[pid].get("note"):
+                    notes[pid] = tiles[pid]["note"]
             elif p["type"] == "timeseries" and p.get("source", "snapshots") != "snapshots":     # a series source (series.py): GIZMO logs, plugin sources
                 from . import series as SR
                 from .runs import snapshot_times

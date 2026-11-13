@@ -1,0 +1,99 @@
+# Radial structure of a circumbinary disc (snapshot product `disc`), averaged over time windows (lines: window means, shades: 16-84% over the window's snapshots).
+# R in units of the binary semi-major axis a. windows = N splits the run in N parts; "last:K" = the last K orbits.
+
+schema = "splosh-layout-1"
+name = "disc_profiles"
+scope = "run"
+ncols = 3
+figure = {panel_in = 4.2}
+
+[[panel]]
+type = "radial"
+id = "sigma"
+label = "surface density"
+source = "prod_disc"
+prefix = "sigma_"
+windows = 4
+yscale = "log"
+xlabel = "R / a"
+
+[[panel]]
+type = "radial"
+id = "sigma_slope"
+label = "d ln Sigma / d ln R"
+source = "prod_disc"
+prefix = "sigma_"
+windows = 4
+slope = true
+hlines = [0.0]
+xlabel = "R / a"
+
+[[panel]]
+type = "radial"
+id = "rhomid"
+label = "midplane density"
+source = "prod_disc"
+prefix = "rhomid_"
+windows = 4
+yscale = "log"
+xlabel = "R / a"
+
+[[panel]]
+type = "radial"
+id = "hr"
+label = "H / R"
+source = "prod_disc"
+prefix = "hr_"
+windows = 4
+xlabel = "R / a"
+
+[[panel]]
+type = "radial"
+id = "cs2"
+label = "c_s^2"
+source = "prod_disc"
+prefix = "cs2_"
+windows = 4
+yscale = "log"
+xlabel = "R / a"
+
+[[panel]]
+type = "radial"
+id = "vrat"
+label = "v_phi / v_K (with the binary quadrupole)"
+source = "prod_disc"
+prefix = "vrat_"
+windows = 4
+hlines = [1.0]
+xlabel = "R / a"
+
+[[panel]]
+type = "radial"
+id = "vR"
+label = "v_R (mass-weighted)"
+source = "prod_disc"
+prefix = "vR_"
+windows = 4
+hlines = [0.0]
+xlabel = "R / a"
+
+[[panel]]
+type = "radial"
+id = "mdot"
+label = "Mdot(R) (> 0 inflow)"
+source = "prod_disc"
+prefix = "mdot_"
+windows = 4
+yscale = "symlog"
+hlines = [0.0]
+xlabel = "R / a"
+
+[[panel]]
+type = "radial"
+id = "balance"
+label = "vertical balance"
+source = "prod_disc"
+prefixes = ["vsup_", "gauss_"]
+windows = 1
+hlines = [1.0]
+xlabel = "R / a"

@@ -520,3 +520,127 @@ def heat_tile(p, ctx, tnow=None):
             out["styles"].append({"color": "#00e5ff", "lw": 1.0, "style": "line"})
     return out
 from . import products  # noqa: E402  (snapshot products as series sources prod_<name>)
+
+# ----------------------------------------------------------------------------- radial profiles averaged over time windows (layout panel type `radial`)
+
+def _windows(p, t, period):
+    """[(label, t0, t1)] in code time: `windows` = N (the run split in N equal parts), "last:K" (the last K orbits, or K x the run's duration without a binary),
+    or [[a, b], ...] in the panel's x units (orbits with xaxis = orb)."""
+    w = p.get("windows", 1)
+    unit = period if (p.get("xaxis", "orb") == "orb" and period) else 1.0
+    lab = "P0" if unit != 1.0 else "t"
+    t0, t1 = float(np.nanmin(t)), float(np.nanmax(t))
+    if isinstance(w, str) and w.startswith("last:"):
+        k = float(w.split(":", 1)[1]) * (unit if unit != 1.0 else (t1 - t0))
+        return [(f"last {w.split(':', 1)[1]} {'orbits' if unit != 1.0 else 'of the run'}", max(t0, t1 - k), t1)]
+    if isinstance(w, (int, float)) and not isinstance(w, bool):
+        e = np.linspace(t0, t1, int(w) + 1)
+        return [(f"{a / unit:.3g}-{b / unit:.3g} {lab}", a, b) for a, b in zip(e[:-1], e[1:])]
+    return [(f"{a:g}-{b:g} {lab}", a * unit, b * unit) for a, b in w]
+
+
+def _family(tab, prefix):
+    cols = heat_columns(tab, prefix)
+    if not cols:
+        raise KeyError(f"no columns {prefix}<number> in this source")
+    return np.array([y for y, _ in cols]), np.vstack([tab.columns[c] for _, c in cols])          # [ny, nrows]
+
+
+def radial_tile(p, ctx, tnow=None):
+    """What a layout `radial` panel draws: the families <prefix><R> of a source averaged over time windows, against R: {'curves', 'styles' (with 'band':
+    16-84% over the window's snapshots), 'xlog', 'yscale', 'xlabel', 'ylabel', 'hlines'}. `divide`: a family to divide by (ratio of the window means, e.g.
+    jdot_ / mdot_ = ell_0); `slope`: d ln|y| / d ln R of the window mean instead of y; `scale`: a factor; `prefixes` (or `prefix`): one curve per family."""
+    tab = table(p["source"], ctx)
+    period = ctx.get("period")
+    pre = p.get("prefixes") or [p["prefix"]]
+    wins = _windows(p, tab.time, period)
+    out, styles = [], []
+    many_w = len(wins) > 1
+    cmap = None
+    if many_w and len(pre) == 1:
+        import matplotlib
+        cmap = matplotlib.colormaps["viridis"]
+    for kp, prefix in enumerate(pre):
+        Y, M = _family(tab, prefix)
+        D = None
+        if p.get("divide"):
+            Yd, Md = _family(tab, p["divide"])
+            D = np.vstack([Md[np.argmin(np.abs(Yd - y))] if np.min(np.abs(Yd - y)) <= 1e-3 * abs(y) + 1e-12 else np.full(Md.shape[1], np.nan) for y in Y])
+        meta = tab.meta.get(heat_columns(tab, prefix)[0][1], {})
+        name = p.get("labels", {}).get(prefix) if isinstance(p.get("labels"), dict) else None
+        name = name or meta.get("label") or prefix.rstrip("_")
+        for kw, (wl, a, b) in enumerate(wins):
+            sel = (tab.time >= a) & (tab.time <= b)
+            if not sel.any():
+                continue
+            with np.errstate(invalid="ignore", divide="ignore"):
+                mean = np.nanmean(M[:, sel], axis=1)
+                lo, hi = np.nanpercentile(M[:, sel], 16, axis=1), np.nanpercentile(M[:, sel], 84, axis=1)
+                if D is not None:
+                    dm = np.nanmean(D[:, sel], axis=1)
+                    mean, lo, hi = mean / dm, lo / dm, hi / dm
+                    lo, hi = np.minimum(lo, hi), np.maximum(lo, hi)
+                if p.get("slope"):
+                    lx = np.log(Y)
+                    mean = np.gradient(np.log(np.abs(mean)), lx)
+                    lo = hi = None
+                f = float(p.get("scale") or 1.0)
+                mean = mean * f
+                if lo is not None:
+                    lo, hi = lo * f, hi * f
+            color = cmap(kw / max(len(wins) - 1, 1)) if cmap else COLORS[kp % len(COLORS)]
+            if not isinstance(color, str):
+                import matplotlib.colors as mc
+                color = mc.to_hex(color)
+            dash = "-" if (cmap or not many_w) else ("-", "--", ":", "-.")[kw % 4]
+            label = (name + (f", {wl}" if many_w else "")) if len(pre) > 1 or not many_w else wl
+            out.append((label, Y, mean))
+            st = {"style": "line", "color": color, "dash": dash, "lw": 1.5, "legend": True}
+            if lo is not None and p.get("band", True):
+                st["band"] = [lo, hi]
+            styles.append(st)
+    allv = np.concatenate([np.asarray(c[2], float) for c in out]) if out else np.array([])
+    return {"curves": out, "styles": styles, "xlog": p.get("xscale", "log") == "log", "ylog": False,
+            "yscale": auto_scale(allv, p.get("yscale") or "auto"), "xlabel": p.get("xlabel") or "R", "ylabel": p.get("ylabel"),
+            "hlines": [float(h) for h in (p.get("hlines") or [])], "note": tab.note}
+
+
+# ----------------------------------------------------------------------------- power spectra of time series (layout panel type `spectrum`)
+
+def spectrum_tile(p, ctx, tnow=None):
+    """What a layout `spectrum` panel draws: the Lomb-Scargle periodogram of each column (irregular sampling allowed; the mean removed, optionally a running
+    mean of `detrend` P0 too), against frequency in 1/P0 (or 1/code time without a binary), between fmin and fmax; power normalised to the variance
+    ({'curves', 'xlog', 'ylog', 'xlabel', 'ylabel', 'vlines'}). tmin / tmax (x units) restrict the time range (e.g. after the transient)."""
+    from scipy.signal import lombscargle
+    tab = table(p["source"], ctx)
+    period = ctx.get("period") or 1.0
+    unit = "1/P0" if ctx.get("period") else "1/t"
+    out, styles = [], []
+    ids = p.get("ids")
+    for kc, col in enumerate(p["columns"]):
+        for c in curves(tab, [col], ids=ids, n=10 ** 9):
+            t, y = np.asarray(c["t"], float), np.asarray(c["y"], float)
+            ok = np.isfinite(t) & np.isfinite(y)
+            if p.get("tmin") is not None:
+                ok &= t >= float(p["tmin"]) * period
+            if p.get("tmax") is not None:
+                ok &= t <= float(p["tmax"]) * period
+            t, y = t[ok], y[ok]
+            if len(t) < 8:
+                continue
+            if p.get("detrend"):
+                o = np.argsort(t); t, y = t[o], y[o]
+                y = y - running_mean(t, y, float(p["detrend"]) * period)[1]
+            y = y - y.mean()
+            span = t.max() - t.min()
+            fmin = float(p.get("fmin") or 0.5 * period / span)
+            fmax = float(p.get("fmax") or min(20.0, 0.5 * period * (len(t) - 1) / span))
+            f = np.geomspace(fmin, fmax, int(p.get("nf") or 2000))
+            pw = lombscargle(t / period, y, 2 * np.pi * f) * 2.0 / (len(t) * max(y.var(), 1e-300))
+            meta = tab.meta.get(col, {})
+            label = meta.get("label", col) + (f", id {c['id']}" if c.get("id") is not None else "")
+            out.append((label, f, pw))
+            styles.append({"style": "line", "color": COLORS[len(out) % len(COLORS) - 1], "lw": 1.0, "legend": True})
+    return {"curves": out, "styles": styles, "xlog": True, "ylog": True, "xlabel": f"frequency [{unit}]", "ylabel": "power / variance",
+            "hlines": [], "vlines": [float(v) for v in (p.get("vlines") or [])], "note": tab.note}
+

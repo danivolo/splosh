@@ -91,7 +91,7 @@ def test_registry_lists_ingredients():
         r = lay.registry()
     finally:
         plugins.SCALARS.pop("zz_test_scalar", None)
-    assert {"map", "profile", "timeseries", "heatmap", "text"} == set(r["panel_types"])
+    assert {"map", "profile", "timeseries", "heatmap", "radial", "spectrum", "text"} == set(r["panel_types"])
     assert "rho" in [f["name"] for f in r["fields"]] and "T" in [f["name"] for f in r["fields"]]
     names = {s["name"]: s for s in r["scalars"]}
     assert "gas_mass" in names and names["zz_test_scalar"]["builtin"] is False and "bh_sep" in names["black_holes"]["columns"]

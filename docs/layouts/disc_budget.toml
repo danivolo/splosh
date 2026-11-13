@@ -1,0 +1,69 @@
+# Angular-momentum budget of a circumbinary disc (snapshot product `disc`): each outward flux through the cylinder R divided by the mean inflow rate,
+# i.e. its contribution to the specific angular momentum ell carried per unit accreted mass, in units of a^2 Omega_b. In steady state the total
+# jdot / Mdot = ell_0 is the same at every R; ell_0 decides whether the binary widens (above ~0.7-0.8 for q = 1) or shrinks.
+
+schema = "splosh-layout-1"
+name = "disc_budget"
+scope = "run"
+ncols = 2
+figure = {panel_in = 5.0}
+
+[[panel]]
+type = "radial"
+id = "ell0"
+label = "ell_0 = (J inflow - torque outside R) / Mdot"
+source = "prod_disc"
+prefix = "jdot_"
+divide = "mdot_"
+windows = 4
+hlines = [0.0]
+xlabel = "R / a"
+ylabel = "ell_0 [a^2 Omega_b]"
+
+[[panel]]
+type = "radial"
+id = "terms"
+label = "budget terms / Mdot (last window)"
+source = "prod_disc"
+prefixes = ["Fadv_", "Frey_", "Fmax_", "Tout_"]
+divide = "mdot_"
+windows = "last:5"
+hlines = [0.0]
+yscale = "symlog"
+xlabel = "R / a"
+ylabel = "flux / Mdot [a^2 Omega_b]"
+
+[[panel]]
+type = "radial"
+id = "dTdR"
+label = "binary torque on the gas dT/d(R/a)"
+source = "prod_disc"
+prefix = "dTdR_"
+windows = 4
+hlines = [0.0]
+yscale = "symlog"
+xlabel = "R / a"
+
+[[panel]]
+type = "radial"
+id = "alpha"
+label = "effective alpha (stress / pressure)"
+source = "prod_disc"
+prefixes = ["aR_", "aM_"]
+windows = "last:5"
+hlines = [0.0]
+yscale = "symlog"
+xlabel = "R / a"
+
+[[panel]]
+type = "heatmap"
+xaxis = "orb"
+id = "mdot_t"
+label = "Mdot(R, t) (red: inflow)"
+source = "prod_disc"
+prefix = "mdot_"
+zscale = "symlog"
+cmap = "RdBu_r"
+yscale = "log"
+ylabel = "R / a"
+colspan = 2

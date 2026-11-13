@@ -1,0 +1,75 @@
+# Magnetic diagnostics of a disc (snapshot product `disc`, snapshots with a magnetic field): beta(R), alpha_M against beta, MRI resolution for the vertical and
+# azimuthal field, the toroidal-flux budget terms: q = d ln(|v_R| Psi)/d ln R (slope of vRPsi), gamma_eff = d ln B / d ln rho_mid (slopes of Brms and rhomid),
+# and the vertical loss epsP (experimental).
+
+schema = "splosh-layout-1"
+name = "disc_mhd"
+scope = "run"
+ncols = 2
+figure = {panel_in = 5.0}
+
+[[panel]]
+type = "radial"
+id = "beta"
+label = "plasma beta"
+source = "prod_disc"
+prefix = "beta_"
+windows = 4
+yscale = "log"
+hlines = [1.0]
+xlabel = "R / a"
+
+[[panel]]
+type = "radial"
+id = "Q"
+label = "MRI quality Q_z, Q_phi (resolved above ~6-10)"
+source = "prod_disc"
+prefixes = ["Qz_", "Qphi_"]
+windows = "last:5"
+yscale = "log"
+hlines = [6.0, 10.0]
+xlabel = "R / a"
+
+[[panel]]
+type = "radial"
+id = "q"
+label = "q = d ln(|v_R| Psi) / d ln R"
+source = "prod_disc"
+prefix = "vRPsi_"
+windows = 4
+slope = true
+hlines = [0.0]
+xlabel = "R / a"
+
+[[panel]]
+type = "radial"
+id = "slopes"
+label = "slopes of B_rms and rho_mid (gamma_eff = ratio)"
+source = "prod_disc"
+prefixes = ["Brms_", "rhomid_"]
+windows = "last:5"
+slope = true
+hlines = [0.0]
+xlabel = "R / a"
+
+[[panel]]
+type = "radial"
+id = "epsP"
+label = "vertical loss of toroidal flux epsP (experimental)"
+source = "prod_disc"
+prefix = "epsP_"
+windows = "last:5"
+yscale = "symlog"
+hlines = [0.0]
+xlabel = "R / a"
+
+[[panel]]
+type = "heatmap"
+xaxis = "orb"
+id = "beta_t"
+label = "beta(R, t)"
+source = "prod_disc"
+prefix = "beta_"
+zscale = "log"
+yscale = "log"
+ylabel = "R / a"

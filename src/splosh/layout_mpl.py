@@ -154,6 +154,11 @@ def render(layout, tiles, header=""):
         else:                                        # profile / timeseries: curves
             _draw_curves(ax, t)
             ax.set_xlabel(t.get("xlabel") or ("r" if p["type"] == "profile" else "time"))
+            if p["type"] == "radial" and t.get("xlog") and t["curves"]:        # radii in units of a or R_L: plain numbers
+                import matplotlib.ticker as mt
+                ax.xaxis.set_major_locator(mt.LogLocator(base=10, subs=(1.0, 2.0, 5.0)))
+                ax.xaxis.set_major_formatter(mt.FuncFormatter(lambda v, _: f"{v:g}"))
+                ax.xaxis.set_minor_formatter(mt.NullFormatter())
             if fo.get("titles", True):
                 ax.set_title(label, fontsize="medium")
             _sizes(ax, fo)
@@ -262,6 +267,8 @@ def _draw_curves(ax, t):
         xs, ys = np.asarray(xs, float), np.asarray(ys, float)
         kw = {"color": s["color"]} if s.get("color") else {}
         lab = name if s.get("legend", True) else None
+        if s.get("band") is not None:                # a spread (16-84%) under the curve
+            a.fill_between(xs, np.asarray(s["band"][0], float), np.asarray(s["band"][1], float), alpha=0.18, lw=0, **kw)
         if s.get("style") in ("dots", "events"):
             a.plot(xs, ys, ".", ms=1.5 if s["style"] == "dots" else 3.0, alpha=s.get("alpha", 1.0), label=lab, **kw)
         else:
@@ -277,6 +284,10 @@ def _draw_curves(ax, t):
             axes[True].set_ylabel(t["twin_label"])
     for h in t.get("hlines") or []:
         ax.axhline(h, color="0.5", lw=0.8, ls="--")
+    for v in t.get("vlines") or []:
+        ax.axvline(v, color="0.5", lw=0.8, ls=":")
+    if t.get("ylog"):
+        ax.set_yscale("log")
     if t.get("xnow") is not None:
         ax.axvline(t["xnow"], color="0.4", lw=0.8, ls="--")
     labelled = [c for c, s in zip(t["curves"], styles) if s.get("legend", True)]
