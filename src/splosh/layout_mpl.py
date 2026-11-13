@@ -162,6 +162,11 @@ def render(layout, tiles, header=""):
             if fo.get("titles", True):
                 ax.set_title(label, fontsize="medium")
             _sizes(ax, fo)
+        if p["type"] != "map":                       # a saved zoom
+            if p.get("xlim"):
+                ax.set_xlim(*p["xlim"])
+            if p.get("ylim"):
+                ax.set_ylim(*p["ylim"])
         if fo["letters"]:
             ax.text(0.03, 0.96, _letter(k_letter), transform=ax.transAxes, ha="left", va="top", fontweight="bold",
                     color="w" if p["type"] == "map" else "k")

@@ -323,6 +323,11 @@ circumbinary disc and of the two minidiscs; `stack = "fraction"` divides by thei
 `yscale = log | symlog` with `stack` is an error); the current-time marker stays. Both renderers and the viewer's time-series pane (its `lines | stacked | fractions`
 selector, saved as the panel's `stack`) draw it (`layout.stack_tile`). [verified: tests/test_layout.py, tools/browser_smoke.py section_mouse]
 
+**More panel types.** `radial` (a family of a series source averaged over time windows, against its R) and `spectrum` (Lomb-Scargle power spectra of series columns): see
+[DISC.md](DISC.md). `phase` (a phase diagram of the gas in the panel's view window): `x`, `y` (quantities as in the viewer's phase diagram), `xlog`, `ylog`,
+`hweight` (mass | count | volume: the histogram's weight; `weight` stays the map view's), `bins` (8-1024), `xr` / `yr` ([lo, hi] in axis units, log10 on a log
+axis), `cmap`, and the view keys (width, center, align, ...). Every plot panel (not maps) takes `xlim` / `ylim` = [lo, hi]: its zoom, saved from the viewer.
+
 **Heatmap scales** (heatmap keys): `zscale = "log" | "lin" | "symlog"`; symlog is diverging about 0 for signed quantities (torque density dT/dR(R, t), Mdot(R, t), a
 butterfly diagram of B_phi(z, t)): limits -m..m with m the largest |z|, linear within 1e-3 m, colours `RdBu_r` unless the panel names a `cmap` other than the default
 magma. `yscale = "log"` for rows whose numbers are log-spaced radii: the row edges are the geometric midpoints and the y axis is logarithmic (the bitmap preview keeps

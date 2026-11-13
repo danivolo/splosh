@@ -1456,7 +1456,7 @@ function panelOf(p, i) {   // a pane as a layout panel
 }
 function phasePanel(p) {   // a phase pane in a layout: a "phase" panel when the layout schema has that type, else a text panel (drawn as its text in the
   const h = phPane(p), z = plotZoom(p), v = viewKeys(p);   // publication look) whose x_phase holds the pane, which openLayout shows live again
-  const o = {x: h.x, y: h.y, xlog: h.xlog, ylog: h.ylog, weight: h.w, bins: h.bins, ...(zOk(z.x, h.xlog) ? {xr: z.x} : {}), ...(zOk(z.y, h.ylog) ? {yr: z.y} : {})};
+  const o = {x: h.x, y: h.y, xlog: h.xlog, ylog: h.ylog, hweight: h.w, bins: h.bins, ...(zOk(z.x, h.xlog) ? {xr: z.x} : {}), ...(zOk(z.y, h.ylog) ? {yr: z.y} : {})};
   const T = ((FIG.reg || {}).panel_types || {}).phase;
   if (T) { const out = {type: "phase"}; for (const [k, val] of Object.entries({...v, ...o})) if (k in T) out[k] = val; return out; }
   return {type: "text", text: `phase diagram: ${h.y} against ${h.x} (${h.w}) of the window, at {snapshot} (shown live in the viewer)`, x_phase: {...o, view: v}};
@@ -1501,7 +1501,7 @@ async function openLayout(name) {
       if (v.field) p.field = v.field; if (v.mode) p.mode = v.mode; if (v.axes) p.axes = v.axes; p.z0 = String(v.z0 ?? 0); p.weight = v.weight || "auto";
       p.view = S.linked && k ? S.panes[0].view : {...p.view}; if (v.width > 0) p.view.width = v.width; p.view.cx = v.cx || 0; p.view.cy = v.cy || 0;
       p.fix = {}; for (const kk of VIEW_KEYS) if (v[kk] != null && (!firstMap || String(v[kk]) !== String(byId[firstMap.id][kk])) && (kk !== "hscale" || v.hscale !== 1)) p.fix[kk] = v[kk];
-      Object.assign(h, {x: o.x || h.x, y: o.y || h.y, xlog: o.xlog !== false, ylog: o.ylog !== false, w: o.weight || "mass", bins: +o.bins || 200, keep: null, grid: null, meta: null});
+      Object.assign(h, {x: o.x || h.x, y: o.y || h.y, xlog: o.xlog !== false, ylog: o.ylog !== false, w: o.hweight || (rq.x_phase ? o.weight : null) || "mass", bins: +o.bins || 200, keep: null, grid: null, meta: null});
       p.kind = "map"; setKind(p, "phase"); const z = plotZoom(p); z.x = Array.isArray(o.xr) ? o.xr : null; z.y = Array.isArray(o.yr) ? o.yr : null; phRangeInputs(p); return;
     }
     if (q.type === "timeseries") {

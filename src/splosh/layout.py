@@ -34,10 +34,10 @@ import re
 import numpy as np
 
 SCHEMA = "splosh-layout-1"
-PANEL_TYPES_NAMES = ("map", "profile", "timeseries", "heatmap", "radial", "spectrum", "text")
+PANEL_TYPES_NAMES = ("map", "profile", "timeseries", "heatmap", "radial", "spectrum", "phase", "text")
 SCOPES = ("snapshot", "run")
 XAXES = ("time", "time_myr", "index", "orb")      # orb: t / P0 (the binary period at the first snapshot)
-_COMMON = {"id": None, "type": None, "row": None, "col": None, "rowspan": 1, "colspan": 1, "label": None}
+_COMMON = {"id": None, "type": None, "row": None, "col": None, "rowspan": 1, "colspan": 1, "label": None, "xlim": None, "ylim": None}   # xlim / ylim: a plot's zoom ([lo, hi]; maps ignore them)
 _MAP_STYLE = {"cmap": "viridis", "scale": None, "limits": "global", "pct": None, "vmin": None, "vmax": None, "scalebar": True, "colorbar": True, "viewport": None,
               "overlays": []}
 _TOP = {"schema": SCHEMA, "name": None, "title": None, "scope": "snapshot", "ncols": 2, "cell": None, "figure": None, "format": None}
@@ -106,6 +106,8 @@ def panel_types():
                        "band": True, "scale": 1.0, "xscale": "log", "yscale": None, "hlines": [], "xlabel": None, "ylabel": None, "labels": None},
             "spectrum": {**_COMMON, "type": "spectrum", "source": None, "columns": [], "ids": None, "fmin": None, "fmax": None, "nf": 2000, "detrend": None,
                          "tmin": None, "tmax": None, "vlines": []},
+            "phase": {**_COMMON, "type": "phase", "x": None, "y": None, "xlog": True, "ylog": True, "hweight": "mass", "bins": 256, "xr": None, "yr": None,
+                      "cmap": "magma", **view},
             "text": {**_COMMON, "type": "text", "text": ""}}
 
 
@@ -328,6 +330,14 @@ def validate_layout(layout):
                  (isinstance(w, list) and all(isinstance(x, (list, tuple)) and len(x) == 2 for x in w))
             if not ok or p["xaxis"] not in ("orb", "time") or p["xscale"] not in ("log", "lin"):
                 raise LayoutError(f"{where}: windows = N (1-12) | \"last:K\" | [[a, b], ...]; xaxis orb|time; xscale log|lin")
+        elif t == "phase":                               # a phase diagram of the gas in the panel's view window (phase.histogram)
+            if not p["x"] or not p["y"]:
+                raise LayoutError(f"{where}: a phase panel needs `x` and `y` (quantities: fields, r, R, z, ...)")
+            if not (isinstance(p["bins"], int) and 8 <= p["bins"] <= 1024) or p["hweight"] not in ("mass", "count", "volume"):
+                raise LayoutError(f"{where}: bins 8-1024, hweight (the histogram's weight; `weight` is the map view's) mass|count|volume")
+            for k in ("xr", "yr"):
+                if p[k] is not None and not (isinstance(p[k], (list, tuple)) and len(p[k]) == 2):
+                    raise LayoutError(f"{where}: {k} = [lo, hi] (in the axis units: log10 when the axis is log)")
         elif t == "spectrum":                            # Lomb-Scargle power spectra of series columns (series.spectrum_tile)
             cols = [p["columns"]] if isinstance(p["columns"], str) else list(p["columns"] or [])
             if not p["source"] or not cols:

@@ -208,6 +208,19 @@ def tiles_for(layout, path, load, store, products=None, table=None, time=None, c
                 tiles[pid] = SR.heat_tile(p, ctx, tnow=tnow)
                 if p.get("yscale", "lin") != "lin":                  # the panel's y scale (log-spaced radii), whatever the source passes on
                     tiles[pid]["yscale"] = p["yscale"]
+            elif p["type"] == "phase":                          # drawn like a heatmap: x = the bin edges, y = the row centres, z = the weighted counts
+                from . import phase as PH
+                from .maps import View
+                view = View(**{k: p[k] for k in lay._view_keys()})
+                snap = load(tuple(sorted(PH.needs(view, p["x"], p["y"]))))
+                grid, meta = PH.histogram(snap, view, p["x"], p["y"], p["bins"], p["xlog"], p["ylog"], p["xr"], p["yr"], p["hweight"])
+                (x0, x1), (y0, y1) = meta["x"]["range"], meta["y"]["range"]
+                nb = int(p["bins"])
+                lab = lambda m, q, lg: ("log10 " if lg else "") + (m.get("label") or q) + (f" [{m['unit']}]" if m.get("unit") else "")
+                tiles[pid] = {"heat": {"x": np.linspace(x0, x1, nb + 1), "y": y0 + (np.arange(nb) + 0.5) * (y1 - y0) / nb, "z": np.asarray(grid, float),
+                                       "zscale": "log", "cmap": p.get("cmap") or "magma", "norm": "none", "label": p["hweight"]},
+                              "curves": [], "styles": [], "xnow": None, "xlabel": lab(meta["x"], p["x"], p["xlog"]), "ylabel": lab(meta["y"], p["y"], p["ylog"]),
+                              "yscale": "lin"}
             elif p["type"] in ("radial", "spectrum"):          # time-averaged radial profiles / power spectra of a series source
                 from . import series as SR
                 ctx = _cached(cache, ("seriesctx", os.path.dirname(os.path.abspath(path))), lambda: SR.context_for_snapshot(path))

@@ -551,6 +551,8 @@ def radial_tile(p, ctx, tnow=None):
     16-84% over the window's snapshots), 'xlog', 'yscale', 'xlabel', 'ylabel', 'hlines'}. `divide`: a family to divide by (ratio of the window means, e.g.
     jdot_ / mdot_ = ell_0); `slope`: d ln|y| / d ln R of the window mean instead of y; `scale`: a factor; `prefixes` (or `prefix`): one curve per family."""
     tab = table(p["source"], ctx)
+    if not len(tab):
+        raise ValueError(f"{p['source']}: no rows yet" + (" (snapshot products not computed: splosh products RUN, or open the run in the viewer)" if p["source"].startswith("prod_") else ""))
     period = ctx.get("period")
     pre = p.get("prefixes") or [p["prefix"]]
     wins = _windows(p, tab.time, period)

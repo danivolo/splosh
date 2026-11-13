@@ -91,7 +91,7 @@ def test_registry_lists_ingredients():
         r = lay.registry()
     finally:
         plugins.SCALARS.pop("zz_test_scalar", None)
-    assert {"map", "profile", "timeseries", "heatmap", "radial", "spectrum", "text"} == set(r["panel_types"])
+    assert {"map", "profile", "timeseries", "heatmap", "radial", "spectrum", "phase", "text"} == set(r["panel_types"])
     assert "rho" in [f["name"] for f in r["fields"]] and "T" in [f["name"] for f in r["fields"]]
     names = {s["name"]: s for s in r["scalars"]}
     assert "gas_mass" in names and names["zz_test_scalar"]["builtin"] is False and "bh_sep" in names["black_holes"]["columns"]
@@ -249,3 +249,16 @@ def test_heatmap_symlog_and_log_y():
     assert ax.get_yscale() == "log" and isinstance(ax.collections[0].norm, mc.SymLogNorm) and ax.collections[0].norm.vmin == -ax.collections[0].norm.vmax
     lo, hi = ax.get_ylim()
     assert np.isclose(lo, y[0] ** 1.5 / y[1] ** 0.5) and np.isclose(hi, y[-1] ** 1.5 / y[-2] ** 0.5)
+
+
+def test_phase_panel_and_plot_limits():
+    """`phase` panels (x, y, hweight, bins, xr / yr) and the xlim / ylim of plot panels validate; a bad phase panel is refused."""
+    from splosh import layout as L
+    lay = L.validate_layout({"schema": "splosh-layout-1", "name": "t", "panel": [
+        {"type": "phase", "id": "p", "x": "density", "y": "u", "bins": 64, "xr": [-3, 2], "hweight": "volume"},
+        {"type": "timeseries", "id": "s", "columns": ["t"], "xlim": [0, 1], "ylim": [1, 2]}]})
+    p, s = lay["panel"]
+    assert p["hweight"] == "volume" and p["weight"] == "auto" and s["xlim"] == [0, 1]
+    for bad in ({"type": "phase", "id": "q", "x": "density"}, {"type": "phase", "id": "q", "x": "a", "y": "b", "bins": 4}):
+        with pytest.raises(L.LayoutError):
+            L.validate_layout({"schema": "splosh-layout-1", "name": "t", "panel": [bad]})
