@@ -13,6 +13,7 @@ Per cylindrical shell (columns <name>_<R>, a family per quantity, R the shell's 
     vsup        H Omega_K / c_s (vertical support by thermal pressure ~ 1)   vsupA    H Omega_K / sqrt(c_s^2 + v_A^2)
     gauss       sigma / (sqrt(2 pi) rhomid H)  (1 for a Gaussian vertical profile)
     aR, aM      Reynolds sum m dv_R dv_phi / sum V P and Maxwell -sum V B_R B_phi / sum V P (dv: about the shell's mass-weighted means)
+    toomre      c_s Omega_K / (pi G Sigma)                                    hH, nH   resolution: <h> / H and cells per H (H / <(m/rho)^(1/3)>)
     ecc, eccphi magnitude and angle of the mass-weighted eccentricity vector of the gas orbits (Keplerian about M)
     A1, A1phi   m = 1 azimuthal Fourier amplitude |sum m e^{i phi}| / sum m and its phase
   CBD only, the angular-momentum budget (outward fluxes through the cylinder R, in units of a^2 Omega_b, Omega_b = sqrt(G M / a^3); divide by mdot
@@ -21,6 +22,8 @@ Per cylindrical shell (columns <name>_<R>, a family per quantity, R the shell's 
     Fmax        Maxwell -R sum V B_R B_phi / dR                               dTdR     torque of the binary on the gas per unit R/a (sum -m tau_bin / d(R/a))
     Tout        torque of the binary on all gas outside R                     jdot     -(Fadv + Frey + Fmax) - Tout: in steady state Mdot ell_0, the same at
                                                                                         every R (Mdot ell_0 / Mdot = ell_0: divide jdot by mdot)
+    nu, alphaeff, tvisc   the effective viscosity of all the stresses (F = 3 pi nu Sigma R^2 Omega), nu Omega / c_s^2, and R^2 / nu in binary orbits
+  With exclude_ids, the left-out gas (e.g. injected wind cells): mdotx, Fx (its advective J flux), jdotx = jdot - Fx, mdott = mdot + mdotx.
   Magnetic (snapshots with MagneticField; B in code units, mu_0 = 1, via UnitMagneticField_in_gauss):
     beta        sum V P / sum V B^2/2           Brms  sqrt(sum V B^2 / sum V)        vA2   sum V B^2 / sum m
     Psi         height-integrated toroidal field sum V B_phi / area (signed); PsiAbs  |Psi above <z>| + |Psi below|
@@ -28,7 +31,7 @@ Per cylindrical shell (columns <name>_<R>, a family per quantity, R the shell's 
     Qz, Qphi    MRI quality lambda/h with lambda = 2 pi v_A,z / Omega_K (or v_A,phi), h = (m / rho)^(1/3): mass-weighted geometric mean
     epsP        vertical loss of toroidal flux per Omega_K: -([v_phi B_z - v_z B_phi] at +2H minus at -2H) / (Omega_K Psi)  (layers 1.5-2.5 H; experimental)
 Scalars: r_cav (R/a where sigma first reaches half its maximum), e_disc / varpi_disc (eccentricity vector of the gas between 1.5 and 5 a), A1_lump /
-phi_lump (m = 1 between 2 and 4 a), mdot_3a, Mcbd, Mmini0/1 (gas in the Roche lobes), r50_mini0/1, r90_mini0/1 (radii holding 50 / 90% of the lobe's
+phi_lump (m = 1 between 2 and 4 a), r_steady (the largest R with t_visc < the time so far), mdot_3a, Mcbd, Mmini0/1 (gas in the Roche lobes), r50_mini0/1, r90_mini0/1 (radii holding 50 / 90% of the lobe's
 gas, units of R_L: the minidisc truncation), a, e (osculating), q.
 Extra budget terms (an explicit viscosity of the code, ...): register_flux(name, fn); the parameter `fluxes` lists those a run computes (columns F<name>_<R>).
 Parameters: gamma (5/3), r_min / r_max / nbins of the CBD (0.5, 12, 44, units of a), exclude_ids (particle IDs left out, e.g. spawned wind cells), z_cut (the
@@ -79,7 +82,7 @@ def _bin(idx, nb, w):
     return np.bincount(idx[ok], weights=w[ok], minlength=nb)
 
 
-def shells(rel, vel, m, rho, u, edges, zhat, GM, gamma, B=None, quad=0.0, a=1.0, z_cut=None, scale=1.0):
+def shells(rel, vel, m, rho, u, edges, zhat, GM, gamma, B=None, quad=0.0, a=1.0, z_cut=None, scale=1.0, hsml=None, G=None):
     """per-shell statistics of the gas at positions `rel` (relative to the centre, code length) and velocities `vel` (relative): a dict of arrays over the
     shells `edges` (in units of `scale`), as listed in the module docstring (without the CBD budget). quad: 3/4 q/(1+q)^2 for the binary's Omega_K."""
     e1, e2 = _basis(zhat)
@@ -119,7 +122,11 @@ def shells(rel, vel, m, rho, u, edges, zhat, GM, gamma, B=None, quad=0.0, a=1.0,
         PV = _bin(ib, nb, P * V)
         out = {"sigma": w / area, "hr": H / Rm, "rhomid": rhomid, "cs2": cs2, "vphi": mvphi, "vR": mvR, "vrat": mvphi / (Rm * OmK),
                "mdot": -_bin(idx, nb, m * vR) / dR, "vsup": H * OmK / np.sqrt(cs2), "gauss": (w / area) / (np.sqrt(2 * np.pi) * rhomid * H),
-               "aR": _bin(ib, nb, m * dvR * dvphi) / PV}
+               "aR": _bin(ib, nb, m * dvR * dvphi) / PV,
+               "toomre": np.sqrt(cs2) * OmK / (np.pi * (G or 1.0) * w / area)}
+        if hsml is not None:                         # resolution: the kernel size against the disc's scale height
+            out["hH"] = mean(hsml) / H                                         # <h> / H (mass-weighted h)
+            out["nH"] = H / mean(np.cbrt(m / rho))                              # cells per scale height (mean spacing (m / rho)^(1/3))
         # eccentricity vectors (Keplerian about GM) and the m = 1 mode, in the plane basis
         h = x1 * v2 - x2 * v1
         r3 = np.sqrt(x1 * x1 + x2 * x2 + z * z)
@@ -229,7 +236,8 @@ def disc(path, params):
         d = [np.linalg.norm(pos - bp[k], axis=1) for k in (0, 1)]
         lobes = (d[0] < rl[0]) | (d[1] < rl[1])
         sc["Mcbd"] = float(m[~lobes].sum())
-    st = shells(rel, vrel, m, rho, u, edges, zhat, GM, gamma, B=B, quad=quad, a=a, z_cut=zc, scale=a)
+    hs = np.asarray(s["SmoothingLength"], np.float64)[keep]
+    st = shells(rel, vrel, m, rho, u, edges, zhat, GM, gamma, B=B, quad=quad, a=a, z_cut=zc, scale=a, hsml=hs, G=G)
     Rmid = np.sqrt(edges[1:] * edges[:-1])
     Om_b = np.sqrt(GM / a ** 3)
     lunit = a * a * Om_b
@@ -263,8 +271,35 @@ def disc(path, params):
         fam["jdot"] = jin - fam["Tout"]
     else:
         fam["jdot"] = jin
+    # the gas left out by exclude_ids (e.g. injected wind cells): its mass and advective angular-momentum fluxes through the same cylinders
+    if not keep.all():
+        xp = np.asarray(s["Coordinates"], np.float64)[~keep] - com
+        xv = np.asarray(s["Velocities"], np.float64)[~keep] - vcom
+        xm = np.asarray(s["Masses"], np.float64)[~keep]
+        e1, e2 = _basis(zhat)
+        X1, X2 = xp @ e1, xp @ e2
+        XR = np.hypot(X1, X2)
+        V1, V2 = xv @ e1, xv @ e2
+        XvR, Xj = (X1 * V1 + X2 * V2) / np.maximum(XR, 1e-30), X1 * V2 - X2 * V1
+        xi = np.digitize(XR / a, edges) - 1
+        xi[(xi < 0) | (xi >= len(Rmid))] = -1
+        fam["mdotx"] = -_bin(xi, len(Rmid), xm * XvR) / st["_dR"]
+        fam["Fx"] = _bin(xi, len(Rmid), xm * XvR * Xj) / st["_dR"] / lunit
+        fam["jdotx"] = fam["jdot"] - fam["Fx"]                     # J inflow including the excluded gas
+        fam["mdott"] = fam["mdot"] + fam["mdotx"]                  # Mdot of all the gas
+    # effective viscosity of all the stresses (Reynolds, Maxwell, registered terms) and the viscous time: F = 3 pi nu Sigma R^2 Omega (Keplerian)
+    fstress = fam["Frey"] + (fam["Fmax"] if "Fmax" in fam else 0.0) + sum(fam["F" + n] for n in names)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        OmR = np.sqrt(GM / st["_Rm"] ** 3)
+        nu = fstress * lunit / (3 * np.pi * fam["sigma"] * st["_Rm"] ** 2 * OmR)
+        fam["nu"] = nu
+        fam["tvisc"] = np.where(nu > 0, st["_Rm"] ** 2 / nu, np.nan) / (2 * np.pi / Om_b)     # in binary orbits (2 pi / Omega_b)
+        fam["alphaeff"] = nu * OmR / fam["cs2"]
+    t_orb = float(s["time"]) / (2 * np.pi / Om_b)
+    reach = np.where(np.nan_to_num(fam["tvisc"], nan=np.inf) < t_orb)[0]
+    sc["r_steady"] = float(Rmid[reach.max()]) if len(reach) else np.nan          # largest R whose viscous time is shorter than the time so far
     few = st["_n"] < 20
-    for k in ["Fadv", "Frey", "Fmax", "jdot"] + ["F" + n for n in names]:
+    for k in ["Fadv", "Frey", "Fmax", "jdot", "nu", "tvisc", "alphaeff"] + ["F" + n for n in names]:
         if k in fam:
             fam[k] = np.where(few, np.nan, fam[k])
     for k, arr in fam.items():
@@ -304,7 +339,7 @@ def disc(path, params):
             rr, vv = pos[sel] - bp[k], vel[sel] - bv[k]
             zk = _unit(np.sum(m[sel, None] * np.cross(rr, vv), axis=0))
             mk = bm[k]
-            stk = shells(rr, vv, m[sel], rho[sel], u[sel], MINI_EDGES, zk, G * mk, gamma, B=None if B is None else B[sel], z_cut=zc, scale=rl[k])
+            stk = shells(rr, vv, m[sel], rho[sel], u[sel], MINI_EDGES, zk, G * mk, gamma, B=None if B is None else B[sel], z_cut=zc, scale=rl[k], hsml=hs[sel], G=G)
             Rk = np.sqrt(MINI_EDGES[1:] * MINI_EDGES[:-1])
             for name, arr in stk.items():
                 if not name.startswith("_") and name not in ("Psi", "PsiAbs", "vRPsi", "epsP"):
@@ -325,19 +360,32 @@ def _applies(path):
 
 META = {"r_cav": ("cavity radius (sigma at half its maximum) [a]", "disc"), "e_disc": ("disc eccentricity (1.5-5 a)", "disc"),
         "varpi_disc": ("disc periapsis angle [deg]", "disc"), "A1_lump": ("m = 1 amplitude (2-4 a)", "disc"), "phi_lump": ("m = 1 phase [deg]", "disc"),
-        "mdot_3a": ("Mdot at 3 a (> 0 inflow)", "disc"), "Mcbd": ("gas outside the Roche lobes", "disc"), "a": ("binary a", "orbit"), "e": ("binary e", "orbit"),
+        "mdot_3a": ("Mdot at 3 a (> 0 inflow)", "disc"), "r_steady": ("steady-state radius (t_visc < t) [a]", "disc"), "Mcbd": ("gas outside the Roche lobes", "disc"), "a": ("binary a", "orbit"), "e": ("binary e", "orbit"),
         "q": ("mass ratio", "orbit"), **{f"{x}_mini{k}": (f"minidisc {k}: radius holding {x[1:]}% of the lobe gas [R_L]", "minidiscs") for x in ("r50", "r90") for k in (0, 1)},
         **{f"Mmini{k}": (f"gas in Roche lobe {k}", "minidiscs") for k in (0, 1)}}
+# log-slopes d ln X / d ln R of standard steady-disc closures, for reference lines on slope panels (radial panel `refs = true`): Shakura & Sunyaev (1973)
+# zones B (gas pressure, electron scattering) and C (gas pressure, Kramers); a magnetically supported disc with B ~ rho^(2/3) (Hopkins et al. 2024);
+# the flux-frozen magnetically supported solution with pure steady advection of toroidal flux (B H |v_R| = const). rho_mid = Sigma / H.
+CLOSURE_SLOPES = {
+    "sigma": {"SS73 B": -3 / 5, "SS73 C": -3 / 4, "B~rho^2/3": -5 / 6, "flux advection": -11 / 10},
+    "hr": {"SS73 B": 1 / 20, "SS73 C": 1 / 8, "B~rho^2/3": 1 / 6, "flux advection": 3 / 10},
+    "cs2": {"SS73 B": -9 / 10, "SS73 C": -3 / 4, "B~rho^2/3": -3 / 4},
+    "rhomid": {"SS73 B": -3 / 5 - 21 / 20, "SS73 C": -3 / 4 - 9 / 8, "B~rho^2/3": -2.0, "flux advection": -11 / 10 - 13 / 10},
+    "Brms": {"B~rho^2/3": -4 / 3, "flux advection": -7 / 5},
+}
+
 FAMILIES = {"sigma_": "Sigma", "hr_": "H/R", "rhomid_": "rho_mid", "cs2_": "c_s^2", "vphi_": "v_phi", "vR_": "v_R", "vrat_": "v_phi / v_K", "mdot_": "Mdot (> 0 in)",
             "vsup_": "H Omega_K / c_s", "vsupA_": "H Omega_K / sqrt(c_s^2 + v_A^2)", "gauss_": "Sigma / (sqrt(2 pi) rho_mid H)", "aR_": "alpha Reynolds",
             "aM_": "alpha Maxwell", "ecc_": "e_d", "eccphi_": "periapsis [deg]", "A1_": "m = 1 amplitude", "A1phi_": "m = 1 phase [deg]", "Fadv_": "advective",
             "Frey_": "Reynolds", "Fmax_": "Maxwell", "dTdR_": "binary torque density", "Tout_": "binary torque outside R", "jdot_": "J inflow - torque outside",
             "beta_": "beta", "Brms_": "B_rms", "vA2_": "v_A^2", "Psi_": "Psi", "PsiAbs_": "|Psi|", "vRPsi_": "|v_R| |Psi|", "Qz_": "Q_z", "Qphi_": "Q_phi",
-            "epsP_": "epsilon_P"}
+            "epsP_": "epsilon_P", "toomre_": "Toomre Q", "hH_": "<h> / H", "nH_": "cells per H", "mdotx_": "Mdot of the excluded gas",
+            "Fx_": "excluded gas (advective)", "jdotx_": "J inflow incl. excluded gas", "mdott_": "Mdot of all gas", "nu_": "nu_eff", "tvisc_": "t_visc [orbits]",
+            "alphaeff_": "alpha_eff (all stresses)"}
 
 plugins.register_product("disc", disc, needs=("Coordinates", "Velocities", "Masses", "Density", "InternalEnergy", "SmoothingLength", "?MagneticField", "?ParticleIDs",
                                               "PartType5"),
-                         version=1, label="disc: profiles, angular-momentum budget, eccentricity, minidiscs", applies=_applies,
+                         version=2, label="disc: profiles, angular-momentum budget, eccentricity, minidiscs", applies=_applies,
                          params={"gamma": None, "r_min": 0.5, "r_max": 12.0, "nbins": 44, "exclude_ids": [], "z_cut": None, "fluxes": []}, defaults=["r_cav"],
                          meta={**{k: {"label": a, "group": g} for k, (a, g) in META.items()}, "varpi_disc": {"label": META["varpi_disc"][0], "group": "disc", "wrap": 360.0},
                                "phi_lump": {"label": META["phi_lump"][0], "group": "disc", "wrap": 360.0},

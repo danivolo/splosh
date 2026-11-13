@@ -25,6 +25,7 @@ source = "prod_disc"
 prefix = "sigma_"
 windows = 4
 slope = true
+refs = true
 hlines = [0.0]
 xlabel = "R / a"
 
@@ -96,4 +97,37 @@ source = "prod_disc"
 prefixes = ["vsup_", "gauss_"]
 windows = 1
 hlines = [1.0]
+xlabel = "R / a"
+
+[[panel]]
+type = "radial"
+id = "sigma_fit"
+label = "Sigma and the steady torqued-disc fit (last 5 orbits)"
+source = "prod_disc"
+prefix = "sigma_"
+windows = "last:5"
+fit = "torqued"
+fit_range = [2.0, 8.0]
+yscale = "log"
+xlabel = "R / a"
+
+[[panel]]
+type = "radial"
+id = "hr_slope"
+label = "d ln(H/R) / d ln R and closures"
+source = "prod_disc"
+prefix = "hr_"
+windows = "last:5"
+slope = true
+refs = true
+xlabel = "R / a"
+
+[[panel]]
+type = "radial"
+id = "tvisc"
+label = "viscous time R^2 / nu_eff [orbits]"
+source = "prod_disc"
+prefix = "tvisc_"
+windows = "last:5"
+yscale = "log"
 xlabel = "R / a"

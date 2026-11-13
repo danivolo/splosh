@@ -30,6 +30,9 @@ bunit (UnitMagneticField_in_gauss of the run, for beta).
             types 0 and 5)). The common pull moves the centre of mass and drops out. > 0: the gas adds angular momentum to the orbit (a circular binary of fixed
             masses widens, da/dt / a = 2 tau / L_orb), < 0 it shrinks. With weight = column a projection is the torque per unit area. G from the header
             (Gravitational_Constant_In_Code_Inits) or from the code units.          [code velocity^2]
+  hres      resolution: (c_s / Omega_K) / h, the thermal scale height in smoothing lengths (Omega_K about the black holes' centre of mass)
+  ncellH    cells per thermal scale height (c_s / Omega_K) / (m / rho)^(1/3)
+  Qz, Qphi  MRI quality factors lambda_MRI / (m / rho)^(1/3) of the vertical / azimuthal field, lambda = 2 pi v_A,i / Omega_K (frame z axis; > 6-10 resolved)
 No neighbour searches are used (no vorticity, divergence, gradients). A dataset missing from the snapshot raises a KeyError naming it."""
 import numpy as np
 
@@ -265,6 +268,54 @@ def f_tau_bin(ctx):
     return binary_torque(ctx.snap)
 
 
+def _omega_k(ctx, r=None):
+    """Keplerian Omega about the black holes' centre of mass, sqrt(G M_bh / r^3), r the 3D distance from it (the gas's own mass neglected)."""
+    if "bh_pos" not in ctx.snap or not len(ctx.snap["bh_pos"]):
+        raise ValueError("this field needs black holes (PartType5): Omega_K is about them")
+    m = np.asarray(ctx.snap["bh_mdyn"] if "bh_mdyn" in ctx.snap else ctx.snap["bh_mass"], dtype=np.float64)
+    c = (np.asarray(ctx.snap["bh_pos"], np.float64) * m[:, None]).sum(0) / m.sum()
+    if r is None:
+        r = np.sqrt(((np.asarray(ctx.snap["Coordinates"], np.float64) - c) ** 2).sum(1))
+    return np.sqrt(gravitational_constant(ctx.snap) * m.sum() / np.maximum(r, 1e-30) ** 3)
+
+
+def f_hres(ctx):
+    """Resolution of the disc's thermal scale height: H / h with H = c_s / Omega_K (Omega_K about the black holes) and h the SmoothingLength (kernel support)."""
+    return f_cs(ctx) / _omega_k(ctx) / _need(ctx, "SmoothingLength")
+
+
+def f_ncellH(ctx):
+    """Cells per thermal scale height: (c_s / Omega_K) / (m / rho)^(1/3)."""
+    return f_cs(ctx) / _omega_k(ctx) / np.cbrt(_need(ctx, "Masses") / _need(ctx, "Density"))
+
+
+def _mri_q(ctx, comp):
+    B = _need(ctx, "MagneticField")
+    u = _units(ctx)
+    bunit, _ = magnetic_unit_gauss(ctx.snap, ctx.view)
+    b = np.asarray(B, np.float64) @ ctx.frame.rot.T * (bunit / np.sqrt(4.0 * np.pi * u.density_cgs * u.velocity_cm_s ** 2))     # code units, mu_0 = 1, frame axes
+    if comp == "z":
+        bc = b[:, 2]
+    else:
+        p = ctx.frame.pos(ctx.snap["Coordinates"])
+        R = np.maximum(np.hypot(p[:, 0], p[:, 1]), 1e-30)
+        bc = (-b[:, 0] * p[:, 1] + b[:, 1] * p[:, 0]) / R
+    rho = _need(ctx, "Density")
+    lam = 2 * np.pi * np.abs(bc) / np.sqrt(rho) / _omega_k(ctx)
+    return lam / np.cbrt(_need(ctx, "Masses") / rho)
+
+
+def f_qmri_z(ctx):
+    """MRI quality factor of the vertical field: lambda_MRI / h, lambda = 2 pi v_A,z / Omega_K, h = (m / rho)^(1/3); resolved above ~6-10. z = the frame's z axis
+    (align the frame with the disc: tilt L or align bh)."""
+    return _mri_q(ctx, "z")
+
+
+def f_qmri_phi(ctx):
+    """MRI quality factor of the azimuthal field (about the frame's z axis through the frame centre)."""
+    return _mri_q(ctx, "phi")
+
+
 def _entropy_dim(view):
     g = float(getattr(view, "gamma", DEFAULT_GAMMA))
     return (-3.0 * (1.0 - g), 1.0 - g, 2.0)
@@ -291,6 +342,10 @@ _ALL = [
     ("beta", f_beta, "plasma beta 2 P / |B|^2", ("Density", "InternalEnergy", "MagneticField"), DIMLESS),
     ("B", f_bmag, "magnetic field strength |B| [gauss]", ("MagneticField",), GAUSS),
     ("Pmag", f_pmag, "magnetic pressure |B|^2 / 2 (code units, mu_0 = 1)", ("MagneticField",), PRESSURE),
+    ("hres", f_hres, "resolution: thermal scale height / smoothing length, (c_s / Omega_K) / h", ("InternalEnergy", "SmoothingLength"), DIMLESS),
+    ("ncellH", f_ncellH, "resolution: cells per thermal scale height, (c_s / Omega_K) / (m / rho)^(1/3)", ("InternalEnergy", "Density"), DIMLESS),
+    ("Qz", f_qmri_z, "MRI quality lambda / h of the vertical field (resolved above ~6-10)", ("MagneticField", "Density"), DIMLESS),
+    ("Qphi", f_qmri_phi, "MRI quality lambda / h of the azimuthal field", ("MagneticField", "Density"), DIMLESS),
     ("tau_bin", f_tau_bin, "torque on the binary orbit per unit gas mass (> 0 widens it; weight=column: per unit area)", ("SmoothingLength",), (0, 0, 2)),
     ("divB", f_divb, "relative divergence error H |div B| / |B| (GIZMO: build with OUTPUT_BFIELD_DIVCLEAN_INFO)", ("MagneticField", "DivergenceOfMagneticField", "SmoothingLength"), DIMLESS),
 ]

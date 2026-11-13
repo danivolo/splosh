@@ -601,10 +601,135 @@ def radial_tile(p, ctx, tnow=None):
             if lo is not None and p.get("band", True):
                 st["band"] = [lo, hi]
             styles.append(st)
+    if p.get("fit"):                                 # fits of the window means over fit_range: power law, or the steady torqued disc
+        f_out, f_st = [], []
+        for (lab, x, y), st in zip(out, styles):
+            r = fit_profile(np.asarray(x, float), np.asarray(y, float), p["fit"], p.get("fit_range"))
+            if r:
+                f_out.append((f"fit {lab}: {r['text']}", r["x"], r["y"]))
+                f_st.append({"style": "line", "color": "k", "dash": "--", "lw": 1.4, "legend": True})
+        out, styles = out + f_out, styles + f_st
+    hl = [float(h) if not isinstance(h, (list, tuple)) else [float(h[0]), str(h[1])] for h in (p.get("hlines") or [])]
+    if p.get("refs") and p.get("slope"):              # reference slopes of standard disc closures for this family
+        from .disc import CLOSURE_SLOPES
+        for prefix in pre:
+            for name, v in CLOSURE_SLOPES.get(prefix.rstrip("_"), {}).items():
+                hl.append([v, name])
     allv = np.concatenate([np.asarray(c[2], float) for c in out]) if out else np.array([])
     return {"curves": out, "styles": styles, "xlog": p.get("xscale", "log") == "log", "ylog": False,
-            "yscale": auto_scale(allv, p.get("yscale") or "auto"), "xlabel": p.get("xlabel") or "R", "ylabel": p.get("ylabel"),
-            "hlines": [float(h) for h in (p.get("hlines") or [])], "note": tab.note}
+            "yscale": auto_scale(allv, p.get("yscale") or "auto"), "xlabel": p.get("xlabel") or "R",
+            "ylabel": p.get("ylabel") or ("d ln y / d ln R" if p.get("slope") else None), "hlines": hl, "note": tab.note}
+
+
+def fit_profile(x, y, kind, rng=None):
+    """fit a profile y(x) over rng = [x0, x1]: "power" y = A x^s (in log space); "torqued" the steady disc with a torqued inner edge,
+    Sigma = A x^-n [1 - ell_0 / sqrt(x)] (x = R/a, ell_0 in a^2 Omega_b, nu ~ R^n). Returns {'x', 'y' (the model on a fine grid), 'params', 'text'} or None."""
+    from scipy.optimize import curve_fit
+    ok = np.isfinite(x) & np.isfinite(y) & (x > 0) & (y > 0)
+    if rng:
+        ok &= (x >= float(rng[0])) & (x <= float(rng[1]))
+    if ok.sum() < 4:
+        return None
+    X, Y = x[ok], y[ok]
+    xs = np.geomspace(X.min(), X.max(), 200)
+    if kind == "power":
+        s, lnA = np.polyfit(np.log(X), np.log(Y), 1)
+        return {"x": xs, "y": np.exp(lnA) * xs ** s, "params": {"slope": s}, "text": f"slope {s:.3g}"}
+    if kind == "torqued":
+        f = lambda xx, lnA, n, l0: lnA - n * np.log(xx) + np.log(np.clip(1 - l0 / np.sqrt(xx), 1e-12, None))
+        try:
+            (lnA, n, l0), cov = curve_fit(f, X, np.log(Y), p0=[np.log(np.median(Y)), 1.0, 0.5 * np.sqrt(X.min())],
+                                          bounds=([-np.inf, -5.0, -10.0], [np.inf, 5.0, 0.999 * np.sqrt(X.min())]))
+        except (RuntimeError, ValueError):
+            return None
+        err = np.sqrt(np.diag(cov))
+        return {"x": xs, "y": np.exp(f(xs, lnA, n, l0)), "params": {"n": n, "ell_0": l0, "dn": err[1], "dell_0": err[2]},
+                "text": f"n = {n:.2f}+-{err[1]:.2f}, ell_0 = {l0:.2f}+-{err[2]:.2f}"}
+    raise ValueError(f"fit must be power or torqued, not {kind!r}")
+
+
+def scatter_tile(p, ctx, tnow=None):
+    """What a layout `scatter` panel draws: y against x, both families <prefix><R> of the same source (one point per snapshot and R, coloured by R or
+    time) or both plain columns (one point per row, coloured by time), within the time windows; the binned median of y as a line."""
+    tab = table(p["source"], ctx)
+    if not len(tab):
+        raise ValueError(f"{p['source']}: no rows yet")
+    period = ctx.get("period")
+    wins = _windows(p, tab.time, period)
+    sel = np.zeros(len(tab), bool)
+    for _, a, b in wins:
+        sel |= (tab.time >= a) & (tab.time <= b)
+    unit = period if (p.get("xaxis", "orb") == "orb" and period) else 1.0
+    if p["x"].endswith("_") and p["y"].endswith("_"):
+        Yx, Mx = _family(tab, p["x"])
+        Yy, My = _family(tab, p["y"])
+        common = [y for y in Yx if np.min(np.abs(Yy - y)) <= 1e-3 * abs(y) + 1e-12]
+        X = np.vstack([Mx[np.argmin(np.abs(Yx - y))] for y in common])[:, sel]
+        Y = np.vstack([My[np.argmin(np.abs(Yy - y))] for y in common])[:, sel]
+        R = np.repeat(np.asarray(common)[:, None], X.shape[1], axis=1)
+        T = np.repeat((tab.time[sel] / unit)[None, :], X.shape[0], axis=0)
+        X, Y, R, T = X.ravel(), Y.ravel(), R.ravel(), T.ravel()
+        C, clab = (R, p.get("rlabel") or "R") if p.get("color", "R") == "R" else (T, "t / P0" if unit != 1.0 else "t")
+    else:
+        X, Y = tab.columns[p["x"]][sel], tab.columns[p["y"]][sel]
+        C, clab = tab.time[sel] / unit, ("t / P0" if unit != 1.0 else "t")
+    ok = np.isfinite(X) & np.isfinite(Y)
+    if p.get("xlog"):
+        ok &= X > 0
+    if p.get("ylog"):
+        ok &= Y > 0
+    X, Y, C = X[ok], Y[ok], C[ok]
+    curves = []
+    if len(X) > 20:                                  # binned median
+        e = np.geomspace(X.min(), X.max(), 16) if p.get("xlog") else np.linspace(X.min(), X.max(), 16)
+        k = np.clip(np.digitize(X, e) - 1, 0, 14)
+        med = [np.median(Y[k == i]) if (k == i).sum() >= 5 else np.nan for i in range(15)]
+        xm = np.sqrt(e[1:] * e[:-1]) if p.get("xlog") else 0.5 * (e[1:] + e[:-1])
+        curves.append(("binned median", xm, np.array(med)))
+    lab = lambda c: tab.meta.get(heat_columns(tab, c)[0][1] if c.endswith("_") else c, {}).get("label", c.rstrip("_"))
+    return {"scatter": {"x": X, "y": Y, "c": C, "clabel": clab, "clog": bool(p.get("color", "R") == "R" and (C > 0).all() if len(C) else False)},
+            "curves": curves, "styles": [{"style": "line", "color": "k", "lw": 1.5, "legend": True}] * len(curves),
+            "xlog": bool(p.get("xlog")), "ylog": bool(p.get("ylog")), "xlabel": p.get("xlabel") or lab(p["x"]), "ylabel": p.get("ylabel") or lab(p["y"]),
+            "hlines": [float(h) for h in (p.get("hlines") or [])], "vlines": [float(v) for v in (p.get("vlines") or [])], "note": tab.note}
+
+
+def parray_tile(p, ctx, tnow=None):
+    """What a layout `parray` panel draws: a 2D array stored per snapshot by a product (e.g. a histogram of alpha against R), summed over the time
+    windows' snapshots, as a heat tile; `norm = "column"` makes each x column a distribution; ytransform none | log10 | slog (sign (7 + log10 |y|), for
+    symmetric-log bins)."""
+    from . import products as PR
+    plugins.load_plugins()
+    if p["product"] not in PR.PRODUCTS:
+        raise KeyError(f"no product {p['product']!r} (registered: {sorted(PR.PRODUCTS)})")
+    period = ctx.get("period")
+    paths = ctx.get("snapshots") or []
+    res = [PR.load_result(ctx["run_dir"], p["product"], q) for q in paths]
+    res = [r for r in res if r is not None and p["array"] in r["arrays"]]
+    if not res:
+        raise ValueError(f"no stored {p['product']}:{p['array']} yet")
+    t = np.array([r["time"] for r in res])
+    wins = _windows(p, t, period)
+    sel = np.zeros(len(res), bool)
+    for _, a, b in wins:
+        sel |= (t >= a) & (t <= b)
+    H = np.sum([r["arrays"][p["array"]] for r, s_ in zip(res, sel) if s_ and r["arrays"][p["array"]].shape == res[0]["arrays"][p["array"]].shape], axis=0)
+    xe = np.asarray(res[0]["arrays"][p["xedges"]], float)
+    ye = np.asarray(res[0]["arrays"][p["yedges"]], float)
+    if p.get("norm", "column") == "column":
+        H = H / np.maximum(H.sum(axis=1, keepdims=True), 1e-300)
+    tr = p.get("ytransform", "none")
+    ymid = 0.5 * (ye[1:] + ye[:-1])
+    if tr == "log10":
+        yc = 0.5 * (np.log10(ye[1:]) + np.log10(ye[:-1]))
+    elif tr == "slog":
+        c = np.sqrt(np.abs(ye[1:] * ye[:-1]))
+        yc = np.where(np.sign(ymid) == 0, 0.0, np.sign(ymid) * (7.0 + np.log10(np.where(c > 0, c, 1.0))))
+    else:
+        yc = ymid
+    return {"heat": {"x": xe, "y": yc, "z": H.T, "zscale": p.get("zscale", "log"), "cmap": p.get("cmap", "magma"), "norm": "none",
+                     "label": p.get("zlabel") or ("P(y | x)" if p.get("norm", "column") == "column" else p["array"])},
+            "curves": [], "styles": [], "xnow": None, "xlabel": p.get("xlabel") or p["xedges"], "ylabel": p.get("ylabel") or p["yedges"],
+            "yscale": "lin", "xscale_log": p.get("xscale", "log") == "log", "note": f"{int(sel.sum())} snapshot(s) summed"}
 
 
 # ----------------------------------------------------------------------------- power spectra of time series (layout panel type `spectrum`)
