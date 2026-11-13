@@ -43,16 +43,16 @@ canvas.bar{position:absolute;right:6px;top:6px;border:1px solid #444;width:48px;
 .pane.bA{box-shadow:inset 0 0 0 3px #fa3}.pane.bB{box-shadow:inset 0 0 0 3px #3df}
 .readout:empty{display:none}
 canvas.plot{position:absolute;left:0;top:0;width:100%;height:100%;display:none;background:#0b0e12;cursor:crosshair;z-index:2}
-.pane.kprofile canvas.plot,.pane.kseries canvas.plot,.pane.kheatmap canvas.plot{display:block}.pane.kheatmap canvas.bar,.pane.kheatmap .orient{display:none}
+.pane.kprofile canvas.plot,.pane.kseries canvas.plot,.pane.kheatmap canvas.plot,.pane.kphase canvas.plot{display:block}.pane.kheatmap canvas.bar,.pane.kheatmap .orient,.pane.kphase canvas.bar,.pane.kphase .orient{display:none}
 .pane.kheatmap .pk .ssrc,.pane.kheatmap .pk .sheat,.pane.kheatmap .pk .sids,.pane.kheatmap .pk .sx,.pane.kheatmap .pk .srel{display:inline-block}.pk .sheat{display:none}.pane.kprofile canvas.bar,.pane.kseries canvas.bar,.pane.kseries .orient,.pane.kprofile .orient{display:none}
 .pk{position:absolute;right:6px;bottom:4px;z-index:4;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:3px;font:11px sans-serif;opacity:.55;max-width:calc(100% - 12px)}.pk:hover,.pane:hover .pk{opacity:1}
-.pk:has(.scolmenu.on){opacity:1}.pane .pk select,.pane .pk button,.pane .pk label{width:auto;height:auto;margin:0;line-height:1.3;font:11px sans-serif;background:#000c;color:#ddd;border:1px solid #456;border-radius:3px;padding:1px 3px}.pk .ssrc,.pk .scolwrap,.pk .sids,.pk .ssm,.pk .sx,.pk .sy,.pk .srel,.pk .slog,.pk .sbuild,.pk .sstk,.pk .shz,.pk .shy{display:none}
+.pk:has(.scolmenu.on){opacity:1}.pane .pk select,.pane .pk button,.pane .pk label{width:auto;height:auto;margin:0;line-height:1.3;font:11px sans-serif;background:#000c;color:#ddd;border:1px solid #456;border-radius:3px;padding:1px 3px}.pk .ssrc,.pk .scolwrap,.pk .sids,.pk .ssm,.pk .sx,.pk .sy,.pk .srel,.pk .slog,.pk .sbuild,.pk .sstk,.pk .shz,.pk .shy,.pk .php{display:none}.pane.kphase .pk .php{display:inline-block}.pane .pk input.prng{width:9em;margin:0;font:11px sans-serif;background:#000c;color:#ddd;border:1px solid #456;border-radius:3px;padding:1px 3px}
 .pk .scolwrap{position:relative}.pk .scolmenu{display:none;position:absolute;right:0;top:100%;margin-top:2px;background:#10151c;border:1px solid #456;border-radius:4px;padding:6px 8px;max-height:60vh;overflow:auto;width:max-content;max-width:420px;z-index:9;text-align:left}
 .pk .scolmenu.on{display:block}.pk .scolmenu .grp{margin:4px 0}.pk .scolmenu .grp b{display:block;color:#9bd;font-size:11px;margin-bottom:1px}.pk .scolmenu label{display:block;border:0;background:none;padding:1px 0;white-space:nowrap}.pk .scolmenu i{color:#89a}
 .pk .sids label{border:0;background:none;padding:0 2px}
 .pane.kseries .pk .ssrc,.pane.kseries .pk .scolwrap,.pane.kseries .pk .sids,.pane.kseries .pk .ssm,.pane.kseries .pk .sx,.pane.kseries .pk .sy,.pane.kseries .pk .srel,.pane.kseries .pk .sstk,.pane.kheatmap .pk .shz,.pane.kheatmap .pk .shy,.pane.kprofile .pk .slog{display:inline-block}
 .pane.kseries.nodata .pk .sbuild{display:inline-block}.pane.kseries.nodata .pk .scolwrap,.pane.kseries.nodata .pk .sids,.pane.kseries.nodata .pk .ssm{display:none}
-.pane.kprofile .pk,.pane.kseries .pk,.pane.kheatmap .pk{top:5px;bottom:auto;opacity:.8}
+.pane.kprofile .pk,.pane.kseries .pk,.pane.kheatmap .pk,.pane.kphase .pk{top:5px;bottom:auto;opacity:.8}
 .readout{position:absolute;left:6px;bottom:4px;font:12px ui-monospace,monospace;background:#000b;padding:2px 6px;max-width:calc(100% - 12px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
 .chk{display:flex;align-items:center;gap:3px;margin:3px 0 0;color:#9ab;white-space:nowrap}.chk input{margin:0}
 #ovmsg,#inspmsg{font:11px/1.35 ui-monospace,monospace;color:#e98;margin-top:4px;white-space:pre-wrap}
@@ -73,8 +73,8 @@ body{padding-top:27px;box-sizing:border-box}.hid{display:none!important}
 #pubview img{max-width:100%;max-height:calc(100% - 4px);object-fit:contain}#pubnotes{position:absolute;left:6px;bottom:4px;font:11px ui-monospace,monospace;color:#555;white-space:pre-wrap;text-align:left;background:#fffc}
 #pubclose{position:absolute;right:6px;top:6px;z-index:2}
 .ptag{display:none;position:absolute;left:50%;bottom:4px;transform:translateX(-50%);z-index:5;font:11px ui-monospace,monospace;background:#234c;color:#cde;padding:1px 6px;border-radius:3px;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90%}
-.pane.kseries,.pane.kprofile,.pane.kheatmap{width:100cqw;height:100cqh}
-.pane.kseries .ptag,.pane.kprofile .ptag,.pane.kheatmap .ptag{bottom:auto;top:2px;left:auto;right:6px;transform:none}
+.pane.kseries,.pane.kprofile,.pane.kheatmap,.pane.kphase{width:100cqw;height:100cqh}
+.pane.kseries .ptag,.pane.kprofile .ptag,.pane.kheatmap .ptag,.pane.kphase .ptag{bottom:auto;top:2px;left:auto;right:6px;transform:none}
 body.figmode .pane .pk{opacity:0;transition:opacity .15s}body.figmode .pane:hover .pk{opacity:1}body.figmode .pane:hover .ptag{display:none}
 body.figmode .ptag{display:block}body.figmode .pane{outline:1px dashed #456;outline-offset:-1px}
 body.mapsonly{padding-top:0}body.mapsonly #panel,body.mapsonly #grip{display:none!important}
@@ -272,7 +272,7 @@ function makePane(src) {
              selCrit: null, selOnly: false, selHi: true, selItem: null, selMsg: "", ovBusy: false, ovMsg: "", insp: null, inspSeq: 0, inspMsg: "", clickTimer: null, downAt: null};
   if (src) { for (const k of ["run", "snap", "field", "mode", "weight", "axes", "z0", "cmap", "scale", "diff", "post", "postarg", "soft"]) p[k] = src[k]; p.prev = src.prev ? {...src.prev} : null; p.missing = src.missing; p.view = S.linked ? src.view : {...src.view}; Object.assign(p.nl, src.nl); Object.assign(p.dl, src.dl); p.ovo = {...src.ovo}; }
   const i = S.panes.length, cell = document.createElement("div"); cell.className = "cell";
-  cell.innerHTML = '<div class="pane"><canvas class="view" width="768" height="768"></canvas><canvas class="ovl" width="768" height="768"></canvas><canvas class="bar" width="64" height="256"></canvas><div class="cap"></div><div class="badge"></div><div class="spin" title="loading tiles"></div><div class="clock"></div><div class="nosnap"></div><div class="readout"></div><div class="ptag"></div><canvas class="plot" width="768" height="768"></canvas><div class="pk"><select class="kind" title="what this pane shows"><option value="map">map</option><option value="profile">radial profile</option><option value="series">time series</option><option value="heatmap">heatmap</option></select><select class="sheat" title="the family of columns (name + number) drawn against time"></select><select class="ssrc" title="data source: the snapshot scalars, GIZMO logs (energy.txt, blackholes.txt), plugin sources (black-hole logs, binary orbit)"></select><span class="scolwrap"><button class="scolbtn" title="columns to draw">columns ▾</button><div class="scolmenu"></div></span><span class="sids"></span><select class="ssm" title="running mean (centred window), in binary periods P0"><option value="0">no mean</option><option value="0.01">mean 0.01 P0</option><option value="0.1">mean 0.1 P0</option><option value="1">mean 1 P0</option></select><select class="sx" title="time axis"><option value="orb">t/P0</option><option value="myr">Myr</option><option value="t">code t</option></select><select class="sy" title="y axis: auto = log when positive over more than 100x, symlog when both signs span decades"><option value="auto">y auto</option><option value="lin">y lin</option><option value="log">y log</option><option value="symlog">y symlog</option></select><select class="sstk" title="the columns as parts of a total (e.g. the mass of a circumbinary disc and of two minidiscs): stacked shaded zones, or fractions of the total; the total is drawn as a line when it is not constant"><option value="">lines</option><option value="stack">stacked</option><option value="fraction">fractions</option></select><select class="shz" title="colours: log; linear; symlog = diverging about 0 (signed quantities: torque density, Mdot, B_phi), linear within 1e-3 of the largest |z|"><option value="log">z log</option><option value="lin">z lin</option><option value="symlog">z symlog</option></select><select class="shy" title="y axis of the rows (the numbers in the column names): linear, or log for log-spaced radii (row edges at the geometric midpoints)"><option value="lin">y lin</option><option value="log">y log</option></select><button class="srel" title="read the files again (a running simulation wrote more)">↻</button><label class="slog" title="logarithmic y axis"><input type="checkbox" class="ylog" checked> log y</label><button class="sbuild" title="compute the built-in scalars of every snapshot in a background job (to RUN/analysis_viewer/series)">build</button></div><div class="orient"><canvas width="220" height="220" title="drag: turn the view (rendered when you let go); click an axis tip: look along it"></canvas><div class="obtn"><button data-o="face" title="tilt none">face-on</button><button data-o="edge" title="incl:90">edge-on</button><button data-o="L" title="tilt L: the gas disc face-on">disc</button><button data-o="Lbh" title="tilt Lbh: the BH orbit face-on">orbit</button></div></div></div>';
+  cell.innerHTML = '<div class="pane"><canvas class="view" width="768" height="768"></canvas><canvas class="ovl" width="768" height="768"></canvas><canvas class="bar" width="64" height="256"></canvas><div class="cap"></div><div class="badge"></div><div class="spin" title="loading tiles"></div><div class="clock"></div><div class="nosnap"></div><div class="readout"></div><div class="ptag"></div><canvas class="plot" width="768" height="768"></canvas><div class="pk"><select class="kind" title="what this pane shows"><option value="map">map</option><option value="profile">radial profile</option><option value="series">time series</option><option value="heatmap">heatmap</option><option value="phase">phase diagram</option></select><select class="sheat" title="the family of columns (name + number) drawn against time"></select><select class="ssrc" title="data source: the snapshot scalars, GIZMO logs (energy.txt, blackholes.txt), plugin sources (black-hole logs, binary orbit)"></select><span class="scolwrap"><button class="scolbtn" title="columns to draw">columns ▾</button><div class="scolmenu"></div></span><span class="sids"></span><select class="ssm" title="running mean (centred window), in binary periods P0"><option value="0">no mean</option><option value="0.01">mean 0.01 P0</option><option value="0.1">mean 0.1 P0</option><option value="1">mean 1 P0</option></select><select class="sx" title="time axis"><option value="orb">t/P0</option><option value="myr">Myr</option><option value="t">code t</option></select><select class="sy" title="y axis: auto = log when positive over more than 100x, symlog when both signs span decades"><option value="auto">y auto</option><option value="lin">y lin</option><option value="log">y log</option><option value="symlog">y symlog</option></select><select class="sstk" title="the columns as parts of a total (e.g. the mass of a circumbinary disc and of two minidiscs): stacked shaded zones, or fractions of the total; the total is drawn as a line when it is not constant"><option value="">lines</option><option value="stack">stacked</option><option value="fraction">fractions</option></select><select class="shz" title="colours: log; linear; symlog = diverging about 0 (signed quantities: torque density, Mdot, B_phi), linear within 1e-3 of the largest |z|"><option value="log">z log</option><option value="lin">z lin</option><option value="symlog">z symlog</option></select><select class="shy" title="y axis of the rows (the numbers in the column names): linear, or log for log-spaced radii (row edges at the geometric midpoints)"><option value="lin">y lin</option><option value="log">y log</option></select><button class="srel" title="read the files again (a running simulation wrote more)">↻</button><label class="slog" title="logarithmic y axis"><input type="checkbox" class="ylog" checked> log y</label><select class="php pqx" title="phase diagram: the x quantity"></select><select class="php pqy" title="phase diagram: the y quantity"></select><label class="php" title="logarithmic x axis"><input type="checkbox" class="pxl" checked> log x</label><label class="php" title="logarithmic y axis"><input type="checkbox" class="pyl" checked> log y</label><select class="php pw" title="what each bin sums: the gas mass, the number of particles, their volume"><option>mass</option><option>count</option><option>volume</option></select><select class="php pb" title="bins per axis"><option value="64">64 bins</option><option value="128">128 bins</option><option value="200">200 bins</option><option value="256">256 bins</option><option value="400">400 bins</option></select><input class="php prng pxr" placeholder="x range: auto" title="x range: lo, hi (empty: automatic; a box zoom fills it)"><input class="php prng pyr" placeholder="y range: auto" title="y range: lo, hi (empty: automatic; a box zoom fills it)"><button class="php pclr" title="clear the selection drawn on this diagram (R)">clear sel.</button><button class="sbuild" title="compute the built-in scalars of every snapshot in a background job (to RUN/analysis_viewer/series)">build</button></div><div class="orient"><canvas width="220" height="220" title="drag: turn the view (rendered when you let go); click an axis tip: look along it"></canvas><div class="obtn"><button data-o="face" title="tilt none">face-on</button><button data-o="edge" title="incl:90">edge-on</button><button data-o="L" title="tilt L: the gas disc face-on">disc</button><button data-o="Lbh" title="tilt Lbh: the BH orbit face-on">orbit</button></div></div></div>';
   p.cell = cell; p.el = cell.firstChild; p.cv = p.el.querySelector("canvas.view"); p.ctx = p.cv.getContext("2d"); p.bar = p.el.querySelector("canvas.bar"); p.ovcv = p.el.querySelector("canvas.ovl"); p.ovctx = p.ovcv.getContext("2d");
   p.orient = p.el.querySelector(".orient canvas"); attachOrient(p);
   p.cap = p.el.querySelector(".cap"); p.badge = p.el.querySelector(".badge"); p.spin = p.el.querySelector(".spin"); p.clock = p.el.querySelector(".clock"); p.nosnap = p.el.querySelector(".nosnap"); p.readout = p.el.querySelector(".readout");
@@ -797,6 +797,7 @@ async function fetchPane(p) {
       if (isSel()) $("status").textContent = S.runs[p.run].label + ": " + p.missing; return;
     }
     p.nosnap.classList.remove("on");
+    if (p.kind === "phase") { p.spin.classList.remove("on"); updateClock(p); await fetchPhasePane(p); if (seq === p.seq) p.pending = false; if (isSel()) $("status").textContent = "phase diagram of the window of " + S.runs[p.run].label; return; }
     if (p.kind === "series" || p.kind === "heatmap") { p.pending = false; p.spin.classList.remove("on"); draw(p); updateClock(p); if (isSel()) $("status").textContent = "time series of " + S.runs[p.run].label; return; }
     const wantBH = $("bh").checked, diff = p.diff !== "off" && S.A && S.B, plan = diff || (p.selOnly && p.selCrit) ? null : tilePlan(p);
     let ents, tents, markers, reused = false;
@@ -886,9 +887,14 @@ function drawPlot(p) {   // drawn at the canvas' displayed size (CSS pixels x de
   if (p.plot.width !== Math.round(W * dpr) || p.plot.height !== Math.round(Hh * dpr)) { p.plot.width = Math.round(W * dpr); p.plot.height = Math.round(Hh * dpr); }
   PH = Hh;
   const c = p.plot.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, Hh);
-  if (p.kind === "profile") return drawProfile(p, c, W);
-  if (p.kind === "series") return drawSeries(p, c, W);
-  if (p.kind === "heatmap") return drawHeat(p, c, W);
+  p.plotAxes = null;
+  if (p.kind === "profile") drawProfile(p, c, W);
+  else if (p.kind === "series") drawSeries(p, c, W);
+  else if (p.kind === "heatmap") drawHeat(p, c, W);
+  else if (p.kind === "phase") drawPhasePane(p, c, W);
+  const b = p.zbox; if (b && p.plotAxes) { const A = p.plotAxes;      // the box (or axis band) being drawn for a zoom
+    const x0 = b.m === "y" ? A.L : Math.min(b.x0, b.x1), x1 = b.m === "y" ? A.L + A.w : Math.max(b.x0, b.x1), y0 = b.m === "x" ? A.T : Math.min(b.y0, b.y1), y1 = b.m === "x" ? A.T + A.h : Math.max(b.y0, b.y1);
+    c.fillStyle = "rgba(120,190,255,0.15)"; c.fillRect(x0, y0, x1 - x0, y1 - y0); c.strokeStyle = "#8cf"; c.lineWidth = 1; c.setLineDash([4, 3]); c.strokeRect(x0 + 0.5, y0 + 0.5, x1 - x0, y1 - y0); c.setLineDash([]); }
 }
 function plotMessage(c, W, lines) { const Hh = PH || W; c.fillStyle = "#0b0e12"; c.fillRect(0, 0, W, Hh); c.fillStyle = "#bcd"; c.font = "13px sans-serif"; c.textAlign = "center"; lines.forEach((t, i) => c.fillText(t, W / 2, Hh / 2 - 10 + 19 * i, W - 20)); c.textAlign = "left"; }
 function drawProfile(p, c, W) {
@@ -897,7 +903,7 @@ function drawProfile(p, c, W) {
   const lu = lengthUnit(p), f = lu.factor, ylog = p.ylog && pr.mean.some(v => v > 0);
   let yr = range(pr.mean, ylog); const yb = range([...pr.lo, ...pr.hi], ylog);     // the band widens the range by at most a factor 10 (log) or a half (linear)
   if (yr && yb) yr = ylog ? [Math.max(yb[0], yr[0] / 10), Math.min(yb[1], yr[1] * 10)] : [Math.max(yb[0], yr[0] - (yr[1] - yr[0]) / 2), Math.min(yb[1], yr[1] + (yr[1] - yr[0]) / 2)]; if (!yr) return plotMessage(c, W, ["no positive values (untick log y)"]);
-  const m = p.map.meta, u = unitText(p), A = plotFrame(c, W, {x: [pr.r[0] * f, pr.r[pr.r.length - 1] * f], y: yr, xlog: true, ylog,
+  const z = plotZoom(p), m = p.map.meta, u = unitText(p), A = plotFrame(c, W, {x: zOk(z.x, true) || [pr.r[0] * f, pr.r[pr.r.length - 1] * f], y: zOk(z.y, ylog) || yr, xlog: true, ylog,
     xlabel: `R [${lu.unit}] about the centre (${m.frame ? m.frame.center_spec : "?"})`, ylabel: `${m.view.field}${u ? " [" + u + "]" : ""}, azimuthal mean of the ${m.view.mode} map`});
   const ok = v => Number.isFinite(v) && (!ylog || v > 0);
   c.save(); c.beginPath(); c.rect(A.L, A.T, A.w, A.h); c.clip();
@@ -1022,9 +1028,9 @@ function drawSeries(p, c, W) {
   if (st.stack) return drawStack(p, c, W, D, cv, X, top, win, multiId, multiCol);
   const ys = []; for (const k of cv) k.t.forEach((t, i) => { if (t != null && inWin(t) && k.y[i] != null) ys.push(k.y[i]); });
   const sc = autoScale(ys, st.yscale), ylog = sc === "log", ysym = sc && sc.sym;
-  let yr = range(ys, ylog); if (!yr) return plotMessage(c, W, ["no values in this window" + (ylog ? " (none positive for log y)" : "")]);
+  let yr = zOk(plotZoom(p).y, ylog) || range(ys, ylog); if (!yr) return plotMessage(c, W, ["no values in this window" + (ylog ? " (none positive for log y)" : "")]);
   const unit = [...new Set(st.cols.map(k => (D.columns[k] || {}).unit).filter(Boolean))].join(", ");
-  const A = plotFrame(c, W, {x: [X.f(win[0]), X.f(win[1])], y: yr, ylog, ysym, top, xlabel: X.label + (st.win ? "   (zoomed: double click = whole run)" : ""),
+  const A = plotFrame(c, W, {x: [X.f(win[0]), X.f(win[1])], y: yr, ylog, ysym, top, xlabel: X.label + (st.win || plotZoom(p).y ? "   (zoomed: double click = whole run)" : ""),
     ylabel: (multiCol ? "" : ((D.columns[st.cols[0]] || {}).label || st.cols[0])) + (unit ? (multiCol ? "" : " ") + "[" + unit + "]" : "")});
   const colorOf = k => multiCol ? SER_COLORS[st.cols.indexOf(k.column) % SER_COLORS.length] : SER_COLORS[Math.max(0, (D.ids || []).indexOf(k.id)) % SER_COLORS.length];
   const dashOf = k => multiCol && multiId ? [[], [6, 3], [2, 3], [8, 3, 2, 3]][Math.max(0, (D.ids || []).indexOf(k.id)) % 4] : [];
@@ -1099,10 +1105,10 @@ function drawStack(p, c, W, D, cv, X, top, win, multiId, multiCol) {
   if (!K) return plotMessage(c, W, ["nothing to stack (dots / events only)"]);
   const inWin = t => t >= win[0] && t <= win[1], tot = K.varies ? (frac ? [...K.total].map(v => v / K.max) : [...K.total]) : null;
   const ys = [0]; K.grid.forEach((t, i) => { if (!inWin(t)) return; for (const h of K.hi) ys.push(h[i]); if (tot) ys.push(tot[i]); });
-  let yr = frac ? [0, tot ? Math.max(1.05, ...ys.filter(Number.isFinite)) : 1] : range(ys, false);
+  let yr = zOk(plotZoom(p).y, false) || (frac ? [0, tot ? Math.max(1.05, ...ys.filter(Number.isFinite)) : 1] : range(ys, false));
   if (!yr) return plotMessage(c, W, ["no values in this window"]);
   const unit = [...new Set(st.cols.map(k => (D.columns[k] || {}).unit).filter(Boolean))].join(", ");
-  const A = plotFrame(c, W, {x: [X.f(win[0]), X.f(win[1])], y: yr, top, xlabel: X.label + (st.win ? "   (zoomed: double click = whole run)" : ""),
+  const A = plotFrame(c, W, {x: [X.f(win[0]), X.f(win[1])], y: yr, top, xlabel: X.label + (st.win || plotZoom(p).y ? "   (zoomed: double click = whole run)" : ""),
     ylabel: frac ? "fraction of the total" : (multiCol ? "sum of the parts" : ((D.columns[st.cols[0]] || {}).label || st.cols[0])) + (unit ? " [" + unit + "]" : "")});
   const colorOf = (k, j) => multiCol ? SER_COLORS[st.cols.indexOf(k.column) % SER_COLORS.length] : SER_COLORS[(multiId ? Math.max(0, (D.ids || []).indexOf(k.id)) : j) % SER_COLORS.length];
   c.save(); c.beginPath(); c.rect(A.L, A.T, A.w, A.h); c.clip();
@@ -1156,7 +1162,7 @@ function drawHeat(p, c, W) {   // a family of columns <prefix><number> against t
   const ylog = st.hy === "log" && ny > 1 && G.y.every(v => v > 0), Y = G.y;     // row edges: midpoints (geometric ones on a log axis); one row: +-0.5
   const ye = ny < 2 ? [Y[0] - 0.5, Y[0] + 0.5] : ylog ? [Y[0] ** 1.5 / Y[1] ** 0.5, ...Y.slice(1).map((v, j) => Math.sqrt(v * Y[j])), Y[ny - 1] ** 1.5 / Y[ny - 2] ** 0.5]
                                          : [Y[0] - 0.5 * (Y[1] - Y[0]), ...Y.slice(1).map((v, j) => 0.5 * (v + Y[j])), Y[ny - 1] + 0.5 * (Y[ny - 1] - Y[ny - 2])];
-  const A = plotFrame(c, W, {x: [X.f(G.x[0]), X.f(G.x[G.x.length - 1])], y: [ye[0], ye[ny]], ylog, top, xlabel: X.label, ylabel: st.heat.replace(/_$/, "")});
+  const A = plotFrame(c, W, {x: [X.f(G.x[0]), X.f(G.x[G.x.length - 1])], y: zOk(plotZoom(p).y, ylog) || [ye[0], ye[ny]], ylog, top, xlabel: X.label + (st.win || plotZoom(p).y ? "   (zoomed: double click = whole run)" : ""), ylabel: st.heat.replace(/_$/, "")});
   const tcol = zs === "symlog" ? v => { const f = Math.sign(v) * Math.log10(1 + Math.abs(v) / lt) / Math.log10(1 + (ma || 1) / lt); return 0.5 * (1 + f); }
              : zs === "lin" ? v => (v - mn) / (mx - mn || 1) : v => v > lo ? Math.log(v / lo) / Math.log(mx / lo) : NaN;
   const off = document.createElement("canvas"); off.width = nx; off.height = ny; const g = off.getContext("2d"), img = g.createImageData(nx, ny);
@@ -1166,7 +1172,9 @@ function drawHeat(p, c, W) {   // a family of columns <prefix><number> against t
     const q = lut[Math.max(0, Math.min(255, Math.round(255 * t)))]; img.data[o] = q[0]; img.data[o + 1] = q[1]; img.data[o + 2] = q[2]; img.data[o + 3] = 255;
   }
   g.putImageData(img, 0, 0); c.imageSmoothingEnabled = false;
+  c.save(); c.beginPath(); c.rect(A.L, A.T, A.w, A.h); c.clip();
   for (let j = 0; j < ny; j++) { const y0 = A.Y(ye[j + 1]), y1 = A.Y(ye[j]); c.drawImage(off, 0, ny - 1 - j, nx, 1, A.L, y0, A.w, Math.max(1, y1 - y0)); }
+  c.restore();
   const snap = S.runs[p.run].snaps[p.snap], tNow = p.missing ? null : +snap.time;
   if (tNow != null) { const x = A.X(X.f(tNow)); if (x >= A.L && x <= A.L + A.w) { c.strokeStyle = "#fc4"; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x, A.T); c.lineTo(x, A.T + A.h); c.stroke(); } }
   c.font = "11px sans-serif"; c.fillStyle = "#89a";
@@ -1180,10 +1188,12 @@ function drawHeat(p, c, W) {   // a family of columns <prefix><number> against t
   p.plotAxes = A; p.serX = X;
 }
 function setKind(p, k) {
-  p.kind = k; p.el.classList.remove("kmap", "kprofile", "kseries", "kheatmap"); p.el.classList.add("k" + k); p.el.querySelector(".kind").value = k;
+  if (p.kind !== k) { p.pz = null; p.zbox = null; }                // a zoom belongs to the plot it was made on
+  p.kind = k; p.el.classList.remove("kmap", "kprofile", "kseries", "kheatmap", "kphase"); p.el.classList.add("k" + k); p.el.querySelector(".kind").value = k;
   if (k === "series" || k === "heatmap") fillSeriesControls(p);
+  if (k === "phase") phFill(p);
   if (k !== "profile" && !S.panes.some(q => q.kind === "profile")) setHoverR(null);
-  if (k === "map" || !p.map) requestPanes([p], 0); else draw(p);
+  if (k === "map" || k === "phase" || !p.map) requestPanes([p], 0); else draw(p);
 }
 function attachPlot(p) {
   p.plot = p.el.querySelector("canvas.plot");
@@ -1209,24 +1219,195 @@ function attachPlot(p) {
   };
   document.addEventListener("mousedown", e => { const m = pk.querySelector(".scolmenu"); if (m.classList.contains("on") && !pk.contains(e.target)) m.classList.remove("on"); });
   const at = ev => { const r = p.plot.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };     // CSS pixels, as drawPlot draws
-  p.plot.addEventListener("mousedown", () => selectPane(S.panes.indexOf(p)));
-  p.plot.addEventListener("mousemove", ev => { const A = p.plotAxes; if (!A) return; const [x] = at(ev), inside = x >= A.L && x <= A.L + A.w;
+  p.plot.addEventListener("mousedown", ev => {   // shift+drag: box zoom; drag along an axis strip: zoom that axis; drag: pan a zoomed plot (phase: draw a selection); middle drag: pan
+    selectPane(S.panes.indexOf(p)); p.noClick = false; const A = p.plotAxes; if (!A || ev.button > 1) return;
+    const [x, y] = at(ev), reg = plotRegion(A, x, y); if (!reg) return;
+    const A0 = {...A}, d = {p, A0, x0: x, y0: y, sx: ev.clientX, sy: ev.clientY, moved: false};
+    if (ev.button === 1) d.mode = "pan";
+    else if (reg !== "in") d.mode = "box", d.m = reg;                                    // an axis strip: that axis only
+    else if (ev.shiftKey) d.mode = "box", d.m = "xy";
+    else if (p.kind === "phase") { if (!phPane(p).meta) return; d.mode = "lasso"; phPane(p).drawing = [[x, y]]; }
+    else d.mode = "pan";
+    if (d.mode === "pan") { const z = plotZoom(p); d.zx = p.kind === "series" || p.kind === "heatmap" ? serState(p).win : z.x; d.zy = z.y; if (!d.zx && !d.zy) d.mode = "none"; }   // pan only a zoomed axis
+    PZ.drag = d; ev.preventDefault();
+  });
+  p.plot.addEventListener("mousemove", ev => { const A = p.plotAxes; if (!A) return; const [x, y] = at(ev), inside = x >= A.L && x <= A.L + A.w, reg = plotRegion(A, x, y);
+    if (!PZ.drag) p.plot.style.cursor = reg === "x" ? "ew-resize" : reg === "y" ? "ns-resize" : "crosshair";
     if (p.kind === "profile") setHoverR(inside ? {R: A.inv(x) / lengthUnit(p).factor, src: p} : null);
-    if ((p.kind === "series" || p.kind === "heatmap") && p.serX) { st.hover = inside ? p.serX.inv(A.inv(x)) : null; st.hoverY = A.invY ? A.invY(at(ev)[1]) : null; drawPlot(p); } });
-  p.plot.addEventListener("mouseleave", () => { if (p.kind === "profile") setHoverR(null); if (p.kind === "series" || p.kind === "heatmap") { st.hover = null; drawPlot(p); } });
-  p.plot.addEventListener("wheel", ev => {   // zoom in time about the cursor
-    if ((p.kind !== "series" && p.kind !== "heatmap") || !p.plotAxes || !p.serX) return; ev.preventDefault();
-    const D = (serDesc(p.run, st.src) || {}).data; if (!D || !D.t_range) return;
-    const A = p.plotAxes, t = p.serX.inv(A.inv(at(ev)[0])), w0 = st.win || D.t_range, f = Math.exp(ev.deltaY * 0.0015);
-    let a = t - (t - w0[0]) * f, b = t + (w0[1] - t) * f; a = Math.max(a, D.t_range[0]); b = Math.min(b, D.t_range[1]);
-    st.win = b - a >= 0.98 * (D.t_range[1] - D.t_range[0]) ? null : [a, b]; drawPlot(p);
+    if (p.kind === "phase") { p.phHover = reg === "in" ? [x, y] : null; if (!PZ.drag) drawPlot(p); }
+    if ((p.kind === "series" || p.kind === "heatmap") && p.serX) { st.hover = inside ? p.serX.inv(A.inv(x)) : null; st.hoverY = A.invY ? A.invY(y) : null; if (!PZ.drag) drawPlot(p); } });
+  p.plot.addEventListener("mouseleave", () => { if (p.kind === "profile") setHoverR(null); if (p.kind === "series" || p.kind === "heatmap") { st.hover = null; drawPlot(p); } if (p.kind === "phase") { p.phHover = null; drawPlot(p); } });
+  p.plot.addEventListener("wheel", ev => {   // inside: zoom about the cursor (time series, heatmap: time only; alt: y only); over an axis strip: that axis only
+    const A = p.plotAxes; if (!A) return; ev.preventDefault();
+    const [x, y] = at(ev), reg = plotRegion(A, x, y); if (!reg) return;
+    const f = Math.exp(ev.deltaY * 0.0015), timeOnly = p.kind === "series" || p.kind === "heatmap";
+    const ax = reg === "x" ? "x" : reg === "y" ? "y" : ev.altKey ? "y" : timeOnly ? "x" : "xy";
+    const xr = ax.includes("x") ? [A.inv(x - (x - A.L) * f), A.inv(x + (A.L + A.w - x) * f)] : undefined;
+    const yr = ax.includes("y") ? [A.invY(y + (A.T + A.h - y) * f), A.invY(y - (y - A.T) * f)] : undefined;
+    setPlotZoom(p, xr, yr);
   }, {passive: false});
-  p.plot.addEventListener("dblclick", () => { if (p.kind === "series" || p.kind === "heatmap") { st.win = null; drawPlot(p); } });
+  p.plot.addEventListener("dblclick", () => resetPlotZoom(p));
   p.plot.addEventListener("click", ev => {   // a time series: go to the snapshot nearest the clicked time
-    const A = p.plotAxes; if ((p.kind !== "series" && p.kind !== "heatmap") || !A || !p.serX || ev.detail > 1) return;
+    const A = p.plotAxes; if ((p.kind !== "series" && p.kind !== "heatmap") || !A || !p.serX || ev.detail > 1 || p.noClick) return;
+    if (plotRegion(A, ...at(ev)) !== "in") return;
     const t = p.serX.inv(A.inv(at(ev)[0])), sn = S.runs[p.run].snaps; let b = 0; sn.forEach((s, i) => { if (Math.abs(s.time - t) < Math.abs(sn[b].time - t)) b = i; });
     selectPane(S.panes.indexOf(p)); setSnap(b);
   });
+  attachPhasePane(p);
+}
+// ---- zoom in the plot panes (radial profile, time series, heatmap, phase diagram): box (shift+drag), one axis (drag or wheel over the axis strip, alt+wheel = y),
+// pan (drag when zoomed, middle drag), reset (double click, o). The time axis of a series / heatmap is its window st.win (fetched again at full detail); the other
+// ranges are p.pz = {x, y} in the axes' data units (a phase diagram requests them as xr / yr). A zoomed y replaces the automatic y limits until the reset.
+const PZ = {drag: null};
+function plotZoom(p) { return p.pz || (p.pz = {x: null, y: null}); }
+function zOk(r, log) { return r && r[1] > r[0] && Number.isFinite(r[0]) && Number.isFinite(r[1]) && (!log || r[0] > 0) ? r : null; }
+function plotRegion(A, x, y) {   // "in" the frame, "x" = the strip under it (tick labels), "y" = the strip left of it, else null
+  if (x >= A.L && x <= A.L + A.w && y >= A.T && y <= A.T + A.h) return "in";
+  if (x >= A.L && x <= A.L + A.w && y > A.T + A.h && y <= A.T + A.h + 32) return "x";
+  if (x < A.L && x >= 0 && y >= A.T && y <= A.T + A.h) return "y";
+  return null;
+}
+function plotZoomed(p) { const z = plotZoom(p); return !!(z.x || z.y || ((p.kind === "series" || p.kind === "heatmap") && serState(p).win)); }
+function setPlotZoom(p, xr, yr) {   // xr / yr: [lo, hi] in the axis' data units, null = automatic, undefined = unchanged
+  const z = plotZoom(p), srt = r => r && (r[0] > r[1] ? [r[1], r[0]] : r);
+  xr = srt(xr); yr = srt(yr);
+  if (xr !== undefined) {
+    if (p.kind === "series" || p.kind === "heatmap") {
+      const st = serState(p), D = (serDesc(p.run, st.src) || {}).data;
+      if (!xr) st.win = null;
+      else if (D && D.t_range && p.serX) {
+        const full = D.t_range; let a = p.serX.inv(xr[0]), b = p.serX.inv(xr[1]); if (a > b) [a, b] = [b, a];
+        const w = Math.min(b - a, full[1] - full[0]); if (a < full[0]) { a = full[0]; b = a + w; } if (b > full[1]) { b = full[1]; a = b - w; }    // a pan stops at the ends
+        st.win = w >= 0.98 * (full[1] - full[0]) ? null : [a, b];
+      }
+    } else z.x = xr;
+  }
+  if (yr !== undefined) z.y = yr;
+  if (p.kind === "phase") { phRangeInputs(p); clearTimeout(p.phT); p.phT = setTimeout(() => fetchPhasePane(p), 200); }
+  drawPlot(p);
+}
+function resetPlotZoom(p) {
+  const z = plotZoom(p); z.x = z.y = null; if (p.kind === "series" || p.kind === "heatmap") serState(p).win = null;
+  if (p.kind === "phase") { phPane(p).keep = null; phRangeInputs(p); fetchPhasePane(p); }
+  drawPlot(p);
+}
+window.addEventListener("mousemove", e => {
+  const d = PZ.drag; if (!d) return; const p = d.p, r = p.plot.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, A0 = d.A0;
+  if (Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 4) d.moved = true; if (!d.moved) return;
+  if (d.mode === "box") { p.zbox = {m: d.m, x0: d.x0, y0: d.y0, x1: Math.max(A0.L, Math.min(A0.L + A0.w, x)), y1: Math.max(A0.T, Math.min(A0.T + A0.h, y))}; drawPlot(p); }
+  else if (d.mode === "pan") {
+    const dx = x - d.x0, dy = y - d.y0;
+    setPlotZoom(p, d.zx ? [A0.inv(A0.L - dx), A0.inv(A0.L + A0.w - dx)] : undefined, d.zy ? [A0.invY(A0.T + A0.h - dy), A0.invY(A0.T - dy)] : undefined);
+  } else if (d.mode === "lasso") { const h = phPane(p), l = h.drawing[h.drawing.length - 1]; if (Math.hypot(x - l[0], y - l[1]) >= 3) { h.drawing.push([x, y]); drawPlot(p); } }
+});
+window.addEventListener("mouseup", () => {
+  const d = PZ.drag; if (!d) return; PZ.drag = null; const p = d.p, A0 = d.A0; p.noClick = d.moved;
+  if (d.mode === "box") { const b = p.zbox; p.zbox = null;
+    if (!b) return drawPlot(p);
+    const wx = Math.abs(b.x1 - b.x0) >= 6 && d.m !== "y", wy = Math.abs(b.y1 - b.y0) >= 6 && d.m !== "x";     // a thin box zooms one axis
+    if (!wx && !wy) return drawPlot(p);
+    setPlotZoom(p, wx ? [A0.inv(b.x0), A0.inv(b.x1)] : undefined, wy ? [A0.invY(b.y0), A0.invY(b.y1)] : undefined);
+  } else if (d.mode === "lasso") phLassoEnd(p);
+});
+// ---- phase-diagram panes (/api/phase of the pane's window at its snapshot): x, y, log axes, weight, bins and ranges in the pane; a box zoom asks for the new
+// ranges; a drag draws a selection (lasso) that is highlighted, as from the side panel, on the map panes of the same run (R clears it)
+function phPane(p) { return p.pp || (p.pp = {x: "density", y: "u", xlog: true, ylog: true, w: "mass", bins: 200, grid: null, meta: null, seq: 0, keep: null, drawing: null}); }
+function phFill(p) {   // the quantity menus (once) and the controls from the state
+  const h = phPane(p), pk = p.el.querySelector(".pk");
+  for (const c of [".pqx", ".pqy"]) { const s = pk.querySelector(c); if (!s.options.length) for (const f of S.phaseQ || []) s.add(new Option(f, f)); }
+  pk.querySelector(".pqx").value = h.x; pk.querySelector(".pqy").value = h.y; pk.querySelector(".pxl").checked = h.xlog; pk.querySelector(".pyl").checked = h.ylog;
+  pk.querySelector(".pw").value = h.w; pk.querySelector(".pb").value = String(h.bins); phRangeInputs(p);
+}
+const phReal = (v, lg) => lg ? 10 ** v : v, phT = (v, lg) => lg ? Math.log10(v) : v;
+function phAxes(p) {   // the displayed ranges (data units): the zoom, else the ranges of the grid drawn
+  const h = phPane(p), z = plotZoom(p), m = h.meta;
+  return {x: zOk(z.x, h.xlog) || (m && m.x.log === h.xlog ? m.x.range.map(v => phReal(v, h.xlog)) : null), y: zOk(z.y, h.ylog) || (m && m.y.log === h.ylog ? m.y.range.map(v => phReal(v, h.ylog)) : null)};
+}
+function phRangeInputs(p) {
+  const z = plotZoom(p), pk = p.el.querySelector(".pk"), f = r => r ? r.map(v => +v.toPrecision(4)).join(", ") : "";
+  for (const [c, r] of [[".pxr", z.x], [".pyr", z.y]]) { const e = pk.querySelector(c); if (document.activeElement !== e) e.value = f(r); }
+}
+async function fetchPhasePane(p) {
+  const h = phPane(p), seq = ++h.seq, z = plotZoom(p), key = [h.x, h.y, h.xlog, h.ylog].join("|");
+  if (p.missing) { h.grid = null; drawPlot(p); return; }
+  const q = paneParams(p); delete q.sel;
+  Object.assign(q, {x: h.x, y: h.y, xlog: h.xlog ? 1 : 0, ylog: h.ylog ? 1 : 0, weight: h.w, bins: h.bins});
+  const kept = h.keep === key && h.meta;                              // not zoomed: keep the first automatic ranges over the snapshots (axes and a lasso stay put)
+  if (zOk(z.x, h.xlog)) q.xr = z.x.map(v => phT(v, h.xlog)).join(","); else if (kept) q.xr = h.meta.x.range.join(",");
+  if (zOk(z.y, h.ylog)) q.yr = z.y.map(v => phT(v, h.ylog)).join(","); else if (kept) q.yr = h.meta.y.range.join(",");
+  p.spin.classList.add("on");
+  try {
+    const r = await api("/api/phase", q, true), meta = JSON.parse(r.headers.get("X-Splosh-Meta")), buf = await r.arrayBuffer();
+    if (seq !== h.seq) return;
+    h.grid = new Float32Array(buf); h.meta = meta; h.keep = key; h.err = "";
+  } catch (e) { if (seq !== h.seq) return; h.err = errText(e); }
+  finally { if (seq === h.seq) p.spin.classList.remove("on"); }
+  drawPlot(p);
+}
+function drawPhasePane(p, c, W) {
+  const h = phPane(p);
+  if (p.missing) return plotMessage(c, W, ["no snapshot at this time"]);
+  if (h.err && !h.grid) return plotMessage(c, W, ["phase diagram:", h.err]);
+  if (!h.grid || !h.meta) return plotMessage(c, W, ["computing the phase diagram of the window..."]);
+  const m = h.meta, lut = S.luts.viridis; if (!lut) { ensureLut("viridis").then(() => drawPlot(p)); return plotMessage(c, W, ["loading the colour table..."]); }
+  const R = phAxes(p), top = document.body.classList.contains("figmode") ? 30 : Math.max(46, (p.el.querySelector(".pk").offsetHeight || 20) + 26);
+  const lab = a => `${a.label}${a.unit ? " [" + a.unit + "]" : ""}`;
+  const A = plotFrame(c, W, {x: R.x, y: R.y, xlog: h.xlog, ylog: h.ylog, top, xlabel: lab(m.x) + (zOk(plotZoom(p).x, h.xlog) || zOk(plotZoom(p).y, h.ylog) ? "   (zoomed: double click = automatic)" : ""), ylabel: lab(m.y)});
+  const n = m.bins, g = h.grid;
+  if (h.offFor !== g) {   // the coloured histogram, once per grid (hover and zoom redraw often)
+    let mx = 0; for (const v of g) if (v > mx) mx = v;
+    const off = document.createElement("canvas"); off.width = off.height = n; const oc = off.getContext("2d"), im = oc.createImageData(n, n), px = im.data, lmx = Math.log10(mx || 1), lmn = lmx - 4;
+    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+      const v = g[j * n + i], o = ((n - 1 - j) * n + i) * 4;     // row 0 of the grid is the lowest y: flip for the screen
+      if (!(v > 0)) continue;
+      const k = Math.round(Math.max(0, Math.min(1, (Math.log10(v) - lmn) / (lmx - lmn))) * 255); px[o] = lut[k][0]; px[o + 1] = lut[k][1]; px[o + 2] = lut[k][2]; px[o + 3] = 255;
+    }
+    oc.putImageData(im, 0, 0); h.off = off; h.offFor = g;
+  }
+  const off = h.off;
+  const gx0 = A.X(phReal(m.x.range[0], h.xlog)), gx1 = A.X(phReal(m.x.range[1], h.xlog)), gy1 = A.Y(phReal(m.y.range[1], h.ylog)), gy0 = A.Y(phReal(m.y.range[0], h.ylog));
+  c.save(); c.beginPath(); c.rect(A.L, A.T, A.w, A.h); c.clip(); c.fillStyle = "#000"; c.fillRect(A.L, A.T, A.w, A.h);
+  c.imageSmoothingEnabled = false; c.drawImage(off, gx0, gy1, gx1 - gx0, gy0 - gy1);     // the grid at its own ranges (a zoom shows the old grid stretched until the new one arrives)
+  const toPx = q => [A.X(phReal(q[0], h.xlog)), A.Y(phReal(q[1], h.ylog))], crit = p.selCrit;
+  const poly = h.drawing || (crit && crit.x === h.x && crit.y === h.y && crit.xlog === h.xlog && crit.ylog === h.ylog ? crit.poly.map(toPx) : null);
+  if (poly && poly.length > 1) { c.beginPath(); poly.forEach((q, i) => i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1])); if (!h.drawing) c.closePath(); c.lineWidth = 1.5; c.strokeStyle = "#f4f"; c.stroke(); }
+  c.restore();
+  c.font = "11px sans-serif"; c.fillStyle = "#89a";
+  let txt = `${m.weight} per bin, log colours over 4 decades; ${m.n_in_view} particles in the window, ${m.n_in_range} in range`;
+  if (p.phHover) { const xv = A.inv(p.phHover[0]), yv = A.invY(p.phHover[1]), i = Math.floor((phT(xv, h.xlog) - m.x.range[0]) / (m.x.range[1] - m.x.range[0]) * n), j = Math.floor((phT(yv, h.ylog) - m.y.range[0]) / (m.y.range[1] - m.y.range[0]) * n);
+    txt = `${m.x.label} ${fmt(xv)}, ${m.y.label} ${fmt(yv)}: ${i >= 0 && i < n && j >= 0 && j < n ? fmt(g[j * n + i]) : "-"} (${m.weight} in the bin)`; }
+  else if (p.selMsg && crit) txt = p.selMsg;
+  c.fillText(txt, A.L, A.T - 6, A.w);
+  p.plotAxes = A;
+}
+function phLassoEnd(p) {   // the drawn polygon -> a selection (in the diagram's axis values, log10 on log axes), shown on the map panes of the run
+  const h = phPane(p), pts = h.drawing, A = p.plotAxes; h.drawing = null;
+  if (!pts || pts.length < 3 || !A) return drawPlot(p);
+  const crit = {x: h.x, y: h.y, xlog: h.xlog, ylog: h.ylog, poly: pts.map(q => [phT(A.inv(q[0]), h.xlog), phT(A.invY(q[1]), h.ylog)].map(v => +v.toPrecision(6)))};
+  p.selCrit = crit; p.selMsg = "selection drawn: shown on the map panes of this run (R clears)";
+  for (const q of S.panes) if (q.kind === "map" && q.run === p.run) { q.selCrit = {...crit}; q.selFrom = p; refreshPhase(q); if (q.selOnly) fetchPane(q); }
+  drawPlot(p);
+}
+function phClear(p) {   // the selection of a phase pane and its copies on the maps
+  p.selCrit = null; p.selMsg = "";
+  for (const q of S.panes) if (q.selFrom === p) { const was = q.selOnly && q.selCrit; q.selCrit = null; q.selItem = null; q.selMsg = ""; q.selFrom = null; drawOv(q); if (was) fetchPane(q); }
+  drawPlot(p);
+}
+function attachPhasePane(p) {
+  const pk = p.el.querySelector(".pk"), h = phPane(p), again = () => { plotZoom(p).x = plotZoom(p).y = null; h.keep = null; phRangeInputs(p); fetchPhasePane(p); };
+  pk.querySelector(".pqx").onchange = e => { h.x = e.target.value; again(); };
+  pk.querySelector(".pqy").onchange = e => { h.y = e.target.value; again(); };
+  pk.querySelector(".pxl").onchange = e => { h.xlog = e.target.checked; again(); };
+  pk.querySelector(".pyl").onchange = e => { h.ylog = e.target.checked; again(); };
+  pk.querySelector(".pw").onchange = e => { h.w = e.target.value; fetchPhasePane(p); };
+  pk.querySelector(".pb").onchange = e => { h.bins = +e.target.value; fetchPhasePane(p); };
+  pk.querySelector(".pclr").onclick = () => phClear(p);
+  for (const [c, ax] of [[".pxr", "x"], [".pyr", "y"]]) pk.querySelector(c).onchange = e => {
+    const v = e.target.value.split(/[\s,;]+/).filter(Boolean).map(Number), lg = ax === "x" ? h.xlog : h.ylog;
+    const r = v.length === 2 && zOk(v[0] < v[1] ? v : [v[1], v[0]], lg); e.target.blur();
+    if (!e.target.value.trim()) { plotZoom(p)[ax] = null; h.keep = null; } else if (!r) { phRangeInputs(p); return; } else plotZoom(p)[ax] = r;
+    phRangeInputs(p); fetchPhasePane(p);
+  };
 }
 // ---- Figure mode: the panes are the panels of a layout (layout.py). The stage is the layout's grid; the Figure tab holds what the layout editor had:
 // open / save, title, grid, the selected pane's placement and label, the figure options and the format, the publication look over the stage (the
@@ -1257,7 +1438,8 @@ function panelOf(p, i) {   // a pane as a layout panel
   const base = {id: p.lid || `p${i + 1}`, ...(p.label ? {label: p.label} : {})};
   if (p.pos) Object.assign(base, {row: p.pos.row, col: p.pos.col}, (p.pos.rs || 1) > 1 ? {rowspan: p.pos.rs} : {}, (p.pos.cs || 1) > 1 ? {colspan: p.pos.cs} : {});
   else if (p.span) Object.assign(base, (p.span.rs || 1) > 1 ? {rowspan: p.span.rs} : {}, (p.span.cs || 1) > 1 ? {colspan: p.span.cs} : {});
-  const ex = p.extra || {};
+  const {x_phase, text, ...ex} = p.extra || {};                   // (text, x_phase: a phase pane saved as a text panel)
+  if (p.kind === "phase") return {...ex, ...base, ...phasePanel(p)};
   if (p.kind === "series") {
     const st = serState(p);
     const o = {...ex, ...base, type: "timeseries", source: st.src || "snapshots", columns: st.cols.length ? st.cols : (ex.columns || []), ...(st.ids ? {ids: st.ids} : {}), ...(st.smooth ? {smooth: st.smooth} : {}),
@@ -1272,6 +1454,13 @@ function panelOf(p, i) {   // a pane as a layout panel
   else if (!m.limits || m.limits === "fixed") { m.limits = "frame"; delete m.vmin; delete m.vmax; }
   return m;
 }
+function phasePanel(p) {   // a phase pane in a layout: a "phase" panel when the layout schema has that type, else a text panel (drawn as its text in the
+  const h = phPane(p), z = plotZoom(p), v = viewKeys(p);   // publication look) whose x_phase holds the pane, which openLayout shows live again
+  const o = {x: h.x, y: h.y, xlog: h.xlog, ylog: h.ylog, weight: h.w, bins: h.bins, ...(zOk(z.x, h.xlog) ? {xr: z.x} : {}), ...(zOk(z.y, h.ylog) ? {yr: z.y} : {})};
+  const T = ((FIG.reg || {}).panel_types || {}).phase;
+  if (T) { const out = {type: "phase"}; for (const [k, val] of Object.entries({...v, ...o})) if (k in T) out[k] = val; return out; }
+  return {type: "text", text: `phase diagram: ${h.y} against ${h.x} (${h.w}) of the window, at {snapshot} (shown live in the viewer)`, x_phase: {...o, view: v}};
+}
 function layoutOf() {   // the whole layout: the panes, the panels the viewer does not show live (text, product panels, expressions), the layout's own keys
   const L = {...FIG.keepTop, schema: "splosh-layout-1", name: FIG.name || "figure", scope: FIG.scope || "snapshot", ncols: gridCols(), panel: S.panes.map(panelOf).concat(FIG.extra)};
   if (FIG.title) L.title = FIG.title; else delete L.title;
@@ -1285,7 +1474,7 @@ function setPost(p, post) {   // the inverse of postSpec
   const s = String(post || "none"); let m;
   if ((m = s.match(/^resid:smooth:(.+)$/))) { p.post = "resid:smooth"; p.postarg = m[1]; } else if ((m = s.match(/^grad:(.+)$/))) { p.post = "grad"; p.postarg = m[1]; } else { p.post = s; p.postarg = ""; }
 }
-const LIVE_PANEL = q => q.type === "heatmap" ? true : q.type === "map" ? !q.product : q.type === "profile" ? !q.product : q.type === "timeseries" ? (q.source && q.source !== "snapshots") || (q.columns || []).every(c => /^[A-Za-z_]\w*$/.test(c)) : false;
+const LIVE_PANEL = q => q.type === "phase" || (q.type === "text" && q.x_phase && typeof q.x_phase === "object") ? true : q.type === "heatmap" ? true : q.type === "map" ? !q.product : q.type === "profile" ? !q.product : q.type === "timeseries" ? (q.source && q.source !== "snapshots") || (q.columns || []).every(c => /^[A-Za-z_]\w*$/.test(c)) : false;
 async function openLayout(name) {
   const r = await api("/api/layout", {name}), raw = r.raw, v = (await postJSON("/api/layout/validate", {layout: raw}));
   if (!v.ok) { $("fg_err").textContent = "this layout does not validate: " + v.error; return; }
@@ -1307,6 +1496,14 @@ async function openLayout(name) {
     p.extra = Object.fromEntries(Object.entries(rq).filter(([k2]) => !["id", "label", "row", "col", "rowspan", "colspan", "type"].includes(k2)));
     if (q.type === "heatmap") { const st = serState(p); st.src = q.source; st.heat = q.prefix; st.xaxis = {orb: "orb", time_myr: "myr", time: "t"}[q.xaxis] || "t"; st.win = null;
       st.hz = q.zscale || "log"; st.hy = q.yscale || "lin"; p.el.querySelector(".shz").value = st.hz; p.el.querySelector(".shy").value = st.hy; setKind(p, "heatmap"); return; }
+    if (q.type === "phase" || rq.x_phase) {   // a phase pane: its own view (the shared centre / align / tilt controls stay as they are) and diagram
+      const o = q.type === "phase" ? q : rq.x_phase, v = q.type === "phase" ? q : o.view || {}, h = phPane(p);
+      if (v.field) p.field = v.field; if (v.mode) p.mode = v.mode; if (v.axes) p.axes = v.axes; p.z0 = String(v.z0 ?? 0); p.weight = v.weight || "auto";
+      p.view = S.linked && k ? S.panes[0].view : {...p.view}; if (v.width > 0) p.view.width = v.width; p.view.cx = v.cx || 0; p.view.cy = v.cy || 0;
+      p.fix = {}; for (const kk of VIEW_KEYS) if (v[kk] != null && (!firstMap || String(v[kk]) !== String(byId[firstMap.id][kk])) && (kk !== "hscale" || v.hscale !== 1)) p.fix[kk] = v[kk];
+      Object.assign(h, {x: o.x || h.x, y: o.y || h.y, xlog: o.xlog !== false, ylog: o.ylog !== false, w: o.weight || "mass", bins: +o.bins || 200, keep: null, grid: null, meta: null});
+      p.kind = "map"; setKind(p, "phase"); const z = plotZoom(p); z.x = Array.isArray(o.xr) ? o.xr : null; z.y = Array.isArray(o.yr) ? o.yr : null; phRangeInputs(p); return;
+    }
     if (q.type === "timeseries") {
       const st = serState(p); st.src = q.source || "snapshots"; st.cols = [...q.columns]; st.ids = q.ids || null; st.smooth = +q.smooth || 0;
       st.xaxis = {orb: "orb", time_myr: "myr", time: "t", index: "t"}[q.xaxis] || "orb"; st.yscale = q.yscale || (q.ylog ? "log" : "auto"); st.win = null;
@@ -1323,7 +1520,8 @@ async function openLayout(name) {
     p.ovo = {...ovDefault(), extra: (q.overlays || []).join(";")};
     setKind(p, "map");
   });
-  if (live.length > 1 && S.linked && live.some((q, k) => k && byId[q.id].width !== byId[live[0].id].width)) setLinked(false);     // panels with their own windows
+  const widthOf = q => byId[q.id].width ?? ((q.x_phase || {}).view || {}).width;      // (a phase pane saved as a text panel: its view in x_phase)
+  if (live.length > 1 && S.linked && live.some((q, k) => k && widthOf(q) !== widthOf(live[0]))) setLinked(false);     // panels with their own windows
   FIG.dirty = false; $("fg_stat").textContent = `opened ${name}` + (FIG.extra.length ? `; ${FIG.extra.length} panel(s) not shown live (text, analyze products, expressions, more than ${MAXPANES}): visible in the publication look` : "");
   $("fg_err").textContent = ""; applyGrid(); showControls(); figToControls(); requestAll(30);
 }
@@ -1943,14 +2141,14 @@ window.addEventListener("keydown", e => {
     case "a": { const L = p.diff !== "off" ? p.dl : p.nl; L.auto = true; L.lock = false; $("auto").checked = true; $("lock").checked = false; bake(p); draw(p); showLimits(p); return done(); }
     case "l": p.scale = p.scale === "log" ? "linear" : "log"; $("scale").value = p.scale; bake(p); draw(p); return done();
     case "s": { const L = p.diff !== "off" ? p.dl : p.nl; L.lock = !L.lock; $("lock").checked = L.lock; bake(p); draw(p); return done(); }
-    case "o": resetView(p); return done();
+    case "o": if (p.kind !== "map" && plotZoomed(p)) resetPlotZoom(p); else resetView(p); return done();     // a zoomed plot pane: its zoom first
     case "r": S.panes.forEach(q => { q.seq++; }); requestAll(0); return done();                         // SPLASH: replot
     case "C": { const w = cursorWorld(); if (w) centreAt(p, w); return done(); }
     case "n": { const w = cursorWorld(); if (w) centreOnBH(p, w); return done(); }
     case "t": { const w = cursorWorld(); if (/^ids:/.test($("center").value) && !w) { $("center").value = S.def.center; $("center").sync(); requestAll(30); return done(); }
                 if (w) trackAt(p, w); return done(); }
     case "p": case "c": { const w = cursorWorld(); if (w) inspectAt(p, w[0], w[1]); return done(); }   // SPLASH: closest particle / its circle
-    case "R": $("ph_clear").click(); return done();
+    case "R": if (p.kind === "phase") phClear(p); else $("ph_clear").click(); return done();
     case "Escape": case "Backspace": S.panes.forEach(clearInsp); closeFieldMenu(); return done();
     case "m": case "M": { const o = [...$("cmap").options].map(x => x.value).filter(x => !x.endsWith("_r")), base = p.cmap.replace(/_r$/, ""), i = o.indexOf(base);
                           p.cmap = o[(i + (k === "m" ? 1 : -1) + o.length) % o.length]; $("cmap").value = p.cmap; $("cmap").dispatchEvent(new Event("change")); return done(); }
@@ -1994,6 +2192,11 @@ const KEYMAP = [
   [["menu"], "right click", "a menu at that point: centre, zoom, nearest black hole, track, inspect, copy the coordinates or the value (series: go to that time, stack); shift+right click: the browser's menu"],
   [["view.reset", "view.centre", "view.bh"], "o, C, n", "reset the view; centre on the cursor; centre on the black hole nearest the cursor"],
   [["track"], "t", "track the particle nearest the cursor (centre rule ids:ID); t away from the map: tracking off"],
+  ["Plot panes (profile, time series, heatmap, phase diagram)"],
+  [["plot.box"], "shift+drag", "zoom to the box drawn; a drag along an axis strip (tick labels): that axis only"],
+  [["plot.wheel"], "wheel, alt+wheel", "zoom about the cursor (series, heatmap: time; over an axis strip: that axis); alt: y only"],
+  [["plot.pan", "plot.reset"], "drag, middle drag; double click, o", "pan a zoomed plot (phase diagram: drag = selection, middle drag pans); reset the zoom"],
+  [["plot.sel.clear"], "R", "phase-diagram pane: clear its selection and the highlight on the maps"],
   ["Colours and rendering"],
   [["lim.auto", "scale.log", "lim.lock"], "a, l, s", "automatic colour limits; log / linear; lock the limits for all snapshots"],
   [["cmap.next", "cmap.prev", "cmap.invert"], "m M i", "next / previous colour map, invert it"],
@@ -2055,7 +2258,7 @@ function plotMenu(p, e) {
   const r = p.plot.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, t = p.serX.inv(A.inv(px)), y = A.invY ? A.invY(py) : null;
   const sn = S.runs[p.run].snaps; let b = 0; sn.forEach((s, i) => { if (Math.abs(s.time - t) < Math.abs(sn[b].time - t)) b = i; });
   const items = [[`Go to the snapshot nearest this time (${b + 1})`, () => { selectPane(S.panes.indexOf(p)); setSnap(b); }, "click"]];
-  if (st.win) items.push(["Whole run (reset the time zoom)", () => { st.win = null; drawPlot(p); }, "double click"]);
+  if (plotZoomed(p)) items.push(["Reset the zoom (whole run, automatic y)", () => resetPlotZoom(p), "double click"]);
   if (p.kind === "series") { items.push(null); for (const [v, lab] of [["", "Lines"], ["stack", "Stacked (parts of a total)"], ["fraction", "Fractions of the total"]]) items.push([(st.stack === v ? "✓ " : " ") + lab, () => { st.stack = v; p.el.querySelector(".sstk").value = v; drawPlot(p); if (FIG.pub) pubSchedule(); }]); }
   items.push(null, ["Copy t (code time) and y", () => copyText(`${t.toPrecision(7)} ${y != null ? y.toPrecision(6) : ""}`.trim())]);
   openCtx(e.clientX, e.clientY, `t = ${t.toPrecision(6)} (code)${y != null ? "   y = " + y.toPrecision(5) : ""}`, items); return true;
@@ -2066,6 +2269,13 @@ document.addEventListener("contextmenu", e => {
   const p = S.panes.find(q => q.el === el); if (!p) return;
   if (p.kind === "map") { e.preventDefault(); selectPane(S.panes.indexOf(p)); mapMenu(p, e); }
   else if ((p.kind === "series" || p.kind === "heatmap") && e.target === p.plot) { e.preventDefault(); selectPane(S.panes.indexOf(p)); if (!plotMenu(p, e)) closeCtx(); }
+  else if ((p.kind === "profile" || p.kind === "phase") && e.target === p.plot && p.plotAxes) {     // zoom and the values under the cursor
+    e.preventDefault(); selectPane(S.panes.indexOf(p)); const A = p.plotAxes, r = p.plot.getBoundingClientRect(), x = A.inv(e.clientX - r.left), y = A.invY(e.clientY - r.top);
+    const items = [["Reset the zoom", () => resetPlotZoom(p), "double click"]];
+    if (p.kind === "phase" && p.selCrit) items.push(["Clear the selection", () => phClear(p), "R"]);
+    items.push(null, ["Copy x and y", () => copyText(`${x.toPrecision(6)} ${y.toPrecision(6)}`)]);
+    openCtx(e.clientX, e.clientY, `x = ${x.toPrecision(5)}   y = ${y.toPrecision(5)}`, items);
+  }
 });
 document.addEventListener("mousedown", e => { if (!(e.target.closest && e.target.closest("#ctx"))) closeCtx(); }, true);
 window.addEventListener("blur", closeCtx); window.addEventListener("resize", closeCtx);
@@ -2357,6 +2567,7 @@ $("folderlink").onclick = e => { e.preventDefault(); openPicker(false); };
       $("ov_plug").append(box);
     }
     { const hasB = st.fields.includes("Bx"); for (const id of ["ov_vB", "ov_sB"]) { $(id).closest("label").classList.toggle("hid", !hasB); if (!hasB) $(id).checked = false; } }   // B overlays only when the runs have MagneticField
+    S.phaseQ = st.phase_quantities || [];
     for (const f of st.phase_quantities || []) { $("ph_x").add(new Option(f, f)); $("ph_y").add(new Option(f, f)); } for (const c of st.colormaps) $("cmap").add(new Option(c, c));
     const d = st.defaults, p = makePane(); S.panes.push(p); $("stage").appendChild(p.cell);
     Object.assign(p, {field: d.field, mode: d.mode, axes: d.axes, z0: String(d.z0)}); p.view = {cx: d.cx, cy: d.cy, width: d.width};

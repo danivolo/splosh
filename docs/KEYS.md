@@ -3,7 +3,7 @@
 Source for SPLASH: its in-app list (`h` in the plot window; pasted by the user 2026-11-09) and the docs
 (https://splash-viz.readthedocs.io/en/latest/basic.html, settings.html). Goal: a SPLASH user finds the same keys doing the same things;
 SPLOSH's own extras go on keys SPLASH leaves free. **Status (2026-11-09): implemented** as below, with the user's answers to the three open questions (space = next snapshot as in
-SPLASH; digits are step counts, panes by Tab; right click is NOT bound: the browser's menu stays). Not yet: `g` (line profile), `shift`+drag zoom box.
+SPLASH; digits are step counts, panes by Tab; right click is NOT bound: the browser's menu stays). Not yet: `g` (line profile), `shift`+drag zoom box on a map (it works on the plot panes, below).
 "(today)" / "moved" refer to the keys before this change.
 
 Legend: **=** same key and meaning as SPLASH · **~** same key, SPLOSH's closest equivalent · **new** SPLOSH only · **moved** an SPLOSH key that changes.
@@ -27,7 +27,7 @@ Legend: **=** same key and meaning as SPLASH · **~** same key, SPLOSH's closest
 | `shift`+drag | zoom to the box drawn | ~ (SPLASH: left click = select/zoom box) |
 | `a` | adapt the colour limits to the data (auto limits on) | = (today: store A, moved to `A`) |
 | `l` | log / linear colour scale | = (today: link panes, moved to `L`) |
-| `o` | reset the view: the default centre and width | ~ (SPLASH: re-centre on the origin; today `r`) |
+| `o` | reset the view: the default centre and width (a zoomed plot pane: its zoom) | ~ (SPLASH: re-centre on the origin; today `r`) |
 | `C` | centre on the cursor | = |
 | `n` | centre on the nearest black hole (sink) to the cursor | = |
 | `t` | track the particle nearest the cursor (centre rule `ids:<its id>`); again: off | = |
@@ -81,13 +81,27 @@ Legend: **=** same key and meaning as SPLASH · **~** same key, SPLOSH's closest
 | `e` / `E` | set the movie range end / start to this snapshot (then File > Movie) | ~ (SPLASH: animation sequence end point) |
 | `h`, `F1` | the key list | = (`?` is a rotation key in SPLASH) |
 
+## Zoom in the plot panes: radial profile, time series, heatmap, phase diagram (SPLOSH's own, 2026-11-13)
+| input | action |
+|---|---|
+| `shift`+drag | zoom to the box drawn (a box under 6 px tall or wide zooms the other axis only) |
+| drag along the x-axis strip (the tick labels under the plot) / the y-axis strip (left of it) | zoom that axis to the band drawn |
+| wheel over an axis strip | zoom that axis about the cursor |
+| wheel inside the plot | time series, heatmap: zoom in time (the window is fetched again); profile, phase diagram: both axes |
+| `alt`+wheel inside the plot | zoom y only |
+| drag inside a zoomed plot / middle drag | pan (the zoomed axes); on a phase diagram a plain drag draws a selection (lasso), so it pans with the middle button |
+| double click, `o`, right click > Reset the zoom | reset the zoom (the whole run, automatic y; a phase diagram's automatic ranges) |
+| `R` on a phase-diagram pane | clear its selection and the highlight on the maps |
+
+A zoomed y replaces the automatic y limits until the reset; `ctrl` / `shift`+wheel still scan the snapshots over a plot pane. Zoom is not saved in layouts, except a phase pane's ranges.
+
 ## Mouse and window (SPLOSH's own, 2026-11-12)
 | input | action |
 |---|---|
 | mouse back / forward buttons | previous / next snapshot (the browser's history navigation is prevented) |
 | `ctrl` or `shift` + wheel over the slider or a pane | scan the snapshot number (label, clock and a mark on the slider show the target); loads on releasing the key; `Esc` cancels |
 | middle click / middle drag | centre here / pan; double middle click: reset the view |
-| right click | a menu at that point (map: centre, zoom, reset, nearest black hole, track, inspect, copy coordinates / value; time series: go to that time, stack mode, copy); `shift`+right click: the browser's menu |
+| right click | a menu at that point (map: centre, zoom, reset, nearest black hole, track, inspect, copy coordinates / value; time series: go to that time, reset the zoom, stack mode, copy; profile / phase diagram: reset the zoom, clear the selection, copy x y); `shift`+right click: the browser's menu |
 | `q` | show / hide the side panel (also in Figure mode) |
 
 ## Not taken from SPLASH

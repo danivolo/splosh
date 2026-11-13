@@ -72,7 +72,8 @@ def test_whole_smoke_passes(smoke_output):
                                      ("step all panes", 1), ("clocks", 1), ("no snapshot at this time", 1), ("offset 1.5", 1), ("page's nearest-snapshot rule", 1), ("index alignment", 2), ("a pane can show the other run", 1), ("independent /api/map?run=", 1),
                                      ("mouse forward / back", 1), ("scans the snapshots without loading", 1), ("releasing shift loads", 1), ("the page does not zoom", 1), ("Esc cancels a scan", 1),
                                      ("plain wheel still zooms", 1), ("middle click", 2), ("right click opens the map menu", 1), ("shift+right click keeps", 1), ("hides and shows the side panel", 1),
-                                     ("stackOf", 1), ("stack option goes into its layout panel", 1), ("signed field vx", 1)])
+                                     ("stackOf", 1), ("stack option goes into its layout panel", 1), ("signed field vx", 1),
+                                     ("plot zoom:", 10), ("phase pane:", 9)])
 def test_group_ran_and_passed(smoke_output, word, n):
     _, out = smoke_output
     got = lines(out, word)

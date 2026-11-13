@@ -253,7 +253,7 @@ Panes, blink, difference, keys (`?` or `h` in the page shows them):
 - Keys: left / right previous / next snapshot (all panes or Shift: the selected one); `a` `b` store A / B, `space` blink, `d` difference; `p` number of panes, `1`..`4` select a pane; `l` link pan / zoom; `r` reset the view; drag pans, wheel zooms about the cursor, double click centres;
   click inspects (shift+click at once), `Esc` clears the inspection (and closes the help); `?` or `h` the help.
 - Colouring is done in JavaScript on a 2D canvas (no WebGL).
-- Pane kinds (selector at the pane's bottom right, top right on a plot): `map` (default), `radial profile` and `time series` [verified: tests/test_series.py, scratch browser check].
+- Pane kinds (selector at the pane's bottom right, top right on a plot): `map` (default), `radial profile`, `time series`, `heatmap` and `phase diagram` (below) [verified: tests/test_series.py, scratch browser check].
   `radial profile` is the azimuthal statistics of the pane's own map (its field, mode, units and window; the controls still edit it) in 48 log-spaced annuli about the centre of the
   frame (the centre rule's point, not the window centre): mean (line), 16-84 percentiles (band), dashed where the window covers under half of the annulus. For `rho` in projection that
   is the surface density Sigma(R). Hover on the profile draws the circle of that radius on every map pane; hover on a map marks its radius on the profiles.
@@ -266,9 +266,25 @@ Panes, blink, difference, keys (`?` or `h` in the page shows them):
   and gaps survive; columns with style `events` are sent whole. Controls: source, columns (grouped; several share the y axis), one curve per id (black hole) with checkboxes, running mean
   of 0.01 / 0.1 / 1 binary period P0 (P0 of the first snapshot), x axis t/P0, Myr or code time, y auto (log when positive over more than 100x, symlog when both signs span decades, linthresh =
   20th percentile of |y|) or fixed. Angles with a wrap break their line at the wrap, are drawn in [0, 360) when that wraps less, and get no running mean. The legend gives each curve's value at
-  the current snapshot (yellow line) or under the cursor; the wheel zooms in time (the window is fetched again at full detail), a double click shows the whole run, a click goes to the nearest
+  the current snapshot (yellow line) or under the cursor; the wheel zooms in time (the window is fetched again at full detail; more zoom gestures below), a double click shows the whole run, a click goes to the nearest
   snapshot. A run without snapshot scalars gets a `build` button: a background job (`POST /api/jobs {"kind": "series", "run": ...}`, analyze with only the built-in scalars, incremental) writes
   `<run>/analysis_viewer/series/scalars.csv`, and the pane fills in when it is done.
+- Zoom in the plot panes (radial profile, time series, heatmap, phase diagram) [verified: tools/browser_smoke.py section_plots]: `shift`+drag draws a box and zooms x and y to it
+  (a box thinner than 6 px zooms one axis); a drag along the x-axis strip (the tick labels under the plot) or the y-axis strip (left of it) zooms that axis only, and the
+  wheel over a strip zooms that axis about the cursor; the wheel inside the plot zooms about the cursor (time series and heatmap: the time axis only, as before; profile and
+  phase diagram: both axes), `alt`+wheel inside zooms y only. A drag inside a zoomed plot pans it (only the zoomed axes; a time window stops at the run's ends), a middle
+  drag pans every kind (also the phase diagram, where a plain drag draws a selection). Double click, `o` (when the selected pane is a zoomed plot) or the right-click
+  menu reset the zoom. The time axis of a series / heatmap is its time window, fetched again at full detail as before; a zoomed y replaces the automatic y limits
+  (also on other snapshots) until the reset. Zoom is not saved in layouts (the layout schema has no `xlim` / `ylim` keys); a phase pane's ranges are.
+- `phase diagram` pane: the phase diagram of the side panel as a pane of the grid, beside maps. It shows `/api/phase` for the pane's own window (its width, centre and
+  pan, which a linked pane shares; the shared centre / align / tilt rules) at the pane's snapshot, so it follows stepping, alignment and other runs like a map. Its
+  controls are in the pane: x and y quantities, log x / log y, weight (mass, count, volume), bins (64 ... 400) and the x / y ranges (`lo, hi`, empty = automatic;
+  a box zoom fills them and requests the new `xr` / `yr`, the old histogram is shown stretched until the new one arrives). Without a zoom the first automatic ranges are
+  kept over the snapshots (so axes and a selection stay put) until the axes change or the zoom is reset. A drag draws a selection (lasso) as in the side panel: the
+  selected gas is highlighted on the map panes of the same run (their "map only the selection" works as before); `R` or `clear sel.` clears it. In a Figure-mode
+  layout a phase pane is saved as a `text` panel (its text names the diagram, which is what the publication look draws) whose `x_phase` key holds the diagram and the
+  view; opening the layout shows it live again. When the layout schema gets a `phase` panel type the viewer writes that instead (keys x, y, xlog, ylog, weight, bins,
+  xr, yr and the view keys).
 
 Remote data (data on a login node, browser on your laptop):
 
@@ -362,6 +378,9 @@ limits (`"maps"`). Time alignment per product: `time`, `time_myr`, `index` or `o
 With `--extra-run DIR` (another run: the test serves a second run with another snapshot spacing) it also checks the clocks, stepping all panes to the nearest snapshot in time, the tolerance and offsets, `no snapshot at this time`, the alignment modes, the page's rule against `/api/align`, and a pane showing the other run; the overlay, inspect and deep-zoom sections run in every case.
 With `--layouts DIR --analysis DIR` (a `seed.toml` with a map `m` at column 0 and a text panel `t` at column 1 of 4; a `scalars.csv` with `gas_mass`) it also drives the layout editor: open, drag, refused
 overlap, resize, inspector edits and resets, product versus inline settings, undo, an id clash shown and undone, the series from `scalars.csv`, save and read back. `--only layout` runs just that part.
+`section_plots` (needs 3 snapshots; `--only plots` runs just it) zooms a radial profile (box, axis strips, alt+wheel, pan, reset by double click and `o`, a zoomed y kept on the
+next snapshot), a time series and a heatmap when the run has the data, and drives a phase-diagram pane: controls, a box zoom that requests the new ranges, bins, a lasso
+highlighted on a second (map) pane against `/api/selection`, `R`, and with `--layouts` a save and reopen of the layout with the phase pane.
 `tests/test_viewer_browser.py` runs it with the python in `SPLOSH_BROWSER_PYTHON` (or the current one) and skips when Playwright or its chromium is missing. Setup that needs no root:
 
     uv venv /path/to/browser-env && uv pip install --python /path/to/browser-env/bin/python playwright
@@ -377,7 +396,8 @@ Colour-coded vectors and streamlines, mpl-backend overlays, contours and transfo
 slice): any two of `density`, the per-particle fields (u, T, velocities, vR, vphi, jz, ...) and the geometry `x y z R r h v los`, log or linear axes, weighted by
 mass, count or volume, in the view's unit system. Drag on the diagram to draw a selection (lasso): the selected gas is highlighted on the map (magenta points,
 at most 20000 drawn), the panel gives its count and mass, and "map only the selection" renders the pane from those particles alone (not stored in the map
-store; deep-zoom tiles are off meanwhile). The selection is a region of the diagram, so it follows the pane to other snapshots and runs.
+store; deep-zoom tiles are off meanwhile). The selection is a region of the diagram, so it follows the pane to other snapshots and runs. The same diagram as a pane
+of the grid (zoom, its own controls, a lasso shown on the map panes of the run): pane kind `phase diagram` (Viewer and server).
 
 ## GPU colouring (viewer: "GPU colouring", on by default)
 The browser's GPU colours the maps: each float map becomes a WebGL2 texture and the stretch (linear, log, asinh), the limits and the colour table run in a

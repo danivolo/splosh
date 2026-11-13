@@ -89,7 +89,7 @@ def start_server(a):
     sys.exit("server did not start")
 
 
-def run(pg, url, a, check):
+def run(pg, url, a, check, only=None):
     shot = (lambda name: pg.screenshot(path=os.path.join(a.shots, name + ".png"))) if a.shots else (lambda name: None)
     ev = pg.evaluate
     wait = lambda js, t=120000: pg.wait_for_function(js, timeout=t)
@@ -101,6 +101,8 @@ def run(pg, url, a, check):
     check(ev(DISTINCT) > 20, f"canvas shows an image ({ev(DISTINCT)} distinct colours in the sample)")
     check(ev("window.__splosh.markers.length") >= 1, "black-hole markers received")
     shot("viewer_first")
+    if only == "plots":
+        return section_plots(pg, url, a, check, shot, wait, idle)
 
     # ---- the original behaviour: zoom, step, field, slice
     r0, w0 = ev("window.__splosh.requests"), ev("window.__splosh.map.meta.view.width")
@@ -339,6 +341,7 @@ def run(pg, url, a, check):
     check(not pg.locator("#help").is_visible(), "a key closes the help")
 
     section_mouse(pg, check, shot, wait, idle)
+    section_plots(pg, url, a, check, shot, wait, idle)
     section_explore(pg, url, a, check, shot, wait, idle)
 
     # ---- narrow window
@@ -610,6 +613,209 @@ def section_mouse(pg, check, shot, wait, idle):
     back = ev("[window.__splosh.panes[0].cmap, window.__splosh.panes[0].scale]")
     check(sv[0] == "RdBu_r" and sv[1] == "asinh" and sv[4] == "RdBu_r" and abs(sv[2] + sv[3]) <= 1e-9 * abs(sv[3]) and sv[3] > 0 and back == st0,
           f"signed field vx: RdBu_r, asinh, limits symmetric about 0 {sv[2:4]}; rho gets {back} back")
+
+
+def section_plots(pg, url, a, check, shot, wait, idle):
+    """zoom in the plot panes (box, one axis, alt+wheel, pan, reset; a zoomed y overrides the automatic one) and the phase-diagram pane (controls, box zoom = a new
+    request, a lasso shown on a map pane of the run, R, the layout panel). Needs 1 pane and 3 snapshots."""
+    ev = pg.evaluate
+    idle()
+    ev("() => setSnap(0)")
+    wait("window.__splosh.idx === 0")
+    idle()
+    AX = "(i) => { const p = window.__splosh.panes[i], A = p.plotAxes, r = p.plot.getBoundingClientRect(); return A && {L: A.L + r.left, T: A.T + r.top, w: A.w, h: A.h}; }"
+    RNG = "(i) => { const A = window.__splosh.panes[i].plotAxes; return [A.inv(A.L), A.inv(A.L + A.w), A.invY(A.T + A.h), A.invY(A.T)]; }"
+    PZ_ = "(i) => { const z = plotZoom(window.__splosh.panes[i]); return [z.x, z.y]; }"
+    close = lambda u, v, tol=1e-6: abs(u - v) <= tol * max(abs(u), abs(v), 1e-300)
+
+    def drag(x0, y0, x1, y1, shift=False, button="left"):
+        pg.mouse.move(x0, y0)
+        if shift:
+            pg.keyboard.down("Shift")
+        pg.mouse.down(button=button)
+        pg.mouse.move(x1, y1, steps=8)
+        pg.mouse.up(button=button)
+        if shift:
+            pg.keyboard.up("Shift")
+
+    # ---- radial profile: box, axis strips, alt+wheel, pan, reset
+    ev("() => setKind(window.__splosh.panes[0], 'profile')")
+    wait("window.__splosh.panes[0].plotAxes !== null && window.__splosh.panes[0].plotAxes !== undefined && !window.__splosh.panes[0].pending")
+    pg.wait_for_timeout(300)
+    A = ev(AX, 0)
+    r0 = ev(RNG, 0)
+    want = ev(f"(() => {{ const A = window.__splosh.panes[0].plotAxes; return [A.inv(A.L + 0.25 * A.w), A.inv(A.L + 0.75 * A.w), A.invY(A.T + 0.75 * A.h), A.invY(A.T + 0.25 * A.h)]; }})()")
+    drag(A["L"] + 0.25 * A["w"], A["T"] + 0.25 * A["h"], A["L"] + 0.75 * A["w"], A["T"] + 0.75 * A["h"], shift=True)
+    z = ev(PZ_, 0)
+    r1 = ev(RNG, 0)
+    check(z[0] and z[1] and all(close(u, v, 3e-2) for u, v in zip(z[0] + z[1], want)) and all(close(u, v, 1e-6) for u, v in zip(r1, z[0] + z[1])),
+          f"plot zoom: shift+drag box on a radial profile zooms x and y to the box ({[f'{v:.3g}' for v in r0]} -> {[f'{v:.3g}' for v in r1]})")
+    shot("plot_profile_box")
+    ev("() => setSnap(1)")
+    wait("window.__splosh.idx === 1")
+    idle()
+    pg.wait_for_timeout(300)
+    check(all(close(u, v, 1e-6) for u, v in zip(ev(RNG, 0)[2:], z[1])), "plot zoom: a zoomed y stays (overrides the automatic limits) on the next snapshot")
+    ev("() => setSnap(0)")
+    wait("window.__splosh.idx === 0")
+    idle()
+    pg.wait_for_timeout(300)
+    A = ev(AX, 0)
+    y_before = ev(PZ_, 0)[1]
+    drag(A["L"] + 0.3 * A["w"], A["T"] + A["h"] + 10, A["L"] + 0.6 * A["w"], A["T"] + A["h"] + 10)
+    z2 = ev(PZ_, 0)
+    check(z2[1] == y_before and z2[0][1] < z[0][1] and z2[0][0] > z[0][0], "plot zoom: a drag along the x-axis strip zooms x only")
+    A = ev(AX, 0)
+    pg.mouse.move(A["L"] - 20, A["T"] + 0.5 * A["h"])
+    pg.mouse.wheel(0, 200)
+    pg.wait_for_timeout(150)
+    z3 = ev(PZ_, 0)
+    check(z3[0] == z2[0] and z3[1][1] - z3[1][0] > z2[1][1] - z2[1][0], "plot zoom: the wheel over the y-axis strip zooms y only")
+    pg.mouse.move(A["L"] + 0.5 * A["w"], A["T"] + 0.5 * A["h"])
+    pg.keyboard.down("Alt")
+    pg.mouse.wheel(0, -200)
+    pg.keyboard.up("Alt")
+    pg.wait_for_timeout(150)
+    z4 = ev(PZ_, 0)
+    check(z4[0] == z3[0] and z4[1][1] - z4[1][0] < z3[1][1] - z3[1][0], "plot zoom: alt+wheel inside the plot zooms y only")
+    pg.mouse.wheel(0, -200)
+    pg.wait_for_timeout(150)
+    z5 = ev(PZ_, 0)
+    check(z5[0][1] / z5[0][0] < z4[0][1] / z4[0][0] and z5[1][1] - z5[1][0] < z4[1][1] - z4[1][0], "plot zoom: the wheel inside a profile zooms both axes")
+    A = ev(AX, 0)
+    drag(A["L"] + 0.5 * A["w"], A["T"] + 0.5 * A["h"], A["L"] + 0.3 * A["w"], A["T"] + 0.5 * A["h"])
+    z6 = ev(PZ_, 0)
+    check(z6[0][0] > z5[0][0] and close(z6[0][1] / z6[0][0], z5[0][1] / z5[0][0], 1e-6) and all(close(u, v, 1e-9) for u, v in zip(z6[1], z5[1])),
+          "plot zoom: a drag pans a zoomed plot (the log width of x kept, y unchanged)")
+    pg.mouse.dblclick(A["L"] + 0.5 * A["w"], A["T"] + 0.5 * A["h"])
+    pg.wait_for_timeout(150)
+    check(ev(PZ_, 0) == [None, None] and all(close(u, v, 1e-6) for u, v in zip(ev(RNG, 0), r0)), "plot zoom: double click resets the zoom (automatic ranges again)")
+    drag(A["L"] + 0.2 * A["w"], A["T"] + 0.2 * A["h"], A["L"] + 0.6 * A["w"], A["T"] + 0.6 * A["h"], shift=True)
+    pg.keyboard.press("o")
+    pg.wait_for_timeout(150)
+    check(ev(PZ_, 0) == [None, None] and close(ev("window.__splosh.view.width"), ev("window.__splosh.def.width")), "plot zoom: o resets a zoomed plot (not the map window)")
+
+    # ---- time series: box zoom = a time window fetched again + a y zoom; reset
+    ev("() => setKind(window.__splosh.panes[0], 'series')")
+    try:
+        wait("window.__splosh.panes[0].plotAxes && window.__splosh.panes[0].serX", 120000)
+        has_series = True
+    except Exception:
+        has_series = False
+    if has_series:
+        pg.wait_for_timeout(300)
+        A = ev(AX, 0)
+        drag(A["L"] + 0.3 * A["w"], A["T"] + 0.2 * A["h"], A["L"] + 0.7 * A["w"], A["T"] + 0.8 * A["h"], shift=True)
+        st = ev("(() => { const p = window.__splosh.panes[0]; return [serState(p).win, plotZoom(p).y]; })()")
+        pg.wait_for_timeout(700)
+        keys = ev("Object.keys(window.__splosh.ser.curves).filter(k => !k.endsWith('|all'))")
+        r = ev(RNG, 0)
+        check(st[0] and st[1] and keys and close(r[2], st[1][0], 1e-6) and close(r[3], st[1][1], 1e-6),
+              f"plot zoom: a box on a time series sets the time window (fetched again: {len(keys)} request(s)) and a fixed y {st}")
+        shot("plot_series_box")
+        pg.mouse.dblclick(A["L"] + 0.5 * A["w"], A["T"] + 0.5 * A["h"])
+        pg.wait_for_timeout(150)
+        check(ev("(() => { const p = window.__splosh.panes[0]; return serState(p).win === null && plotZoom(p).y === null; })()"), "plot zoom: double click on a time series: whole run, automatic y")
+    else:
+        check(True, "plot zoom: (no snapshot scalars for a time series: its box zoom not checked)")
+
+    # ---- heatmap (when the run has a column family): box zoom = a time window and a y range
+    ev("() => setKind(window.__splosh.panes[0], 'heatmap')")
+    try:
+        wait("window.__splosh.panes[0].plotAxes && window.__splosh.panes[0].serX", 30000)
+        has_heat = True
+    except Exception:
+        has_heat = False
+    if has_heat:
+        pg.wait_for_timeout(300)
+        A = ev(AX, 0)
+        drag(A["L"] + 0.3 * A["w"], A["T"] + 0.3 * A["h"], A["L"] + 0.7 * A["w"], A["T"] + 0.7 * A["h"], shift=True)
+        pg.wait_for_timeout(700)
+        st = ev("(() => { const p = window.__splosh.panes[0]; return [serState(p).win, plotZoom(p).y, !!p.plotAxes]; })()")
+        r = ev(RNG, 0)
+        check(st[0] and st[1] and st[2] and close(r[2], st[1][0], 1e-6), f"plot zoom: a box on a heatmap sets the time window and the rows' y range {st[:2]}")
+        shot("plot_heatmap_box")
+        pg.keyboard.press("o")
+        pg.wait_for_timeout(150)
+        check(ev("(() => { const p = window.__splosh.panes[0]; return serState(p).win === null && plotZoom(p).y === null; })()"), "plot zoom: o resets a zoomed heatmap")
+    else:
+        check(True, "plot zoom: (no column family for a heatmap: its box zoom not checked)")
+
+    # ---- the phase-diagram pane
+    ev("() => setKind(window.__splosh.panes[0], 'phase')")
+    wait("window.__splosh.panes[0].pp && window.__splosh.panes[0].pp.meta && window.__splosh.panes[0].plotAxes")
+    m = ev("window.__splosh.panes[0].pp.meta")
+    vis = ev("['.pqx', '.pqy', '.pxl', '.pw', '.pb', '.pxr', '.pyr'].every(c => getComputedStyle(document.querySelector('.pane .pk ' + c)).display !== 'none')")
+    hide_series = ev("getComputedStyle(document.querySelector('.pane .pk .ssrc')).display === 'none'")
+    check(m["x"]["label"] == "density" and m["y"]["log"] and m["n_in_view"] > 100 and vis and hide_series,
+          f"phase pane: density vs log u of the window ({m['n_in_view']} particles), its controls in the pane")
+    total = ev("window.__splosh.panes[0].pp.grid.reduce((a, b) => a + b, 0)")
+    check(abs(total - m["total_in_range"]) <= 1e-4 * m["total_in_range"], "phase pane: the histogram holds the gas in range")
+    shot("phase_pane")
+    A = ev(AX, 0)
+    seq0 = ev("window.__splosh.panes[0].pp.seq")
+    drag(A["L"] + 0.2 * A["w"], A["T"] + 0.3 * A["h"], A["L"] + 0.7 * A["w"], A["T"] + 0.8 * A["h"], shift=True)
+    z = ev(PZ_, 0)
+    wait(f"window.__splosh.panes[0].pp.seq > {seq0} && window.__splosh.panes[0].pp.meta && Math.abs(window.__splosh.panes[0].pp.meta.x.range[0] - Math.log10({z[0][0]})) < 1e-6")
+    m2 = ev("window.__splosh.panes[0].pp.meta")
+    import math
+    inp = ev("[document.querySelector('.pane .pxr').value, document.querySelector('.pane .pyr').value]")
+    check(all(close(u, math.log10(v), 1e-6) for u, v in zip(m2["x"]["range"] + m2["y"]["range"], z[0] + z[1])) and m2["n_in_range"] < m["n_in_range"] and inp[0] and inp[1],
+          f"phase pane: a box zoom requests the new ranges xr / yr ({m['n_in_range']} -> {m2['n_in_range']} particles in range; inputs {inp})")
+    shot("phase_pane_zoom")
+    pg.select_option(".pane .pb", "64")
+    wait("window.__splosh.panes[0].pp.meta.bins === 64")
+    check(all(close(u, v, 1e-9) for u, v in zip(ev("window.__splosh.panes[0].pp.meta.x.range"), m2["x"]["range"])), "phase pane: bins 64 re-requested, the zoomed range kept")
+    pg.fill(".pane .pxr", "")
+    pg.dispatch_event(".pane .pxr", "change")
+    wait("plotZoom(window.__splosh.panes[0]).x === null && window.__splosh.panes[0].pp.meta.x.range[0] < " + str(m2["x"]["range"][0]))
+    check(True, "phase pane: emptying the x range field returns to the automatic x range")
+    pg.mouse.dblclick(A["L"] + 0.5 * A["w"], A["T"] + 0.5 * A["h"])
+    wait("plotZoom(window.__splosh.panes[0]).y === null && !window.__splosh.panes[0].pending")
+    pg.wait_for_timeout(500)
+    # ---- a lasso on the phase pane is shown on a map pane of the same run
+    ev("() => setPanes(2)")
+    wait("window.__splosh.panes.length === 2 && window.__splosh.panes[1].map")
+    idle()
+    pg.wait_for_timeout(500)
+    A = ev(AX, 0)
+    pg.mouse.move(A["L"] + 0.05 * A["w"], A["T"] + 0.05 * A["h"])
+    pg.mouse.down()
+    for fx, fy in ((0.5, 0.05), (0.5, 0.95), (0.05, 0.95), (0.05, 0.1)):
+        pg.mouse.move(A["L"] + fx * A["w"], A["T"] + fy * A["h"], steps=6)
+    pg.mouse.up()
+    wait("window.__splosh.panes[1].selItem !== null")
+    crit = ev("window.__splosh.panes[1].selCrit")
+    p1 = ev("window.__splosh.paneParams(window.__splosh.panes[1])")
+    import json as _json
+    ref = fetch_json(url, "/api/selection", {**p1, "sel": _json.dumps(crit)})
+    npts = ev("window.__splosh.panes[1].selItem.x.length")
+    check(crit and crit["x"] == "density" and len(crit["poly"]) >= 4 and 0 < npts == len(ref["points"]),
+          f"phase pane: a lasso selects gas, highlighted on the map pane of the run ({npts} particles, as /api/selection)")
+    shot("phase_pane_lasso")
+    ev("() => selectPane(0)")
+    pg.mouse.move(A["L"] + 0.5 * A["w"], A["T"] + 0.5 * A["h"])
+    pg.keyboard.press("R")
+    wait("window.__splosh.panes[1].selCrit === null && window.__splosh.panes[1].selItem === null && window.__splosh.panes[0].selCrit === null")
+    check(True, "phase pane: R clears its selection and the highlight on the map")
+    # ---- the layout panel: saved and opened again as a phase pane
+    ev("() => { const p = window.__splosh.panes[0], z = plotZoom(p); z.x = [window.__splosh.panes[0].pp.meta.x.range.map(v => 10 ** v)[0] * 2, window.__splosh.panes[0].pp.meta.x.range.map(v => 10 ** v)[1] / 2]; phPane(p).y = 'pressure'; }")
+    lay = ev("panelOf(window.__splosh.panes[0], 0)")
+    ph = lay.get("x_phase") if lay.get("type") == "text" else lay
+    check(lay.get("type") in ("phase", "text") and ph and ph["y"] == "pressure" and ph.get("xr"), f"phase pane: its layout panel ({lay.get('type')}) keeps x, y, ranges")
+    if a.layouts:
+        ok = ev("(async () => { document.getElementById('fg_name').value = 'smoke_phase'; return await saveLayout(); })()")
+        ev("() => { setKind(window.__splosh.panes[0], 'map'); setPanes(1); }")
+        idle()
+        ev("openLayout('smoke_phase')")
+        wait("window.__splosh.panes.length === 2 && window.__splosh.panes[0].kind === 'phase' && window.__splosh.panes[0].pp.meta && window.__splosh.panes[0].pp.y === 'pressure'")
+        zr = ev(PZ_, 0)
+        check(ok and zr[0] and close(zr[0][0], ph["xr"][0], 1e-9) and ev("window.__splosh.panes[1].kind") == "map",
+              f"phase pane: saved in a layout and opened again as a live phase pane with its x range ({ok}, {zr}, {ph['xr']})")
+        shot("phase_pane_layout")
+    ev("() => { for (const p of window.__splosh.panes) { setKind(p, 'map'); Object.assign(p, {fix: {}, pos: null, span: null, lid: '', label: '', extra: {}}); } setPanes(1); Object.assign(FIG, {name: '', extra: [], ncols: 0, dirty: false}); applyGrid(); }")
+    wait("window.__splosh.panes.length === 1 && window.__splosh.map")
+    idle()
 
 
 def section_explore(pg, url, a, check, shot, wait, idle):
@@ -1119,7 +1325,7 @@ def main():
     ap.add_argument("--extra-run", action="append", default=[], help="another run directory served beside SNAPDIR (several runs in the panes; enables the run and time-alignment checks, which expect the layout of tests/test_viewer_browser.py)")
     ap.add_argument("--layouts", default=None, help="a directory with a layout `seed.toml` (4 columns: a map `m` at column 0, a text panel `t` at column 1) for the layout-editor checks; served with --layouts and --analysis")
     ap.add_argument("--analysis", default=None, help="an analysis directory (scalars.csv with a gas_mass column) for the editor's time-series panel")
-    ap.add_argument("--only", choices=["layout"], default=None, help="run one section only (needs its options: layout -> --layouts, --analysis)")
+    ap.add_argument("--only", choices=["layout", "plots"], default=None, help="run one section only (needs its options: layout -> --layouts, --analysis; plots: 3 snapshots)")
     ap.add_argument("--synthetic", action="store_true", help="snap_001 is snap_000 with all particle masses doubled: also check the exact difference values")
     a = ap.parse_args()
     try:
@@ -1144,6 +1350,8 @@ def main():
             try:
                 if a.only == "layout":
                     section_layout(pg, url, a, check)
+                elif a.only == "plots":
+                    run(pg, url, a, check, only="plots")
                 else:
                     run(pg, url, a, check)
             except Exception as e:                                   # a timeout or a JS error: report, keep the screenshot
