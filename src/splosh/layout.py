@@ -34,7 +34,7 @@ import re
 import numpy as np
 
 SCHEMA = "splosh-layout-1"
-PANEL_TYPES_NAMES = ("map", "profile", "timeseries", "heatmap", "radial", "spectrum", "phase", "text")
+PANEL_TYPES_NAMES = ("map", "profile", "timeseries", "heatmap", "radial", "spectrum", "phase", "scatter", "parray", "text")
 SCOPES = ("snapshot", "run")
 XAXES = ("time", "time_myr", "index", "orb")      # orb: t / P0 (the binary period at the first snapshot)
 _COMMON = {"id": None, "type": None, "row": None, "col": None, "rowspan": 1, "colspan": 1, "label": None, "xlim": None, "ylim": None}   # xlim / ylim: a plot's zoom ([lo, hi]; maps ignore them)
@@ -103,7 +103,12 @@ def panel_types():
             "heatmap": {**_COMMON, "type": "heatmap", "source": None, "prefix": None, "ids": None, "xaxis": "time", "norm": "none", "zscale": "log", "cmap": "magma",
                         "nx": 600, "overlay": [], "marker": True, "zlabel": None, "ylabel": None, "yscale": "lin"},
             "radial": {**_COMMON, "type": "radial", "source": None, "prefix": None, "prefixes": None, "divide": None, "windows": 1, "xaxis": "orb", "slope": False,
-                       "band": True, "scale": 1.0, "xscale": "log", "yscale": None, "hlines": [], "xlabel": None, "ylabel": None, "labels": None},
+                       "band": True, "scale": 1.0, "xscale": "log", "yscale": None, "hlines": [], "xlabel": None, "ylabel": None, "labels": None,
+                       "refs": False, "fit": None, "fit_range": None},
+            "scatter": {**_COMMON, "type": "scatter", "source": None, "x": None, "y": None, "windows": 1, "xaxis": "orb", "color": "R", "xlog": False, "ylog": False,
+                        "hlines": [], "vlines": [], "xlabel": None, "ylabel": None, "rlabel": None},
+            "parray": {**_COMMON, "type": "parray", "product": None, "array": None, "xedges": None, "yedges": None, "windows": 1, "xaxis": "orb",
+                       "norm": "column", "ytransform": "none", "zscale": "log", "cmap": "magma", "xscale": "log", "xlabel": None, "ylabel": None, "zlabel": None},
             "spectrum": {**_COMMON, "type": "spectrum", "source": None, "columns": [], "ids": None, "fmin": None, "fmax": None, "nf": 2000, "detrend": None,
                          "tmin": None, "tmax": None, "vlines": []},
             "phase": {**_COMMON, "type": "phase", "x": None, "y": None, "xlog": True, "ylog": True, "hweight": "mass", "bins": 256, "xr": None, "yr": None,
@@ -328,8 +333,18 @@ def validate_layout(layout):
             w = p["windows"]
             ok = (isinstance(w, int) and not isinstance(w, bool) and 1 <= w <= 12) or (isinstance(w, str) and re.fullmatch(r"last:[0-9.]+", w)) or \
                  (isinstance(w, list) and all(isinstance(x, (list, tuple)) and len(x) == 2 for x in w))
+            if p["fit"] not in (None, "power", "torqued"):
+                raise LayoutError(f"{where}: fit = power | torqued")
             if not ok or p["xaxis"] not in ("orb", "time") or p["xscale"] not in ("log", "lin"):
                 raise LayoutError(f"{where}: windows = N (1-12) | \"last:K\" | [[a, b], ...]; xaxis orb|time; xscale log|lin")
+        elif t in ("scatter", "parray"):
+            need = ("source", "x", "y") if t == "scatter" else ("product", "array", "xedges", "yedges")
+            if not all(p[k] for k in need):
+                raise LayoutError(f"{where}: a {t} panel needs {', '.join(need)}")
+            if t == "scatter" and p["color"] not in ("R", "time"):
+                raise LayoutError(f"{where}: color R | time")
+            if t == "parray" and (p["norm"] not in ("column", "none") or p["ytransform"] not in ("none", "log10", "slog")):
+                raise LayoutError(f"{where}: norm column|none, ytransform none|log10|slog")
         elif t == "phase":                               # a phase diagram of the gas in the panel's view window (phase.histogram)
             if not p["x"] or not p["y"]:
                 raise LayoutError(f"{where}: a phase panel needs `x` and `y` (quantities: fields, r, R, z, ...)")

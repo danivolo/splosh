@@ -221,10 +221,10 @@ def tiles_for(layout, path, load, store, products=None, table=None, time=None, c
                                        "zscale": "log", "cmap": p.get("cmap") or "magma", "norm": "none", "label": p["hweight"]},
                               "curves": [], "styles": [], "xnow": None, "xlabel": lab(meta["x"], p["x"], p["xlog"]), "ylabel": lab(meta["y"], p["y"], p["ylog"]),
                               "yscale": "lin"}
-            elif p["type"] in ("radial", "spectrum"):          # time-averaged radial profiles / power spectra of a series source
+            elif p["type"] in ("radial", "spectrum", "scatter", "parray"):   # time-averaged profiles, spectra, scatter of a series source; stored product arrays
                 from . import series as SR
                 ctx = _cached(cache, ("seriesctx", os.path.dirname(os.path.abspath(path))), lambda: SR.context_for_snapshot(path))
-                tiles[pid] = (SR.radial_tile if p["type"] == "radial" else SR.spectrum_tile)(p, ctx)
+                tiles[pid] = {"radial": SR.radial_tile, "spectrum": SR.spectrum_tile, "scatter": SR.scatter_tile, "parray": SR.parray_tile}[p["type"]](p, ctx)
                 if tiles[pid].get("note"):
                     notes[pid] = tiles[pid]["note"]
             elif p["type"] == "timeseries" and p.get("source", "snapshots") != "snapshots":     # a series source (series.py): GIZMO logs, plugin sources

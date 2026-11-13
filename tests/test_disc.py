@@ -171,3 +171,48 @@ def test_extra_flux_hook(run):
         assert not any(c.startswith("Ftoy_") for c in s0)
     finally:
         D.FLUXES.pop("toy", None)
+
+
+def test_fit_scatter_parray(tmp_path):
+    """fit_profile recovers a torqued-disc Sigma and a power law; scatter and parray tiles on a toy product."""
+    from splosh import series as SR
+    from test_server_fields import _snap
+    x = np.geomspace(1.5, 10, 30)
+    y = 3.0 * x ** -1.2 * (1 - 0.7 / np.sqrt(x))
+    r = SR.fit_profile(x, y, "torqued")
+    assert r["params"]["n"] == pytest.approx(1.2, abs=1e-3) and r["params"]["ell_0"] == pytest.approx(0.7, abs=1e-3)
+    assert SR.fit_profile(x, 2 * x ** -0.5, "power")["params"]["slope"] == pytest.approx(-0.5)
+
+    def fn(path, params):
+        k = int(path[-6])
+        R = (1.0, 2.0, 4.0)
+        return {"scalars": {**{f"b_{q:g}": 10.0 ** (q + k) for q in R}, **{f"m_{q:g}": 0.1 / 10.0 ** (q + k) for q in R}},
+                "arrays": {"h": np.full((3, 4), float(k + 1)), "xe": np.array([1.0, 2, 4, 8]), "ye": np.linspace(0, 1, 5)}}
+    plugins.register_product("toys", fn, version=1, params={})
+    try:
+        run = tmp_path / "run"; (run / "output").mkdir(parents=True)
+        paths = [_snap(run / "output" / f"snapshot_{k:03d}.hdf5") for k in range(3)]
+        P.register_sources()
+        P.compute(str(run), ["toys"], paths, workers=1, log=lambda m: None)
+        ctx = SR.context(str(run), paths)
+        t = SR.scatter_tile({"source": "prod_toys", "x": "b_", "y": "m_", "windows": 1, "xaxis": "time", "color": "R", "xlog": True, "ylog": True}, ctx)
+        assert len(t["scatter"]["x"]) == 9 and np.allclose(t["scatter"]["x"] * t["scatter"]["y"], 0.1)
+        h = SR.parray_tile({"product": "toys", "array": "h", "xedges": "xe", "yedges": "ye", "windows": 1, "xaxis": "time", "norm": "column"}, ctx)
+        assert h["heat"]["z"].shape == (4, 3) and np.allclose(h["heat"]["z"].sum(axis=0), 1.0)
+    finally:
+        plugins.PRODUCTS.pop("toys", None); plugins.SERIES.pop("prod_toys", None)
+
+
+def test_resolution_fields(run):
+    """hres = (c_s / Omega_K) / h on the Keplerian disc with c_s = 0.1 v_K and h = 0.01."""
+    from splosh.frames import make_frame
+    from splosh.io import load_snapshot
+    from splosh.maps import FieldContext, View, _field_values
+    pos, vel, m, rho, u = kepler_disc(n=20_000)
+    p = write(run / "output" / "snapshot_000.hdf5", pos, vel, m, rho, u, [0, 0, 0], [0, 0, 0], 1.0)
+    s = load_snapshot(p, gas_fields=("Coordinates", "SmoothingLength", "Masses", "Density", "InternalEnergy", "Velocities"))
+    v = View(center="bh", field="hres")
+    hres = _field_values("hres", FieldContext(s, make_frame(s, "bh", "none"), v))
+    r = np.linalg.norm(pos, axis=1)
+    R = np.hypot(pos[:, 0], pos[:, 1])
+    assert np.allclose(hres, 0.1 * R ** -0.5 * r ** 1.5 / 0.01, rtol=1e-4)              # c_s = 0.1 v_K(R), Omega_K = r^-3/2 (G = M = 1)

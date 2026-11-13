@@ -73,3 +73,14 @@ prefix = "beta_"
 zscale = "log"
 yscale = "log"
 ylabel = "R / a"
+
+[[panel]]
+type = "scatter"
+id = "aM_beta"
+label = "alpha_M against beta (every shell and snapshot)"
+source = "prod_disc"
+x = "beta_"
+y = "aM_"
+windows = "last:5"
+xlog = true
+ylog = true

@@ -1,0 +1,114 @@
+# How well a disc is resolved: the thermal scale height in smoothing lengths (hres) and in cells (ncellH), the MRI quality of the vertical and azimuthal
+# field (Qz, Qphi: resolved above ~6-10), face-on and edge-on; their radial profiles averaged over time (product `disc`: hH = <h>/H, nH = cells per H) and
+# against time. Under-resolved gas: hres < ~2, Q < ~6.
+
+schema = "splosh-layout-1"
+name = "resolution"
+ncols = 3
+figure = {panel_in = 4.0}
+
+[[panel]]
+type = "map"
+id = "hres"
+label = "H / h (thermal scale height / smoothing length)"
+field = "hres"
+center = "bh"
+align = "bh"
+width = 12.0
+cmap = "RdBu"
+scale = "log"
+vmin = 0.5
+vmax = 50.0
+limits = "fixed"
+
+[[panel]]
+type = "map"
+id = "hres_edge"
+label = "H / h, edge-on slice"
+field = "hres"
+center = "bh"
+align = "bh"
+axes = "xz"
+mode = "slice"
+width = 12.0
+cmap = "RdBu"
+scale = "log"
+vmin = 0.5
+vmax = 50.0
+limits = "fixed"
+
+[[panel]]
+type = "map"
+id = "ncellH"
+label = "cells per scale height"
+field = "ncellH"
+center = "bh"
+align = "bh"
+width = 12.0
+cmap = "RdBu"
+scale = "log"
+vmin = 0.5
+vmax = 50.0
+limits = "fixed"
+
+[[panel]]
+type = "map"
+id = "Qz"
+label = "MRI quality Q_z"
+field = "Qz"
+center = "bh"
+align = "bh"
+width = 12.0
+cmap = "RdBu"
+scale = "log"
+vmin = 0.6
+vmax = 60.0
+limits = "fixed"
+
+[[panel]]
+type = "map"
+id = "Qphi"
+label = "MRI quality Q_phi"
+field = "Qphi"
+center = "bh"
+align = "bh"
+width = 12.0
+cmap = "RdBu"
+scale = "log"
+vmin = 0.6
+vmax = 60.0
+limits = "fixed"
+
+[[panel]]
+type = "radial"
+id = "prof"
+label = "cells per H and <h>/H (time-averaged)"
+source = "prod_disc"
+prefixes = ["nH_", "hH_"]
+windows = "last:5"
+yscale = "log"
+hlines = [1.0, 6.0]
+xlabel = "R / a"
+
+[[panel]]
+type = "radial"
+id = "qprof"
+label = "MRI quality profiles"
+source = "prod_disc"
+prefixes = ["Qz_", "Qphi_"]
+windows = "last:5"
+yscale = "log"
+hlines = [6.0, 10.0]
+xlabel = "R / a"
+
+[[panel]]
+type = "heatmap"
+xaxis = "orb"
+id = "nH_t"
+label = "cells per H against time"
+source = "prod_disc"
+prefix = "nH_"
+zscale = "log"
+yscale = "log"
+ylabel = "R / a"
+colspan = 2

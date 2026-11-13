@@ -236,6 +236,12 @@ def _draw_heat(fig, ax, t):
     if t.get("xnow") is not None:
         ax.axvline(t["xnow"], color="#ffd23c", lw=1.0)
     ax.set_ylim(ye[0], ye[-1])                         # the grid's rows (an overlay curve does not stretch the axis)
+    if t.get("xscale_log") and (x > 0).all():
+        import matplotlib.ticker as mt
+        ax.set_xscale("log")
+        ax.xaxis.set_major_locator(mt.LogLocator(base=10, subs=(1.0, 2.0, 5.0)))
+        ax.xaxis.set_major_formatter(mt.FuncFormatter(lambda v, _: f"{v:g}"))
+        ax.xaxis.set_minor_formatter(mt.NullFormatter())
     ax.set_xlabel(t.get("xlabel") or "time")
     ax.set_ylabel(t.get("ylabel") or "")
 
@@ -287,7 +293,22 @@ def _draw_curves(ax, t):
         _scale(axes[True], t.get("twin_scale"))
         if t.get("twin_label"):
             axes[True].set_ylabel(t["twin_label"])
+    if t.get("scatter"):                             # points coloured by R or time, with a colour bar
+        sc = t["scatter"]
+        import matplotlib.colors as mc
+        c = np.asarray(sc["c"], float)
+        norm = mc.LogNorm() if sc.get("clog") and c.size and (c > 0).all() else None
+        pts = ax.scatter(np.asarray(sc["x"], float), np.asarray(sc["y"], float), c=c, s=4, cmap="viridis", norm=norm, alpha=0.6, lw=0, rasterized=True)
+        ax.figure.colorbar(pts, ax=ax, label=sc.get("clabel") or "", pad=0.01)
+    labelled_h = [h for h in (t.get("hlines") or []) if isinstance(h, (list, tuple))]
+    for k, h in enumerate(labelled_h):               # labelled reference lines (e.g. closures' slopes): coloured, labels spread along x
+        c = ("#8c564b", "#7f7f7f", "#bcbd22", "#17becf", "#e377c2")[k % 5]
+        ax.axhline(h[0], color=c, lw=0.9, ls=(0, (4, 2)))
+        ax.annotate(h[1], ((k + 0.5) / max(len(labelled_h), 1), h[0]), xycoords=("axes fraction", "data"), xytext=(0, 2), textcoords="offset points",
+                    ha="center", va="bottom", fontsize="xx-small", color=c)
     for h in t.get("hlines") or []:
+        if isinstance(h, (list, tuple)):
+            continue
         ax.axhline(h, color="0.5", lw=0.8, ls="--")
     for v in t.get("vlines") or []:
         ax.axvline(v, color="0.5", lw=0.8, ls=":")
