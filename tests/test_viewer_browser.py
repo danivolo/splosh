@@ -45,6 +45,9 @@ def smoke_output(tmp_path_factory):
     ld = tmp / "layouts"
     ld.mkdir()
     (ld / "seed.toml").write_text('name = "seed"\nncols = 4\n\n[[panel]]\nid = "m"\ntype = "map"\nfield = "rho"\nwidth = 6.0\nnpix = 48\ncenter = "com"\n\n[[panel]]\nid = "t"\ntype = "text"\ntext = "snap {snapshot}"\n')
+    (d / "analysis").mkdir()                                        # the run's own snapshot scalars: the time series, heatmap and radial panes (a family sig_<R> = (1 + k) / R)
+    (d / "analysis" / "scalars.csv").write_text("snapshot,time,time_myr,gas_mass,sig_1,sig_2,sig_4,sig_8\n" +
+                                                "\n".join(f"snap_{k:03d},{k},{k},{1 + k}," + ",".join(f"{(1 + k) / r:.12g}" for r in (1, 2, 4, 8)) for k in range(3)) + "\n")
     an = tmp / "analysis"
     an.mkdir()
     (an / "scalars.csv").write_text("snapshot,time,time_myr,gas_mass\n" + "\n".join(f"snap_{k:03d},{k},{k},{1 + k}" for k in range(3)) + "\n")
@@ -73,7 +76,7 @@ def test_whole_smoke_passes(smoke_output):
                                      ("mouse forward / back", 1), ("scans the snapshots without loading", 1), ("releasing shift loads", 1), ("the page does not zoom", 1), ("Esc cancels a scan", 1),
                                      ("plain wheel still zooms", 1), ("middle click", 2), ("right click opens the map menu", 1), ("shift+right click keeps", 1), ("hides and shows the side panel", 1),
                                      ("stackOf", 1), ("stack option goes into its layout panel", 1), ("signed field vx", 1),
-                                     ("plot zoom:", 10), ("phase pane:", 9)])
+                                     ("plot zoom:", 10), ("phase pane:", 9), ("map box zoom", 1), ("lic overlay", 2), ("radial pane", 4), ("spectrum pane", 1), ("zoom saved", 3)])
 def test_group_ran_and_passed(smoke_output, word, n):
     _, out = smoke_output
     got = lines(out, word)

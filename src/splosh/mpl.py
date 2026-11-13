@@ -219,6 +219,9 @@ def draw_items(ax, items, extent):
             ax.add_patch(Circle((it["x"], it["y"]), it["r"], fill=bool(it.get("fill")), facecolor=col if it.get("fill") else "none", edgecolor=col, lw=lw))
         elif k == "legend":
             legends.append(it.get("text", ""))
+        elif k == "image":         # a grey texture with alpha (the LIC overlay), over the map and under the lines
+            g, a = overlays_mod.image_la(it)
+            ax.imshow(np.dstack([g, g, g, a]), extent=it["extent"], origin="upper", interpolation="nearest", zorder=1.5)
         elif k == "polygon":
             from matplotlib.patches import Polygon
             ax.add_patch(Polygon(np.asarray(it["points"], dtype=float), closed=True, facecolor=col, edgecolor="none", zorder=2))

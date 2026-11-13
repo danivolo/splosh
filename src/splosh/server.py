@@ -5,6 +5,7 @@
     GET /api/progress             the render in flight: stage (reading | rendering), fraction (bytes read; rendering: time over the estimate from the last renders), elapsed (the viewer's progress bar)
     GET /api/state                snapshots of the first run (index, name, time), run labels, fields, colour maps, default view, tile grid, store statistics
     GET /api/runs                 every run: label and snapshots (index, name, time, time_myr) (see runs.py)
+    GET /api/series?run=R&radial=<panel JSON> | &spectrum=<panel JSON>   a layout radial / spectrum panel drawn as data (series.radial_tile / spectrum_tile; see ViewerState.series_tile)
     GET /api/align?mode=time&at=T[&tol=..&offset=a,b&prefer=i,j]   the snapshot of every run nearest to the aligned value T (time | time_myr | index | offset), within tol
     every snapshot endpoint below takes run=LABEL (or the run's number); the default is the first run, so single-run URLs are unchanged
     GET /api/map?snap=I&field=..  float32 map (little endian, npix*npix, origin lower-left), metadata in the X-Splosh-Meta header (JSON); gzip if accepted
@@ -386,6 +387,10 @@ class ViewerState:
         one = lambda k, d=None: q.get(k, [d])[0]
         ctx = self.series_context(run)
         label = self.runs[run].label
+        for kind in ("radial", "spectrum"):
+            if one(kind):
+                with self.work():
+                    return {"run": label, "kind": kind, "period": ctx["period"], **self.series_tile(kind, one(kind), ctx)}
         src = one("source")
         if not src:
             return {"run": label, "sources": SR.available(ctx), "period": ctx["period"]}
@@ -408,6 +413,33 @@ class ViewerState:
             fl = lambda k: float(one(k)) if one(k) not in (None, "") else None
             cv = SR.curves(tab, cols, ids=ids, n=max(50, min(20000, int(one("n", "4000")))), smooth=fl("smooth"), tmin=fl("tmin"), tmax=fl("tmax"))
         return {"run": label, "source": src, "curves": SR.jsonable(cv)}
+
+    @staticmethod
+    def series_tile(kind, text, ctx):
+        """the viewer's `radial` / `spectrum` panes (GET /api/series?radial=<panel JSON> | spectrum=<panel JSON>): the panel's keys as in a layout (validated and
+        completed by layout.validate_layout), drawn by series.radial_tile / spectrum_tile; JSON: curves [{label, x, y}], styles (band [lo, hi] as lists), xlog,
+        ylog, yscale ("lin" | "log" | ["symlog", linthresh]), xlabel, ylabel, hlines, vlines, note; NaN as null."""
+        from . import layout as LY, series as SR
+        try:
+            raw = json.loads(text)
+        except ValueError as e:
+            raise ValueError(f"{kind}: the panel is not JSON ({e})") from None
+        if not isinstance(raw, dict):
+            raise ValueError(f"{kind}: the panel is a JSON object of layout keys")
+        drop = {"id", "type", "row", "col", "rowspan", "colspan"}
+        p = LY.validate_layout({"name": "viewer", "panel": [{"id": "p", "type": kind, **{k: v for k, v in raw.items() if k not in drop}}]})["panel"][0]
+        t = (SR.radial_tile if kind == "radial" else SR.spectrum_tile)(p, ctx)
+        fin = lambda a: [None if v is None or not np.isfinite(v) else float(v) for v in np.asarray(a, dtype=float).ravel()]
+        styles = []
+        for st in t.get("styles", []):
+            s = dict(st)
+            if s.get("band") is not None:
+                s["band"] = [fin(s["band"][0]), fin(s["band"][1])]
+            styles.append(s)
+        ys = t.get("yscale")
+        return {"curves": [{"label": str(lab), "x": fin(x), "y": fin(y)} for lab, x, y in t["curves"]], "styles": styles,
+                "xlog": bool(t.get("xlog")), "ylog": bool(t.get("ylog")), "yscale": list(ys) if isinstance(ys, tuple) else (ys or ("log" if t.get("ylog") else "lin")),
+                "xlabel": t.get("xlabel"), "ylabel": t.get("ylabel"), "hlines": t.get("hlines") or [], "vlines": t.get("vlines") or [], "note": t.get("note")}
 
     def job_series(self, b):
         """the built-in scalars of every snapshot of a run (a background analyze with only [[scalar]] builtin), to <run>/analysis_viewer/series/: what the
@@ -725,6 +757,11 @@ def available_fields(state):
     return out
 
 
+def _builtin_overlays():
+    from .overlays import BUILTIN_OVERLAYS      # (the page's own checkboxes: not listed as plugin overlays)
+    return BUILTIN_OVERLAYS
+
+
 def _finite(x):
     """None for NaN/inf (a snapshot whose header could not be read): json.dumps would write NaN, which browsers reject as invalid JSON."""
     return x if isinstance(x, (int, float)) and math.isfinite(x) else None if isinstance(x, float) else x
@@ -799,7 +836,7 @@ def make_handler(state):
                         "presets": sorted(plugins.PRESETS), "tile": tile_info(state),
                         "plugin_overlays": [{"name": n, "label": ((fn.__doc__ or n).strip().splitlines() or [n])[0][:80],
                                              "options": [{"key": k, "label": lab, "default": d} for k, lab, d in plugins.OVERLAY_OPTIONS.get(n, [])]}
-                                            for n, fn in sorted(plugins.OVERLAYS.items()) if n not in ("vectors", "streamlines", "particles", "contours", "disc")],
+                                            for n, fn in sorted(plugins.OVERLAYS.items()) if n not in _builtin_overlays()],
                         "threads": state.threads, "max_threads": state.max_threads, "root": state.root}), "application/json")
                 if u.path == "/api/jobs":
                     return self._send(200, json.dumps({"jobs": state.jobs.list(), "slurm": " ".join(state.jobs.slurm), "ffmpeg": bool(state.ffmpeg)}), "application/json")

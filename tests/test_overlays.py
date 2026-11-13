@@ -513,3 +513,103 @@ def test_server_overlay_and_inspect(server):
         with pytest.raises(urllib.error.HTTPError) as e:
             get(server + bad)
         assert e.value.code == code, bad
+
+
+# ----------------------------------------------------------------------------- line integral convolution
+
+def _streak_ratio(T, dx, dy, r0=20, r1=44, n=128):
+    """mean |T(p + d) - T(p)| along the unit direction field (dx, dy)(p) over / across it, sampled on a ring band, 3 px apart."""
+    y, x = np.mgrid[0:n, 0:n] + 0.5 - n / 2
+    r = np.hypot(x, y)
+    sel = (r > r0) & (r < r1)
+    px, py = x[sel], y[sel]
+    ux, uy = dx(px, py), dy(px, py)
+    from scipy.ndimage import map_coordinates
+    pix = lambda xx, yy: map_coordinates(T, [yy + n / 2 - 0.5, xx + n / 2 - 0.5], order=1, mode="nearest")          # bilinear between pixel centres
+    along = np.nanmean(np.abs(pix(px + 3 * ux, py + 3 * uy) - pix(px, py)))
+    across = np.nanmean(np.abs(pix(px - 3 * uy, py + 3 * ux) - pix(px, py)))
+    return along / across
+
+
+def test_lic_uniform_field_gives_streaks_along_it():
+    n = 128
+    for ang in (0.0, 90.0, 30.0):
+        c, s = np.cos(np.radians(ang)), np.sin(np.radians(ang))
+        T = overlays.lic_texture(np.full((n, n), c), np.full((n, n), s), length=20)
+        assert np.isfinite(T).all()
+        assert _streak_ratio(T, lambda x, y: c + 0 * x, lambda x, y: s + 0 * x, r0=0, r1=50) < (0.3 if ang % 90 == 0 else 0.65), ang        # smooth along the field, noisy across it (oblique: pixel aliasing)
+    T = overlays.lic_texture(np.ones((n, n)), np.zeros((n, n)), length=20)
+    assert np.mean(np.abs(np.diff(T[8:-8, 8:-8], axis=1))) < 0.15 * np.mean(np.abs(np.diff(T[8:-8, 8:-8], axis=0)))
+    W = np.zeros((n, n)); U = np.ones((n, n)); U[:, :10] = np.nan                 # no field: NaN (transparent)
+    T = overlays.lic_texture(U, W, length=20)
+    assert np.isnan(T[:, :10]).all() and np.isfinite(T[:, 12:]).all()
+
+
+def test_lic_circular_field_gives_circles():
+    n = 128
+    y, x = np.mgrid[0:n, 0:n] + 0.5 - n / 2
+    T = overlays.lic_texture(-y, x, length=20)                                    # rigid rotation: the streaks are circles about the centre
+    r = lambda x, y: np.hypot(x, y)
+    assert _streak_ratio(T, lambda x, y: -y / r(x, y), lambda x, y: x / r(x, y)) < 0.6                     # isotropic noise: 1
+    T2 = overlays.lic_texture(x, y, length=20)                                    # a radial field: streaks along the radii, i.e. across the circles
+    assert _streak_ratio(T2, lambda x, y: -y / r(x, y), lambda x, y: x / r(x, y)) > 1.6
+
+
+def test_lic_noise_is_fixed_to_the_frame_pixels():
+    a = overlays.lic_noise(40, 30, 0, 0, seed=1)
+    assert a.shape == (30, 40) and 0 <= a.min() and a.max() < 1 and 0.45 < a.mean() < 0.55
+    assert np.array_equal(overlays.lic_noise(10, 12, 5, 7, seed=1), a[7:19, 5:15])          # a pan by whole pixels keeps the texture on the frame
+    assert not np.array_equal(overlays.lic_noise(40, 30, 0, 0, seed=2), a)
+    assert np.array_equal(overlays.lic_noise(40, 30, 0, 0, seed=1), a)                       # the same in every snapshot: no flicker
+
+
+def test_lic_overlay_item_options_and_drawing(rot_snap):
+    res = overlays.compute(rot_snap, VIEW, ["lic:v"])
+    (it,) = res["items"]
+    assert it["kind"] == "image" and it["nx"] == it["ny"] == VIEW.npix and it["extent"] == pytest.approx([-2, 2, -2, 2]) and it["overlay"] == "lic:v"
+    g, a = overlays.image_la(it)
+    assert g.shape == (64, 64) and 0.2 < g.mean() < 0.8 and g.std() > 0.05 and a.max() == pytest.approx(0.55, abs=0.01)
+    again = overlays.compute(rot_snap, VIEW, ["lic:v"])["items"][0]
+    assert again["data"] == it["data"]                                                       # deterministic
+    m = overlays.compute(rot_snap, VIEW, ["lic:v,mag=1,alpha=1,grid=32,len=8,contrast=3"])["items"][0]
+    gm, am = overlays.image_la(m)
+    assert m["nx"] == 32 and am[16, 16] < 0.4 < am[1, 1]                                     # rigid rotation: the slow centre fades (row 0 = top; any corner is fast)
+    with pytest.raises(ValueError, match="unknown option"):
+        overlays.compute(rot_snap, VIEW, ["lic:v,length=3"])
+    with pytest.raises(ValueError, match="MagneticField"):
+        overlays.compute(rot_snap, VIEW, ["lic:B"])
+    pic = np.zeros((64, 64, 3), np.uint8)                                                    # the bitmap renderer blends it: grey * a + picture * (1 - a)
+    overlays.draw_items(pic, [it], [-2, 2, -2, 2])
+    assert abs(pic.mean() - 255 * 0.55 * g.mean()) < 3
+    big = np.zeros((128, 128, 3), np.uint8)
+    overlays.draw_items(big, [it], [-1, 1, -1, 1])                                            # another window: the image keeps its own extent (the centre half fills it)
+    assert np.abs(big[1::4, 1::4, 0].astype(int) - np.round(255 * 0.55 * g[16:48, 16:48])).max() <= 1
+
+
+def test_lic_B_in_a_shot(tmp_path, store):
+    p = str(tmp_path / "b.hdf5")
+    write_snapshot(p, bfield=(1.0, 0.0, 0.0))
+    plain = splosh.shot(p, SV, store=store)
+    pic = splosh.shot(p, SV, store=store, overlays=["lic:B,alpha=0.8"])
+    assert pic.shape == plain.shape and (np.any(pic.rgba != plain.rgba, axis=2)).mean() > 0.3
+    assert pic.sidecar["overlays"] == ["lic:B,alpha=0.8"]
+
+
+def test_lic_drawn_by_matplotlib(rot_snap):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from splosh import mpl
+    it = overlays.compute(rot_snap, VIEW, ["lic:v,alpha=1"])["items"][0]
+    fig, ax = plt.subplots()
+    mpl.draw_items(ax, [it], it["extent"])
+    (im,) = ax.get_images()
+    arr = im.get_array()
+    assert arr.shape == (64, 64, 4) and np.allclose(arr[..., 3].max(), 1.0, atol=0.01) and im.get_extent() == pytest.approx([-2, 2, -2, 2])
+    plt.close(fig)
+
+
+def test_server_lic_overlay(server):
+    r = get(server + "/overlay?token=s3cret&snap=1&spec=lic:v,len=10")
+    (it,) = [i for i in r["items"] if i["kind"] == "image"]
+    assert it["nx"] == r["npix"] == 64 and it["overlay"] == "lic:v" and len(it["data"]) >= 64 * 64 * 2 * 4 // 3

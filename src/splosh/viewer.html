@@ -41,9 +41,9 @@ canvas.bar{position:absolute;right:6px;top:6px;border:1px solid #444;width:48px;
 .badge{position:absolute;left:50%;top:6px;transform:translateX(-50%);font:bold 15px ui-monospace,monospace;padding:2px 12px;border-radius:4px;color:#000;display:none;pointer-events:none;letter-spacing:1px}
 .badge.A{background:#fa3;display:block}.badge.B{background:#3df;display:block}.badge.D{background:#f6c;display:block}
 .pane.bA{box-shadow:inset 0 0 0 3px #fa3}.pane.bB{box-shadow:inset 0 0 0 3px #3df}
-.readout:empty{display:none}
+.readout:empty{display:none}.mbox{position:absolute;z-index:6;pointer-events:none;border:1px dashed #8cf;background:rgba(120,190,255,0.15)}
 canvas.plot{position:absolute;left:0;top:0;width:100%;height:100%;display:none;background:#0b0e12;cursor:crosshair;z-index:2}
-.pane.kprofile canvas.plot,.pane.kseries canvas.plot,.pane.kheatmap canvas.plot,.pane.kphase canvas.plot{display:block}.pane.kheatmap canvas.bar,.pane.kheatmap .orient,.pane.kphase canvas.bar,.pane.kphase .orient{display:none}
+.pane.kprofile canvas.plot,.pane.kseries canvas.plot,.pane.kradial canvas.plot,.pane.kspectrum canvas.plot,.pane.kheatmap canvas.plot,.pane.kphase canvas.plot{display:block}.pane.kheatmap canvas.bar,.pane.kheatmap .orient,.pane.kphase canvas.bar,.pane.kphase .orient,.pane.kradial canvas.bar,.pane.kradial .orient,.pane.kspectrum canvas.bar,.pane.kspectrum .orient{display:none}
 .pane.kheatmap .pk .ssrc,.pane.kheatmap .pk .sheat,.pane.kheatmap .pk .sids,.pane.kheatmap .pk .sx,.pane.kheatmap .pk .srel{display:inline-block}.pk .sheat{display:none}.pane.kprofile canvas.bar,.pane.kseries canvas.bar,.pane.kseries .orient,.pane.kprofile .orient{display:none}
 .pk{position:absolute;right:6px;bottom:4px;z-index:4;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:3px;font:11px sans-serif;opacity:.55;max-width:calc(100% - 12px)}.pk:hover,.pane:hover .pk{opacity:1}
 .pk:has(.scolmenu.on){opacity:1}.pane .pk select,.pane .pk button,.pane .pk label{width:auto;height:auto;margin:0;line-height:1.3;font:11px sans-serif;background:#000c;color:#ddd;border:1px solid #456;border-radius:3px;padding:1px 3px}.pk .ssrc,.pk .scolwrap,.pk .sids,.pk .ssm,.pk .sx,.pk .sy,.pk .srel,.pk .slog,.pk .sbuild,.pk .sstk,.pk .shz,.pk .shy,.pk .php{display:none}.pane.kphase .pk .php{display:inline-block}.pane .pk input.prng{width:9em;margin:0;font:11px sans-serif;background:#000c;color:#ddd;border:1px solid #456;border-radius:3px;padding:1px 3px}
@@ -51,8 +51,9 @@ canvas.plot{position:absolute;left:0;top:0;width:100%;height:100%;display:none;b
 .pk .scolmenu.on{display:block}.pk .scolmenu .grp{margin:4px 0}.pk .scolmenu .grp b{display:block;color:#9bd;font-size:11px;margin-bottom:1px}.pk .scolmenu label{display:block;border:0;background:none;padding:1px 0;white-space:nowrap}.pk .scolmenu i{color:#89a}
 .pk .sids label{border:0;background:none;padding:0 2px}
 .pane.kseries .pk .ssrc,.pane.kseries .pk .scolwrap,.pane.kseries .pk .sids,.pane.kseries .pk .ssm,.pane.kseries .pk .sx,.pane.kseries .pk .sy,.pane.kseries .pk .srel,.pane.kseries .pk .sstk,.pane.kheatmap .pk .shz,.pane.kheatmap .pk .shy,.pane.kprofile .pk .slog{display:inline-block}
+.pk .rd,.pk .sp{display:none}.pane.kradial .pk .rd,.pane.kspectrum .pk .sp,.pane.kradial .pk .ssrc,.pane.kradial .pk .scolwrap,.pane.kradial .pk .sy,.pane.kradial .pk .srel,.pane.kspectrum .pk .ssrc,.pane.kspectrum .pk .scolwrap,.pane.kspectrum .pk .sids,.pane.kspectrum .pk .srel{display:inline-block}.pane .pk input.rsin{width:6em;margin:0;font:11px sans-serif;background:#000c;color:#ddd;border:1px solid #456;border-radius:3px;padding:1px 3px}
 .pane.kseries.nodata .pk .sbuild{display:inline-block}.pane.kseries.nodata .pk .scolwrap,.pane.kseries.nodata .pk .sids,.pane.kseries.nodata .pk .ssm{display:none}
-.pane.kprofile .pk,.pane.kseries .pk,.pane.kheatmap .pk,.pane.kphase .pk{top:5px;bottom:auto;opacity:.8}
+.pane.kprofile .pk,.pane.kseries .pk,.pane.kheatmap .pk,.pane.kphase .pk,.pane.kradial .pk,.pane.kspectrum .pk{top:5px;bottom:auto;opacity:.8}
 .readout{position:absolute;left:6px;bottom:4px;font:12px ui-monospace,monospace;background:#000b;padding:2px 6px;max-width:calc(100% - 12px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
 .chk{display:flex;align-items:center;gap:3px;margin:3px 0 0;color:#9ab;white-space:nowrap}.chk input{margin:0}
 #ovmsg,#inspmsg{font:11px/1.35 ui-monospace,monospace;color:#e98;margin-top:4px;white-space:pre-wrap}
@@ -73,8 +74,8 @@ body{padding-top:27px;box-sizing:border-box}.hid{display:none!important}
 #pubview img{max-width:100%;max-height:calc(100% - 4px);object-fit:contain}#pubnotes{position:absolute;left:6px;bottom:4px;font:11px ui-monospace,monospace;color:#555;white-space:pre-wrap;text-align:left;background:#fffc}
 #pubclose{position:absolute;right:6px;top:6px;z-index:2}
 .ptag{display:none;position:absolute;left:50%;bottom:4px;transform:translateX(-50%);z-index:5;font:11px ui-monospace,monospace;background:#234c;color:#cde;padding:1px 6px;border-radius:3px;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90%}
-.pane.kseries,.pane.kprofile,.pane.kheatmap,.pane.kphase{width:100cqw;height:100cqh}
-.pane.kseries .ptag,.pane.kprofile .ptag,.pane.kheatmap .ptag,.pane.kphase .ptag{bottom:auto;top:2px;left:auto;right:6px;transform:none}
+.pane.kseries,.pane.kprofile,.pane.kheatmap,.pane.kphase,.pane.kradial,.pane.kspectrum{width:100cqw;height:100cqh}
+.pane.kseries .ptag,.pane.kprofile .ptag,.pane.kheatmap .ptag,.pane.kphase .ptag,.pane.kradial .ptag,.pane.kspectrum .ptag{bottom:auto;top:2px;left:auto;right:6px;transform:none}
 body.figmode .pane .pk{opacity:0;transition:opacity .15s}body.figmode .pane:hover .pk{opacity:1}body.figmode .pane:hover .ptag{display:none}
 body.figmode .ptag{display:block}body.figmode .pane{outline:1px dashed #456;outline-offset:-1px}
 body.mapsonly{padding-top:0}body.mapsonly #panel,body.mapsonly #grip{display:none!important}
@@ -174,6 +175,8 @@ small{color:#789}
   <fieldset id="ovbox"><legend>overlays (selected pane)</legend>
     <div class="row"><label class="chk"><input type="checkbox" id="ov_vv"> vectors v</label><label class="chk"><input type="checkbox" id="ov_vB"> vectors B</label></div>
     <div class="row"><label class="chk"><input type="checkbox" id="ov_sv"> streamlines v</label><label class="chk"><input type="checkbox" id="ov_sB"> streamlines B</label></div>
+    <div class="row"><label class="chk" title="line integral convolution: a streaky texture along the field lines of v, blended over the map"><input type="checkbox" id="ov_lv"> LIC v</label><label class="chk" title="line integral convolution of the magnetic field"><input type="checkbox" id="ov_lB"> LIC B</label><label class="chk" title="LIC: fade the texture where the field is weak (opacity ~ sqrt(|field| / its 95th percentile))"><input type="checkbox" id="ov_lmag"> |field|</label></div>
+    <div class="row"><div><label title="LIC: streak length in map pixels, each way">LIC len</label><input type="number" id="ov_llen" value="24" min="2" max="400" step="1"></div><div><label title="LIC: opacity over the map">alpha</label><input type="number" id="ov_lal" value="0.55" min="0" max="1" step="0.05"></div><div><label title="LIC: contrast of the texture about mid grey">contrast</label><input type="number" id="ov_lco" value="1.5" min="0.1" max="10" step="0.1"></div></div>
     <div class="row"><label class="chk"><input type="checkbox" id="ov_con"> contours</label><div><label>levels n <b id="ov_cnlab" class="slab">8</b></label><input type="range" id="ov_cn" value="8" min="4" max="24" step="1"></div><div><label>dex apart</label><input type="number" id="ov_cstep" value="0.5" min="0.05" step="any"></div></div>
     <div class="row"><label class="chk" style="flex:none">particles</label><label class="chk"><input type="checkbox" id="ov_pbh"> bh</label><label class="chk"><input type="checkbox" id="ov_pstar"> star</label><label class="chk"><input type="checkbox" id="ov_pdm"> dm</label></div>
     <div class="row"><div><label>grid</label><input type="number" id="ov_grid" value="24" min="8" max="128" step="1"></div><div><label>density</label><input type="number" id="ov_density" value="28" min="4" max="100" step="1"></div>
@@ -272,7 +275,7 @@ function makePane(src) {
              selCrit: null, selOnly: false, selHi: true, selItem: null, selMsg: "", ovBusy: false, ovMsg: "", insp: null, inspSeq: 0, inspMsg: "", clickTimer: null, downAt: null};
   if (src) { for (const k of ["run", "snap", "field", "mode", "weight", "axes", "z0", "cmap", "scale", "diff", "post", "postarg", "soft"]) p[k] = src[k]; p.prev = src.prev ? {...src.prev} : null; p.missing = src.missing; p.view = S.linked ? src.view : {...src.view}; Object.assign(p.nl, src.nl); Object.assign(p.dl, src.dl); p.ovo = {...src.ovo}; }
   const i = S.panes.length, cell = document.createElement("div"); cell.className = "cell";
-  cell.innerHTML = '<div class="pane"><canvas class="view" width="768" height="768"></canvas><canvas class="ovl" width="768" height="768"></canvas><canvas class="bar" width="64" height="256"></canvas><div class="cap"></div><div class="badge"></div><div class="spin" title="loading tiles"></div><div class="clock"></div><div class="nosnap"></div><div class="readout"></div><div class="ptag"></div><canvas class="plot" width="768" height="768"></canvas><div class="pk"><select class="kind" title="what this pane shows"><option value="map">map</option><option value="profile">radial profile</option><option value="series">time series</option><option value="heatmap">heatmap</option><option value="phase">phase diagram</option></select><select class="sheat" title="the family of columns (name + number) drawn against time"></select><select class="ssrc" title="data source: the snapshot scalars, GIZMO logs (energy.txt, blackholes.txt), plugin sources (black-hole logs, binary orbit)"></select><span class="scolwrap"><button class="scolbtn" title="columns to draw">columns ▾</button><div class="scolmenu"></div></span><span class="sids"></span><select class="ssm" title="running mean (centred window), in binary periods P0"><option value="0">no mean</option><option value="0.01">mean 0.01 P0</option><option value="0.1">mean 0.1 P0</option><option value="1">mean 1 P0</option></select><select class="sx" title="time axis"><option value="orb">t/P0</option><option value="myr">Myr</option><option value="t">code t</option></select><select class="sy" title="y axis: auto = log when positive over more than 100x, symlog when both signs span decades"><option value="auto">y auto</option><option value="lin">y lin</option><option value="log">y log</option><option value="symlog">y symlog</option></select><select class="sstk" title="the columns as parts of a total (e.g. the mass of a circumbinary disc and of two minidiscs): stacked shaded zones, or fractions of the total; the total is drawn as a line when it is not constant"><option value="">lines</option><option value="stack">stacked</option><option value="fraction">fractions</option></select><select class="shz" title="colours: log; linear; symlog = diverging about 0 (signed quantities: torque density, Mdot, B_phi), linear within 1e-3 of the largest |z|"><option value="log">z log</option><option value="lin">z lin</option><option value="symlog">z symlog</option></select><select class="shy" title="y axis of the rows (the numbers in the column names): linear, or log for log-spaced radii (row edges at the geometric midpoints)"><option value="lin">y lin</option><option value="log">y log</option></select><button class="srel" title="read the files again (a running simulation wrote more)">↻</button><label class="slog" title="logarithmic y axis"><input type="checkbox" class="ylog" checked> log y</label><select class="php pqx" title="phase diagram: the x quantity"></select><select class="php pqy" title="phase diagram: the y quantity"></select><label class="php" title="logarithmic x axis"><input type="checkbox" class="pxl" checked> log x</label><label class="php" title="logarithmic y axis"><input type="checkbox" class="pyl" checked> log y</label><select class="php pw" title="what each bin sums: the gas mass, the number of particles, their volume"><option>mass</option><option>count</option><option>volume</option></select><select class="php pb" title="bins per axis"><option value="64">64 bins</option><option value="128">128 bins</option><option value="200">200 bins</option><option value="256">256 bins</option><option value="400">400 bins</option></select><input class="php prng pxr" placeholder="x range: auto" title="x range: lo, hi (empty: automatic; a box zoom fills it)"><input class="php prng pyr" placeholder="y range: auto" title="y range: lo, hi (empty: automatic; a box zoom fills it)"><button class="php pclr" title="clear the selection drawn on this diagram (R)">clear sel.</button><button class="sbuild" title="compute the built-in scalars of every snapshot in a background job (to RUN/analysis_viewer/series)">build</button></div><div class="orient"><canvas width="220" height="220" title="drag: turn the view (rendered when you let go); click an axis tip: look along it"></canvas><div class="obtn"><button data-o="face" title="tilt none">face-on</button><button data-o="edge" title="incl:90">edge-on</button><button data-o="L" title="tilt L: the gas disc face-on">disc</button><button data-o="Lbh" title="tilt Lbh: the BH orbit face-on">orbit</button></div></div></div>';
+  cell.innerHTML = '<div class="pane"><canvas class="view" width="768" height="768"></canvas><canvas class="ovl" width="768" height="768"></canvas><canvas class="bar" width="64" height="256"></canvas><div class="cap"></div><div class="badge"></div><div class="spin" title="loading tiles"></div><div class="clock"></div><div class="nosnap"></div><div class="readout"></div><div class="ptag"></div><canvas class="plot" width="768" height="768"></canvas><div class="pk"><select class="kind" title="what this pane shows"><option value="map">map</option><option value="profile">radial profile</option><option value="series">time series</option><option value="heatmap">heatmap</option><option value="phase">phase diagram</option><option value="radial">radial profile (time-averaged)</option><option value="spectrum">spectrum</option></select><select class="sheat" title="the family of columns (name + number) drawn against time"></select><select class="ssrc" title="data source: the snapshot scalars, GIZMO logs (energy.txt, blackholes.txt), plugin sources (black-hole logs, binary orbit)"></select><span class="scolwrap"><button class="scolbtn" title="columns to draw">columns ▾</button><div class="scolmenu"></div></span><span class="sids"></span><select class="ssm" title="running mean (centred window), in binary periods P0"><option value="0">no mean</option><option value="0.01">mean 0.01 P0</option><option value="0.1">mean 0.1 P0</option><option value="1">mean 1 P0</option></select><select class="sx" title="time axis"><option value="orb">t/P0</option><option value="myr">Myr</option><option value="t">code t</option></select><select class="sy" title="y axis: auto = log when positive over more than 100x, symlog when both signs span decades"><option value="auto">y auto</option><option value="lin">y lin</option><option value="log">y log</option><option value="symlog">y symlog</option></select><select class="sstk" title="the columns as parts of a total (e.g. the mass of a circumbinary disc and of two minidiscs): stacked shaded zones, or fractions of the total; the total is drawn as a line when it is not constant"><option value="">lines</option><option value="stack">stacked</option><option value="fraction">fractions</option></select><select class="shz" title="colours: log; linear; symlog = diverging about 0 (signed quantities: torque density, Mdot, B_phi), linear within 1e-3 of the largest |z|"><option value="log">z log</option><option value="lin">z lin</option><option value="symlog">z symlog</option></select><select class="shy" title="y axis of the rows (the numbers in the column names): linear, or log for log-spaced radii (row edges at the geometric midpoints)"><option value="lin">y lin</option><option value="log">y log</option></select><select class="rd rdiv" title="divide by another family (the ratio of the window means: jdot_ / mdot_ = ell_0)"></select><input class="rd rsin rwin" placeholder="windows: 1" title="time windows: N (the run in N equal parts, coloured by time), last:K (the last K orbits) or [[a, b], ...] (orbits)"><label class="rd" title="draw d ln|y| / d ln R of the window mean instead of y"><input type="checkbox" class="rslope"> slope</label><input class="sp rsin sfmin" placeholder="fmin" title="lowest frequency (1/P0; empty: half of 1 / the time span)"><input class="sp rsin sfmax" placeholder="fmax" title="highest frequency (1/P0; empty: the Nyquist-like limit, at most 20)"><input class="sp rsin sdet" placeholder="detrend P0" title="subtract a running mean of this many P0 before the periodogram (empty: only the mean)"><button class="srel" title="read the files again (a running simulation wrote more)">↻</button><label class="slog" title="logarithmic y axis"><input type="checkbox" class="ylog" checked> log y</label><select class="php pqx" title="phase diagram: the x quantity"></select><select class="php pqy" title="phase diagram: the y quantity"></select><label class="php" title="logarithmic x axis"><input type="checkbox" class="pxl" checked> log x</label><label class="php" title="logarithmic y axis"><input type="checkbox" class="pyl" checked> log y</label><select class="php pw" title="what each bin sums: the gas mass, the number of particles, their volume"><option>mass</option><option>count</option><option>volume</option></select><select class="php pb" title="bins per axis"><option value="64">64 bins</option><option value="128">128 bins</option><option value="200">200 bins</option><option value="256">256 bins</option><option value="400">400 bins</option></select><input class="php prng pxr" placeholder="x range: auto" title="x range: lo, hi (empty: automatic; a box zoom fills it)"><input class="php prng pyr" placeholder="y range: auto" title="y range: lo, hi (empty: automatic; a box zoom fills it)"><button class="php pclr" title="clear the selection drawn on this diagram (R)">clear sel.</button><button class="sbuild" title="compute the built-in scalars of every snapshot in a background job (to RUN/analysis_viewer/series)">build</button></div><div class="orient"><canvas width="220" height="220" title="drag: turn the view (rendered when you let go); click an axis tip: look along it"></canvas><div class="obtn"><button data-o="face" title="tilt none">face-on</button><button data-o="edge" title="incl:90">edge-on</button><button data-o="L" title="tilt L: the gas disc face-on">disc</button><button data-o="Lbh" title="tilt Lbh: the BH orbit face-on">orbit</button></div></div></div>';
   p.cell = cell; p.el = cell.firstChild; p.cv = p.el.querySelector("canvas.view"); p.ctx = p.cv.getContext("2d"); p.bar = p.el.querySelector("canvas.bar"); p.ovcv = p.el.querySelector("canvas.ovl"); p.ovctx = p.ovcv.getContext("2d");
   p.orient = p.el.querySelector(".orient canvas"); attachOrient(p);
   p.cap = p.el.querySelector(".cap"); p.badge = p.el.querySelector(".badge"); p.spin = p.el.querySelector(".spin"); p.clock = p.el.querySelector(".clock"); p.nosnap = p.el.querySelector(".nosnap"); p.readout = p.el.querySelector(".readout");
@@ -798,7 +801,7 @@ async function fetchPane(p) {
     }
     p.nosnap.classList.remove("on");
     if (p.kind === "phase") { p.spin.classList.remove("on"); updateClock(p); await fetchPhasePane(p); if (seq === p.seq) p.pending = false; if (isSel()) $("status").textContent = "phase diagram of the window of " + S.runs[p.run].label; return; }
-    if (p.kind === "series" || p.kind === "heatmap") { p.pending = false; p.spin.classList.remove("on"); draw(p); updateClock(p); if (isSel()) $("status").textContent = "time series of " + S.runs[p.run].label; return; }
+    if (SERK(p.kind)) { p.pending = false; p.spin.classList.remove("on"); draw(p); updateClock(p); if (isSel()) $("status").textContent = "time series of " + S.runs[p.run].label; return; }
     const wantBH = $("bh").checked, diff = p.diff !== "off" && S.A && S.B, plan = diff || (p.selOnly && p.selCrit) ? null : tilePlan(p);
     let ents, tents, markers, reused = false;
     if (plan) {   // deep zoom: the covering tiles, composited into one map; the map shown meanwhile (transformed) is the coarse placeholder
@@ -839,6 +842,7 @@ const requestView = delay => requestPanes(S.linked ? S.panes : [sel()], delay);
 // ---- profile and time-series panes: drawn in the browser (the profile from the pane's own map, the series from the run's scalars table)
 function niceTicks(lo, hi, log) {
   if (log) { const out = []; for (let e = Math.floor(Math.log10(lo)); e <= Math.ceil(Math.log10(hi)); e++) for (const m of [1, 2, 5]) { const v = m * 10 ** e; if (v >= lo * 0.999 && v <= hi * 1.001) out.push([v, m === 1]); } return out; }
+  if (!(hi - lo > 1e-9 * Math.max(Math.abs(lo), Math.abs(hi)))) return [[lo, true]];     // a range below the float resolution: one tick (v += st would never advance)
   const span = hi - lo || 1, st0 = 10 ** Math.floor(Math.log10(span / 5)), st = [1, 2, 5, 10].map(m => m * st0).find(x => span / x <= 6), out = [];
   for (let v = Math.ceil(lo / st) * st; v <= hi + st * 1e-9; v += st) out.push([Math.abs(v) < st * 1e-9 ? 0 : v, true]);
   return out;
@@ -892,6 +896,7 @@ function drawPlot(p) {   // drawn at the canvas' displayed size (CSS pixels x de
   else if (p.kind === "series") drawSeries(p, c, W);
   else if (p.kind === "heatmap") drawHeat(p, c, W);
   else if (p.kind === "phase") drawPhasePane(p, c, W);
+  else if (p.kind === "radial" || p.kind === "spectrum") drawRS(p, c, W);
   const b = p.zbox; if (b && p.plotAxes) { const A = p.plotAxes;      // the box (or axis band) being drawn for a zoom
     const x0 = b.m === "y" ? A.L : Math.min(b.x0, b.x1), x1 = b.m === "y" ? A.L + A.w : Math.max(b.x0, b.x1), y0 = b.m === "x" ? A.T : Math.min(b.y0, b.y1), y1 = b.m === "x" ? A.T + A.h : Math.max(b.y0, b.y1);
     c.fillStyle = "rgba(120,190,255,0.15)"; c.fillRect(x0, y0, x1 - x0, y1 - y0); c.strokeStyle = "#8cf"; c.lineWidth = 1; c.setLineDash([4, 3]); c.strokeRect(x0 + 0.5, y0 + 0.5, x1 - x0, y1 - y0); c.setLineDash([]); }
@@ -927,7 +932,7 @@ function drawProfile(p, c, W) {
 // one curve per id (black hole), running mean in orbits, x axis t / Myr / t/P0, y auto (log when positive and > 100x, symlog when both signs span decades),
 // wheel = zoom in time (the window is fetched again at full detail), double click = whole run, click = the snapshot nearest that time
 const SER_COLORS = ["#6bf", "#fa4", "#7d8", "#f68", "#c9f", "#ee6", "#4dd", "#f9c"];
-function serState(p) { return p.ser || (p.ser = {src: "", cols: [], ids: null, smooth: 0, xaxis: "orb", yscale: "auto", win: null, hover: null, stack: "", hz: "log", hy: "lin"}); }
+function serState(p) { return p.ser || (p.ser = {src: "", cols: [], ids: null, smooth: 0, xaxis: "orb", yscale: "auto", win: null, hover: null, stack: "", hz: "log", hy: "lin", pre: [], div: "", rwin: "", slope: false, fmin: "", fmax: "", det: ""}); }
 function serCache() { return S.ser || (S.ser = {list: {}, desc: {}, curves: {}}); }
 function serGet(store, key, url, params, onDone) {   // one request per key; the entry is {loading} -> {data} | {error}
   if (store[key]) return store[key];
@@ -935,7 +940,8 @@ function serGet(store, key, url, params, onDone) {   // one request per key; the
   api(url, params).then(d => { e.data = d; }).catch(err => { e.error = errText(err); }).finally(() => { e.loading = false; onDone && onDone(); });
   return e;
 }
-const serRedraw = run => () => { for (const q of S.panes) if ((q.kind === "series" || q.kind === "heatmap") && q.run === run) { fillSeriesControls(q); draw(q); } };
+const SERK = k => k === "series" || k === "heatmap" || k === "radial" || k === "spectrum";     // the panes that read the run's series sources
+const serRedraw = run => () => { for (const q of S.panes) if (SERK(q.kind) && q.run === run) { fillSeriesControls(q); draw(q); } };
 function serList(run) { return serGet(serCache().list, run, "/api/series", {run: S.runs[run].label}, serRedraw(run)); }
 function serDesc(run, src) { return serGet(serCache().desc, run + "|" + src, "/api/series", {run: S.runs[run].label, source: src}, serRedraw(run)); }
 function serForget(run) { const C = serCache(); for (const k of Object.keys(C.list)) if (k == run) delete C.list[k]; for (const st of [C.desc, C.curves]) for (const k of Object.keys(st)) if (k.startsWith(run + "|")) delete st[k]; }
@@ -959,6 +965,16 @@ function fillSeriesControls(p) {
     if (!fam.includes(st.heat)) st.heat = fam[0] || "";
     hs.innerHTML = fam.length ? fam.map(f => `<option value="${esc(f)}"${f === st.heat ? " selected" : ""}>${esc(f)}*</option>`).join("") : '<option value="">(no column families)</option>';
   }
+  if (D && D.columns && p.kind === "radial") {                // radial: the families <prefix><R> drawn against R, and the family to divide by
+    const fam = radFamilies(D); st.pre = st.pre.filter(f => fam.includes(f));
+    if (!st.pre.length && fam.length) st.pre = [fam.includes("sigma_") ? "sigma_" : fam[0]];
+    el.querySelector(".scolbtn").textContent = (st.pre.length === 1 ? st.pre[0] + "*" : st.pre.length + " families") + " ▾";
+    if (st.div && !fam.includes(st.div)) st.div = "";
+    el.querySelector(".rdiv").innerHTML = '<option value="">no ratio</option>' + fam.map(f => `<option value="${esc(f)}"${f === st.div ? " selected" : ""}>/ ${esc(f)}*</option>`).join("");
+    el.querySelector(".sy").value = st.yscale || "auto"; el.querySelector(".rwin").value = st.rwin || ""; el.querySelector(".rslope").checked = !!st.slope;
+    return;
+  }
+  if (D && D.columns && p.kind === "spectrum") for (const [c, k] of [["sfmin", "fmin"], ["sfmax", "fmax"], ["sdet", "det"]]) el.querySelector("." + c).value = st[k] || "";
   if (D && D.columns) {
     const cols = Object.keys(D.columns); st.cols = st.cols.filter(c => cols.includes(c));
     const defs = ((L && L.sources || []).find(s => s.name === st.src) || {}).defaults || [];
@@ -971,6 +987,13 @@ function fillSeriesControls(p) {
 }
 function openColumnMenu(p) {
   const st = serState(p), D = serDesc(p.run, st.src).data, m = p.el.querySelector(".scolmenu"); if (!D || !D.columns) return;
+  if (p.kind === "radial") {                                  // the families (one curve per family and window)
+    m.innerHTML = '<div class="small">tick the families to draw against R (one curve per family; with several windows, one family is clearer)</div>' + radFamilies(D).map(f => {
+      const c = (D.columns[Object.keys(D.columns).find(k => k.startsWith(f))] || {});
+      return `<label title="${esc(f)}*"><input type="checkbox" value="${esc(f)}"${st.pre.includes(f) ? " checked" : ""}> ${esc(f)}* <i>${esc(c.label || "")}${c.unit ? " [" + esc(c.unit) + "]" : ""}</i></label>`; }).join("");
+    m.querySelectorAll("input").forEach(cb => cb.onchange = () => { st.pre = [...m.querySelectorAll("input:checked")].map(x => x.value); fillSeriesControls(p); draw(p); });
+    m.classList.add("on"); return;
+  }
   const groups = {}; for (const [k, v] of Object.entries(D.columns)) (groups[v.group || "columns"] = groups[v.group || "columns"] || []).push([k, v]);
   if (groups["raw columns"]) { const raw = groups["raw columns"]; delete groups["raw columns"]; groups["raw columns"] = raw; }     // the source's own columns after the derived ones
   m.innerHTML = '<div class="small">tick the columns to draw (they share the y axis)</div>' + Object.entries(groups).map(([g, l]) => `<div class="grp"><b>${esc(g)}</b>` +
@@ -1010,6 +1033,7 @@ function drawSeries(p, c, W) {
   if (De.error) return plotMessage(c, W, [`${st.src}: could not read it`, De.error]);
   if (!De.data) return plotMessage(c, W, [`reading ${st.src} (the first time parses the files; then it is cached)...`]);
   const D = De.data;
+  if (st.pendX && !D.missing) { const X0 = serX(p, D.period); st.win = st.pendX.map(X0.inv).sort((a, b) => a - b); st.pendX = null; }     // a layout's xlim (the panel's x units) -> the time window
   if (D.missing) return plotMessage(c, W, (serCache().building || {})[p.run] ? ["building the snapshot scalars (background job)...", "they appear here when the job is done"] :
     [`${D.run} has no snapshot scalars table yet`, "\"build\" (top right) computes the built-in", "scalars of every snapshot in a background job", "(the other sources in the list need no job)"]);
   if (!st.cols.length) fillSeriesControls(p);
@@ -1151,6 +1175,7 @@ function drawHeat(p, c, W) {   // a family of columns <prefix><number> against t
   if (!st.heat) fillSeriesControls(p);
   if (!st.heat) return plotMessage(c, W, [`${st.src} has no column family (name + number, e.g. occ_0, occ_1, ...)`, "pick another source (timebin has the bin occupancy)"]);
   const Hh = PH || W, w = Math.max(50, W - 62 - 12), D = De.data, C = serCache();
+  if (st.pendX) { const X0 = serX(p, D.period); st.win = st.pendX.map(X0.inv).sort((a, b) => a - b); st.pendX = null; }     // a layout's xlim -> the time window
   const params = {run: S.runs[p.run].label, source: st.src, heat: st.heat, n: Math.round(w), ...(st.win ? {tmin: st.win[0], tmax: st.win[1]} : {})};
   const key = p.run + "|heat|" + JSON.stringify(params), Ge = serGet(C.curves, key, "/api/series", params, serRedraw(p.run));
   if (Ge.error) return plotMessage(c, W, ["could not read the grid:", Ge.error]);
@@ -1187,10 +1212,96 @@ function drawHeat(p, c, W) {   // a family of columns <prefix><number> against t
   c.fillText(txt, A.L, A.T - 6, A.w);
   p.plotAxes = A; p.serX = X;
 }
+// ---- radial-profile (time-averaged) and spectrum panes: the layout panels `radial` and `spectrum` (GET /api/series?radial= | spectrum=<panel JSON>,
+// series.radial_tile / spectrum_tile): curves with optional 16-84 % bands, log axes as the tile says, horizontal / vertical guide lines; zoom as the other plot panes
+function radFamilies(D) {   // column families <prefix><number> (the number may be a radius like 0.5184) with at least 3 members, in the source's order
+  const f = {}; for (const k of Object.keys(D.columns || {})) { const m = k.match(/^(.*?_)(-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)$/); if (m) (f[m[1]] = f[m[1]] || []).push(k); }
+  return Object.keys(f).filter(k => f[k].length >= 3);
+}
+function rsWindows(s) { s = String(s ?? "").trim(); if (!s) return 1; if (/^\d+$/.test(s) && +s >= 1 && +s <= 12) return +s; if (/^last:[0-9.]+$/.test(s)) return s;
+  try { const v = JSON.parse(s); if (Array.isArray(v) && v.length && v.every(w => Array.isArray(w) && w.length === 2 && w.every(Number.isFinite))) return v; } catch (e) {} return null; }
+const RS_OWN = {radial: ["source", "prefix", "prefixes", "divide", "windows", "slope", "yscale"], spectrum: ["source", "columns", "ids", "fmin", "fmax", "detrend"]};
+function rsPanel(p) {   // a radial / spectrum pane as layout keys (the opened layout's other keys of this type, e.g. labels, hlines, scale, tmin, are kept)
+  const st = serState(p), keep = {}, num = v => String(v ?? "").trim() !== "" && Number.isFinite(+v) ? +v : null;
+  if (p.extra && p.extraType === p.kind) for (const [k, v] of Object.entries(p.extra)) if (!RS_OWN[p.kind].includes(k) && k !== "xlim" && k !== "ylim" && !k.startsWith("x_")) keep[k] = v;
+  if (p.kind === "radial") {
+    const o = {...keep, source: st.src, windows: rsWindows(st.rwin) ?? 1};
+    if (st.pre.length === 1) o.prefix = st.pre[0]; else o.prefixes = [...st.pre];
+    if (st.div) o.divide = st.div; if (st.slope) o.slope = true; if (st.yscale && st.yscale !== "auto") o.yscale = st.yscale;
+    return o;
+  }
+  const o = {...keep, source: st.src, columns: [...st.cols]}; if (st.ids) o.ids = st.ids;
+  for (const [k, v] of [["fmin", st.fmin], ["fmax", st.fmax], ["detrend", st.det]]) if (num(v) != null && num(v) > 0) o[k] = num(v);
+  return o;
+}
+function rsTile(p) { const pan = rsPanel(p), C = serCache(); return serGet(C.curves, p.run + "|" + p.kind + "|" + JSON.stringify(pan), "/api/series", {run: S.runs[p.run].label, [p.kind]: JSON.stringify(pan)}, serRedraw(p.run)); }
+const RS_DASH = {"-": [], "--": [6, 3], ":": [2, 3], "-.": [8, 3, 2, 3]};
+function drawRS(p, c, W) {
+  const st = serState(p), Ls = serList(p.run), rad = p.kind === "radial";
+  if (Ls.error) return plotMessage(c, W, ["could not list the sources:", Ls.error]);
+  if (!Ls.data) return plotMessage(c, W, ["listing the run's data sources..."]);
+  if (!st.src) fillSeriesControls(p);
+  const De = serDesc(p.run, st.src);
+  if (De.error) return plotMessage(c, W, [`${st.src}: could not read it`, De.error]);
+  if (!De.data) return plotMessage(c, W, [`reading ${st.src}...`]);
+  if (De.data.missing) return plotMessage(c, W, [`${De.data.run} has no snapshot scalars table yet: pick another source`, rad ? "(e.g. prod_disc: the disc product)" : ""]);
+  if (rad ? !st.pre.length : !st.cols.length) fillSeriesControls(p);
+  if (rad && !st.pre.length) return plotMessage(c, W, [`${st.src} has no column family <name>_<R>`, "pick another source (prod_disc has the disc profiles)"]);
+  if (!rad && !st.cols.length) return plotMessage(c, W, ["no column with values in this source"]);
+  if (rad && rsWindows(st.rwin) == null) return plotMessage(c, W, ["windows: N (1-12), last:K or [[a, b], ...] (orbits)"]);
+  const Te = rsTile(p);
+  if (Te.error) return plotMessage(c, W, ["could not compute the " + (rad ? "profiles:" : "spectrum:"), Te.error]);
+  if (!Te.data) return plotMessage(c, W, [rad ? "averaging the profiles over the windows..." : "computing the periodograms..."]);
+  const T = Te.data, cv = T.curves, sty = T.styles || [];
+  if (!cv.length) return plotMessage(c, W, rad ? ["no rows in these windows"] : ["no column with at least 8 values in the time range", "(a spectrum needs a few snapshots or a log source)"]);
+  const xlog = !!T.xlog, ysc = T.yscale, ylog = ysc === "log" || (!!T.ylog && ysc !== "lin"), ysym = Array.isArray(ysc) && ysc[0] === "symlog" ? +ysc[1] || 1 : 0;
+  const xs = [], ys = [], bs = []; cv.forEach((k, j) => { xs.push(...k.x); ys.push(...k.y); const b = (sty[j] || {}).band; if (b) bs.push(...b[0], ...b[1]); });
+  const fy = v => v != null && Number.isFinite(v) && (!ylog || v > 0), fx = v => v != null && Number.isFinite(v) && (!xlog || v > 0);
+  let yr = range(ys.filter(fy), ylog); const yb = range(bs.filter(fy), ylog);     // the bands widen the range by at most a factor 10 (log) or a half (linear), as in the profile pane
+  if (yr && yb) yr = ylog ? [Math.max(yb[0], yr[0] / 10), Math.min(yb[1], yr[1] * 10)] : [Math.max(yb[0], yr[0] - (yr[1] - yr[0]) / 2), Math.min(yb[1], yr[1] + (yr[1] - yr[0]) / 2)];
+  for (const h of T.hlines || []) if (yr && fy(h) && !ysym) yr = [Math.min(yr[0], h), Math.max(yr[1], h)];
+  const xr = range(xs.filter(fx), xlog), wide = r => r && !ylog && r[1] - r[0] < 1e-6 * Math.max(Math.abs(r[0]), Math.abs(r[1])) ? [r[0] - 0.1 * Math.abs(r[0] || 1), r[1] + 0.1 * Math.abs(r[1] || 1)] : r;
+  yr = wide(yr);     // e.g. a slope of exactly -1 up to rounding: a readable axis
+  if (!yr || !xr) return plotMessage(c, W, ["no finite values" + (ylog ? " (none positive for the log y axis)" : "")]);
+  const z = plotZoom(p), top = document.body.classList.contains("figmode") ? 30 : Math.max(46, (p.el.querySelector(".pk").offsetHeight || 20) + 26);
+  const ylab = T.ylabel || (rad ? (st.slope ? "d ln|y| / d ln R of " : "") + st.pre.map(f => f.replace(/_$/, "")).join(", ") + (st.div ? " / " + st.div.replace(/_$/, "") : "") : "power");
+  const A = plotFrame(c, W, {x: zOk(z.x, xlog) || xr, y: zOk(z.y, ylog) || yr, xlog, ylog, ysym, top, xlabel: (T.xlabel || "x") + (z.x || z.y ? "   (zoomed: double click = reset)" : ""), ylabel: ylab});
+  c.save(); c.beginPath(); c.rect(A.L, A.T, A.w, A.h); c.clip();
+  c.lineWidth = 1; c.strokeStyle = "#9ab"; c.setLineDash([5, 4]);
+  for (const h of T.hlines || []) { const y = A.Y(h); if (Number.isFinite(y)) { c.beginPath(); c.moveTo(A.L, y); c.lineTo(A.L + A.w, y); c.stroke(); } }
+  for (const v of T.vlines || []) { if (!fx(v)) continue; const x = A.X(v); c.beginPath(); c.moveTo(x, A.T); c.lineTo(x, A.T + A.h); c.stroke(); }
+  c.setLineDash([]);
+  cv.forEach((k, j) => {   // the 16-84 % band (shaded), then the line
+    const s = sty[j] || {}, col = s.color || SER_COLORS[j % SER_COLORS.length], b = s.band;
+    if (b) { c.fillStyle = col; c.globalAlpha = 0.2; c.beginPath(); let on = false;
+      k.x.forEach((x, i) => { if (!fx(x) || !fy(b[1][i])) return; const px = A.X(x), py = A.Y(b[1][i]); on ? c.lineTo(px, py) : c.moveTo(px, py); on = true; });
+      for (let i = k.x.length - 1; i >= 0; i--) if (fx(k.x[i]) && fy(b[0][i])) c.lineTo(A.X(k.x[i]), A.Y(b[0][i]));
+      c.fill(); c.globalAlpha = 1; }
+    c.strokeStyle = col; c.lineWidth = s.lw ? 1.4 * s.lw : 1.5; c.setLineDash(RS_DASH[s.dash] || []); c.beginPath(); let on = false;
+    k.x.forEach((x, i) => { const y = k.y[i]; if (!fx(x) || !fy(y)) { on = false; return; } const px = A.X(x), py = A.Y(y); on ? c.lineTo(px, py) : c.moveTo(px, py); on = true; });
+    c.stroke(); c.setLineDash([]);
+  });
+  const hx = p.rsHover; let lines = cv.map((k, j) => [(sty[j] || {}).color || SER_COLORS[j % SER_COLORS.length], RS_DASH[(sty[j] || {}).dash] || [], k.label, null]);
+  if (hx != null) {   // the values at the cursor's x (the nearest point of each curve)
+    const x0 = A.X(hx); c.strokeStyle = "#fff8"; c.setLineDash([4, 3]); c.beginPath(); c.moveTo(x0, A.T); c.lineTo(x0, A.T + A.h); c.stroke(); c.setLineDash([]);
+    cv.forEach((k, j) => { let b = -1, bd = Infinity; k.x.forEach((x, i) => { if (fx(x) && fy(k.y[i])) { const d = Math.abs(xlog ? Math.log(x / hx) : x - hx); if (d < bd) { bd = d; b = i; } } });
+      if (b >= 0) { lines[j][3] = k.y[b]; c.fillStyle = "#fff"; c.beginPath(); c.arc(A.X(k.x[b]), A.Y(k.y[b]), 3, 0, 6.2832); c.fill(); } });
+  }
+  c.restore();
+  c.font = "11px ui-monospace,monospace"; let ly = A.T + 13;
+  for (const [col, dash, name, val] of lines.slice(0, 12)) {
+    c.strokeStyle = col; c.lineWidth = 2; c.setLineDash(dash); c.beginPath(); c.moveTo(A.L + 6, ly - 4); c.lineTo(A.L + 22, ly - 4); c.stroke(); c.setLineDash([]);
+    const txt = `${name}${val != null ? " = " + fmt(val) : ""}`; c.lineWidth = 3; c.strokeStyle = "#0b0e12"; c.strokeText(txt, A.L + 27, ly, A.w - 33); c.fillStyle = "#dde"; c.fillText(txt, A.L + 27, ly, A.w - 33); ly += 14;
+  }
+  c.font = "11px sans-serif"; c.fillStyle = "#89a";
+  const what = rad ? `${st.src}: time-averaged over ${cv.length > 1 && st.pre.length === 1 ? cv.length + " windows" : "the window"}${sty.some(s => s.band) ? "; band: 16-84 % of the window's snapshots" : ""}` : `${st.src}: Lomb-Scargle power / variance`;
+  c.fillText(hx != null ? `x = ${(+hx).toPrecision(5)}` + (ysym ? `; symlog, linear below ${fmt(ysym)}` : "") : what + (ysym ? `; symlog, linear below ${fmt(ysym)}` : "") + (T.note ? "; " + T.note : ""), A.L, A.T - 6, A.w);
+  p.plotAxes = A;
+}
 function setKind(p, k) {
   if (p.kind !== k) { p.pz = null; p.zbox = null; }                // a zoom belongs to the plot it was made on
-  p.kind = k; p.el.classList.remove("kmap", "kprofile", "kseries", "kheatmap", "kphase"); p.el.classList.add("k" + k); p.el.querySelector(".kind").value = k;
-  if (k === "series" || k === "heatmap") fillSeriesControls(p);
+  p.kind = k; p.el.classList.remove("kmap", "kprofile", "kseries", "kheatmap", "kphase", "kradial", "kspectrum"); p.el.classList.add("k" + k); p.el.querySelector(".kind").value = k;
+  if (SERK(k)) fillSeriesControls(p);
   if (k === "phase") phFill(p);
   if (k !== "profile" && !S.panes.some(q => q.kind === "profile")) setHoverR(null);
   if (k === "map" || k === "phase" || !p.map) requestPanes([p], 0); else draw(p);
@@ -1201,7 +1312,7 @@ function attachPlot(p) {
   const pk = p.el.querySelector(".pk"), st = serState(p); pk.addEventListener("mousedown", e => e.stopPropagation()); pk.addEventListener("wheel", e => e.stopPropagation());
   pk.querySelector(".kind").onchange = e => { selectPane(S.panes.indexOf(p)); setKind(p, e.target.value); };
   pk.querySelector(".ylog").onchange = e => { p.ylog = e.target.checked; draw(p); };
-  pk.querySelector(".ssrc").onchange = e => { st.src = e.target.value; st.cols = []; st.ids = null; st.win = null; fillSeriesControls(p); draw(p); };
+  pk.querySelector(".ssrc").onchange = e => { st.src = e.target.value; st.cols = []; st.ids = null; st.win = null; st.pre = []; st.div = ""; p.pz = null; fillSeriesControls(p); draw(p); };
   pk.querySelector(".scolbtn").onclick = () => { const m = pk.querySelector(".scolmenu"); if (m.classList.contains("on")) m.classList.remove("on"); else openColumnMenu(p); };
   pk.querySelector(".ssm").onchange = e => { st.smooth = +e.target.value; draw(p); };
   pk.querySelector(".sheat").onchange = e => { st.heat = e.target.value; draw(p); };
@@ -1210,6 +1321,9 @@ function attachPlot(p) {
   pk.querySelector(".sstk").onchange = e => { st.stack = e.target.value; draw(p); if (FIG.pub) pubSchedule(); };
   pk.querySelector(".shz").onchange = e => { st.hz = e.target.value; draw(p); };
   pk.querySelector(".shy").onchange = e => { st.hy = e.target.value; draw(p); };
+  pk.querySelector(".rdiv").onchange = e => { st.div = e.target.value; draw(p); };
+  pk.querySelector(".rslope").onchange = e => { st.slope = e.target.checked; draw(p); };
+  for (const [cl, k] of [["rwin", "rwin"], ["sfmin", "fmin"], ["sfmax", "fmax"], ["sdet", "det"]]) { const el = pk.querySelector("." + cl); el.onchange = () => { st[k] = el.value.trim(); draw(p); }; el.addEventListener("keydown", e => e.stopPropagation()); }
   pk.querySelector(".srel").onclick = () => { serForget(p.run); fillSeriesControls(p); draw(p); };
   pk.querySelector(".sbuild").onclick = async () => {
     const C = serCache(); C.building = C.building || {}; C.building[p.run] = true; draw(p); await jobPost({kind: "series", run: S.runs[p.run].label});
@@ -1235,8 +1349,9 @@ function attachPlot(p) {
     if (!PZ.drag) p.plot.style.cursor = reg === "x" ? "ew-resize" : reg === "y" ? "ns-resize" : "crosshair";
     if (p.kind === "profile") setHoverR(inside ? {R: A.inv(x) / lengthUnit(p).factor, src: p} : null);
     if (p.kind === "phase") { p.phHover = reg === "in" ? [x, y] : null; if (!PZ.drag) drawPlot(p); }
+    if (p.kind === "radial" || p.kind === "spectrum") { p.rsHover = reg === "in" ? A.inv(x) : null; if (!PZ.drag) drawPlot(p); }
     if ((p.kind === "series" || p.kind === "heatmap") && p.serX) { st.hover = inside ? p.serX.inv(A.inv(x)) : null; st.hoverY = A.invY ? A.invY(y) : null; if (!PZ.drag) drawPlot(p); } });
-  p.plot.addEventListener("mouseleave", () => { if (p.kind === "profile") setHoverR(null); if (p.kind === "series" || p.kind === "heatmap") { st.hover = null; drawPlot(p); } if (p.kind === "phase") { p.phHover = null; drawPlot(p); } });
+  p.plot.addEventListener("mouseleave", () => { if (p.kind === "profile") setHoverR(null); if (p.kind === "series" || p.kind === "heatmap") { st.hover = null; drawPlot(p); } if (p.kind === "phase") { p.phHover = null; drawPlot(p); } if (p.rsHover != null) { p.rsHover = null; drawPlot(p); } });
   p.plot.addEventListener("wheel", ev => {   // inside: zoom about the cursor (time series, heatmap: time only; alt: y only); over an axis strip: that axis only
     const A = p.plotAxes; if (!A) return; ev.preventDefault();
     const [x, y] = at(ev), reg = plotRegion(A, x, y); if (!reg) return;
@@ -1287,7 +1402,7 @@ function setPlotZoom(p, xr, yr) {   // xr / yr: [lo, hi] in the axis' data units
   drawPlot(p);
 }
 function resetPlotZoom(p) {
-  const z = plotZoom(p); z.x = z.y = null; if (p.kind === "series" || p.kind === "heatmap") serState(p).win = null;
+  const z = plotZoom(p); z.x = z.y = null; if (p.kind === "series" || p.kind === "heatmap") { serState(p).win = null; serState(p).pendX = null; }
   if (p.kind === "phase") { phPane(p).keep = null; phRangeInputs(p); fetchPhasePane(p); }
   drawPlot(p);
 }
@@ -1434,12 +1549,30 @@ function viewKeys(p) {   // the pane's view as layout keys (map.View fields)
   if (p.fix && p.fix.hscale) o.hscale = +p.fix.hscale;
   return o;
 }
-function panelOf(p, i) {   // a pane as a layout panel
+function zoomKeys(p) {   // a plot pane's zoom as the layout keys xlim / ylim, in the panel's x / y units (a time series' or heatmap's time window converted from code time)
+  const z = plotZoom(p), o = {}, st = serState(p);
+  if (p.kind === "map" || p.kind === "phase") return o;                // maps have their window, phase panels their xr / yr
+  if (p.kind === "series" || p.kind === "heatmap") { if (st.pendX) o.xlim = [...st.pendX]; else if (st.win && p.serX) o.xlim = st.win.map(t => +p.serX.f(t).toPrecision(8)); }
+  else if (z.x) o.xlim = z.x.map(v => +(+v).toPrecision(8));
+  if (z.y) o.ylim = z.y.map(v => +(+v).toPrecision(8));
+  return o;
+}
+function restoreZoom(p, q) {   // the inverse of zoomKeys, after setKind (which drops a zoom): a time window waits for the source's period (drawSeries / drawHeat convert it)
+  const z = plotZoom(p), ok = r => Array.isArray(r) && r.length === 2 && r.every(Number.isFinite) && r[1] !== r[0] ? [Math.min(...r), Math.max(...r)] : null;
+  if (p.kind === "series" || p.kind === "heatmap") { serState(p).pendX = ok(q.xlim); serState(p).win = null; } else z.x = ok(q.xlim);
+  z.y = ok(q.ylim);
+}
+function panelOf(p, i) {   // a pane as a layout panel, with its zoom (xlim / ylim) for the plot panes
+  const o = panelOf0(p, i); delete o.xlim; delete o.ylim;
+  return o.type === "map" || o.type === "text" ? o : Object.assign(o, zoomKeys(p));
+}
+function panelOf0(p, i) {
   const base = {id: p.lid || `p${i + 1}`, ...(p.label ? {label: p.label} : {})};
   if (p.pos) Object.assign(base, {row: p.pos.row, col: p.pos.col}, (p.pos.rs || 1) > 1 ? {rowspan: p.pos.rs} : {}, (p.pos.cs || 1) > 1 ? {colspan: p.pos.cs} : {});
   else if (p.span) Object.assign(base, (p.span.rs || 1) > 1 ? {rowspan: p.span.rs} : {}, (p.span.cs || 1) > 1 ? {colspan: p.span.cs} : {});
   const {x_phase, text, ...ex} = p.extra || {};                   // (text, x_phase: a phase pane saved as a text panel)
   if (p.kind === "phase") return {...ex, ...base, ...phasePanel(p)};
+  if (p.kind === "radial" || p.kind === "spectrum") return {...base, type: p.kind, ...rsPanel(p)};
   if (p.kind === "series") {
     const st = serState(p);
     const o = {...ex, ...base, type: "timeseries", source: st.src || "snapshots", columns: st.cols.length ? st.cols : (ex.columns || []), ...(st.ids ? {ids: st.ids} : {}), ...(st.smooth ? {smooth: st.smooth} : {}),
@@ -1474,7 +1607,7 @@ function setPost(p, post) {   // the inverse of postSpec
   const s = String(post || "none"); let m;
   if ((m = s.match(/^resid:smooth:(.+)$/))) { p.post = "resid:smooth"; p.postarg = m[1]; } else if ((m = s.match(/^grad:(.+)$/))) { p.post = "grad"; p.postarg = m[1]; } else { p.post = s; p.postarg = ""; }
 }
-const LIVE_PANEL = q => q.type === "phase" || (q.type === "text" && q.x_phase && typeof q.x_phase === "object") ? true : q.type === "heatmap" ? true : q.type === "map" ? !q.product : q.type === "profile" ? !q.product : q.type === "timeseries" ? (q.source && q.source !== "snapshots") || (q.columns || []).every(c => /^[A-Za-z_]\w*$/.test(c)) : false;
+const LIVE_PANEL = q => q.type === "phase" || q.type === "radial" || q.type === "spectrum" || (q.type === "text" && q.x_phase && typeof q.x_phase === "object") ? true : q.type === "heatmap" ? true : q.type === "map" ? !q.product : q.type === "profile" ? !q.product : q.type === "timeseries" ? (q.source && q.source !== "snapshots") || (q.columns || []).every(c => /^[A-Za-z_]\w*$/.test(c)) : false;
 async function openLayout(name) {
   const r = await api("/api/layout", {name}), raw = r.raw, v = (await postJSON("/api/layout/validate", {layout: raw}));
   if (!v.ok) { $("fg_err").textContent = "this layout does not validate: " + v.error; return; }
@@ -1493,9 +1626,16 @@ async function openLayout(name) {
     const p = S.panes[k], q = byId[rq.id];
     p.lid = q.id; p.label = rq.label || ""; p.pos = rq.row != null && rq.col != null ? {row: rq.row, col: rq.col, rs: rq.rowspan || 1, cs: rq.colspan || 1} : null;
     p.span = p.pos ? null : {rs: rq.rowspan || 1, cs: rq.colspan || 1};
-    p.extra = Object.fromEntries(Object.entries(rq).filter(([k2]) => !["id", "label", "row", "col", "rowspan", "colspan", "type"].includes(k2)));
+    p.extra = Object.fromEntries(Object.entries(rq).filter(([k2]) => !["id", "label", "row", "col", "rowspan", "colspan", "type"].includes(k2))); p.extraType = rq.type;
+    if (q.type === "radial" || q.type === "spectrum") {   // the layout keys -> the pane's controls (keys without a control stay in p.extra and go with every request)
+      const st = serState(p); st.src = q.source; st.win = null;
+      if (q.type === "radial") { st.pre = q.prefixes ? [...q.prefixes] : [q.prefix]; st.div = q.divide || ""; st.slope = !!q.slope; st.yscale = q.yscale || "auto";
+        st.rwin = Array.isArray(q.windows) ? JSON.stringify(q.windows) : q.windows == null || q.windows === 1 ? "" : String(q.windows); }
+      else { st.cols = [...q.columns]; st.ids = q.ids || null; st.fmin = q.fmin != null ? String(q.fmin) : ""; st.fmax = q.fmax != null ? String(q.fmax) : ""; st.det = q.detrend != null ? String(q.detrend) : ""; }
+      setKind(p, q.type); restoreZoom(p, q); return;
+    }
     if (q.type === "heatmap") { const st = serState(p); st.src = q.source; st.heat = q.prefix; st.xaxis = {orb: "orb", time_myr: "myr", time: "t"}[q.xaxis] || "t"; st.win = null;
-      st.hz = q.zscale || "log"; st.hy = q.yscale || "lin"; p.el.querySelector(".shz").value = st.hz; p.el.querySelector(".shy").value = st.hy; setKind(p, "heatmap"); return; }
+      st.hz = q.zscale || "log"; st.hy = q.yscale || "lin"; p.el.querySelector(".shz").value = st.hz; p.el.querySelector(".shy").value = st.hy; setKind(p, "heatmap"); restoreZoom(p, q); return; }
     if (q.type === "phase" || rq.x_phase) {   // a phase pane: its own view (the shared centre / align / tilt controls stay as they are) and diagram
       const o = q.type === "phase" ? q : rq.x_phase, v = q.type === "phase" ? q : o.view || {}, h = phPane(p);
       if (v.field) p.field = v.field; if (v.mode) p.mode = v.mode; if (v.axes) p.axes = v.axes; p.z0 = String(v.z0 ?? 0); p.weight = v.weight || "auto";
@@ -1509,12 +1649,12 @@ async function openLayout(name) {
       st.xaxis = {orb: "orb", time_myr: "myr", time: "t", index: "t"}[q.xaxis] || "orb"; st.yscale = q.yscale || (q.ylog ? "log" : "auto"); st.win = null;
       st.stack = q.stack === "fraction" ? "fraction" : q.stack ? "stack" : "";
       ["ssm", "sx", "sy", "sstk"].forEach(c => { const e = p.el.querySelector("." + c); if (e) e.value = String({ssm: st.smooth, sx: st.xaxis, sy: st.yscale, sstk: st.stack}[c]); });
-      setKind(p, "series"); return;
+      setKind(p, "series"); restoreZoom(p, q); return;
     }
     p.field = q.field; p.mode = q.mode; p.weight = q.weight || "auto"; p.axes = q.axes; p.z0 = String(q.z0 ?? 0); p.view = S.linked && k ? S.panes[0].view : {...p.view};
     p.view.width = q.width; p.view.cx = q.cx || 0; p.view.cy = q.cy || 0;
     p.fix = {}; for (const kk of VIEW_KEYS) if (kk === "hscale" ? q.hscale && q.hscale !== 1 : String(q[kk]) !== String(byId[firstMap.id][kk])) p.fix[kk] = q[kk];
-    if (q.type === "profile") { p.ylog = q.ylog !== false; setKind(p, "profile"); return; }
+    if (q.type === "profile") { p.ylog = q.ylog !== false; setKind(p, "profile"); restoreZoom(p, q); return; }
     p.cmap = q.cmap || "viridis"; setScale(p, q.scale); setPost(p, q.post);
     if (q.limits === "fixed" && q.vmin != null && q.vmax != null) { p.nl.auto = false; p.nl.vmin = q.vmin; p.nl.vmax = q.vmax; p.lim = [q.vmin, q.vmax]; } else p.nl.auto = true;
     p.ovo = {...ovDefault(), extra: (q.overlays || []).join(";")};
@@ -1638,9 +1778,12 @@ function updateBadge(p) {
 }
 
 // ---- overlays and click-to-inspect (the server computes plain data in window coordinates; the canvas above the map draws it, so pan and zoom just transform it) --------
-function ovDefault() { return {vv: false, vB: false, sv: false, sB: false, pbh: false, pstar: false, pdm: false, con: false, dsc: false, cn: 8, cstep: 0.5, grid: 24, density: 28, arrows: "prop", extra: "", plug: []}; }
+function ovDefault() { return {lv: false, lB: false, lmag: false, llen: 24, lal: 0.55, lco: 1.5, vv: false, vB: false, sv: false, sB: false, pbh: false, pstar: false, pdm: false, con: false, dsc: false, cn: 8, cstep: 0.5, grid: 24, density: 28, arrows: "prop", extra: "", plug: []}; }
 function ovSpecs(o) {   // the `spec=` strings of the overlay panel (see docs/USAGE.md, "Overlays")
   const s = [], g = Math.max(8, Math.min(128, Math.round(+o.grid) || 24)), d = Math.max(4, Math.min(100, Math.round(+o.density) || 28));
+  const lic = `len=${Math.max(2, Math.min(400, +o.llen || 24))},alpha=${Math.max(0, Math.min(1, Number.isFinite(+o.lal) ? +o.lal : 0.55))},contrast=${Math.max(0.1, Math.min(10, +o.lco || 1.5))}${o.lmag ? ",mag=1" : ""}`;
+  if (o.lv) s.push("lic:v," + lic);
+  if (o.lB) s.push("lic:B," + lic);
   if (o.vv) s.push(`vectors:v,grid=${g},arrows=${o.arrows}`);
   if (o.vB) s.push(`vectors:B,grid=${g},arrows=${o.arrows},color=cyan`);
   if (o.sv) s.push(`streamlines:v,density=${d}`);
@@ -1682,7 +1825,8 @@ async function refreshOverlay(p) {
 function showOvMsg(p) { $("ovmsg").textContent = p.ovMsg || (p.ovBusy ? "computing..." : ""); }
 function ovFromControls() {
   const p = sel(), o = p.ovo;
-  for (const k of ["vv", "vB", "sv", "sB", "pbh", "pstar", "pdm", "con", "dsc"]) o[k] = $("ov_" + k).checked;
+  for (const k of ["lv", "lB", "lmag", "vv", "vB", "sv", "sB", "pbh", "pstar", "pdm", "con", "dsc"]) o[k] = $("ov_" + k).checked;
+  o.llen = +$("ov_llen").value; o.lal = +$("ov_lal").value; o.lco = +$("ov_lco").value;
   o.plug = [...document.querySelectorAll("#ov_plug input[data-plug]:checked")].map(x => x.dataset.plug);
   o.plugOpt = {}; document.querySelectorAll("#ov_plug input[data-popt]").forEach(x => { const [n, k] = x.dataset.popt.split("|"); (o.plugOpt[n] = o.plugOpt[n] || {})[k] = x.checked; });
   document.querySelectorAll("#ov_plug .popts").forEach(d => d.classList.toggle("hid", !o.plug.includes(d.dataset.for)));
@@ -1690,7 +1834,8 @@ function ovFromControls() {
   p.ovMsg = ""; refreshOverlay(p);
 }
 function ovToControls(p) {
-  for (const k of ["vv", "vB", "sv", "sB", "pbh", "pstar", "pdm", "con", "dsc"]) $("ov_" + k).checked = !!p.ovo[k];
+  for (const k of ["lv", "lB", "lmag", "vv", "vB", "sv", "sB", "pbh", "pstar", "pdm", "con", "dsc"]) $("ov_" + k).checked = !!p.ovo[k];
+  const d0 = ovDefault(); $("ov_llen").value = p.ovo.llen ?? d0.llen; $("ov_lal").value = p.ovo.lal ?? d0.lal; $("ov_lco").value = p.ovo.lco ?? d0.lco;
   document.querySelectorAll("#ov_plug input[data-plug]").forEach(x => { x.checked = (p.ovo.plug || []).includes(x.dataset.plug); });
   document.querySelectorAll("#ov_plug input[data-popt]").forEach(x => { const [n, k] = x.dataset.popt.split("|"), o = ((S.plugOpts || {})[n] || []).find(q => q.key === k);
     x.checked = ((p.ovo.plugOpt || {})[n] || {})[k] ?? (o ? o.default : true); });
@@ -1783,8 +1928,16 @@ function drawOv(p) {
   const rgba = (col, a) => `rgba(${col[0]},${col[1]},${col[2]},${a})`, vis = (x, y, m) => x > -m && y > -m && x < W + m && y < W + m;
   c.lineCap = "round"; c.lineJoin = "round"; c.font = "12px sans-serif";
   const legends = [];
+  for (const it of p.ov ? p.ov.items : []) if (it.kind === "image") {   // textures (LIC) first, under the lines: grey + alpha bytes (base64), row 0 = top, decoded once per item
+    if (!it._cv) { const bin = atob(it.data), n = it.nx * it.ny, cv = document.createElement("canvas"); cv.width = it.nx; cv.height = it.ny; const g = cv.getContext("2d"), img = g.createImageData(it.nx, it.ny);
+      for (let i = 0; i < n; i++) { const L = bin.charCodeAt(2 * i); img.data[4 * i] = img.data[4 * i + 1] = img.data[4 * i + 2] = L; img.data[4 * i + 3] = bin.charCodeAt(2 * i + 1); }
+      g.putImageData(img, 0, 0); it._cv = cv; }
+    const e = it.extent, [x0, y1] = toScreen(p, e[0], e[3]), [x1, y0] = toScreen(p, e[1], e[2]);
+    c.globalAlpha = it.alpha ?? 1; c.imageSmoothingEnabled = (x1 - x0) < 1.5 * it.nx; c.drawImage(it._cv, x0, y1, x1 - x0, y0 - y1); c.globalAlpha = 1;
+  }
   for (const it of [...(p.ov ? p.ov.items : []), ...(p.selHi && p.selItem ? [p.selItem] : [])]) {
     const k = it.kind, col = it.color || [255, 255, 255], al = it.alpha ?? 1, lw = it.linewidth ?? 1;
+    if (k === "image") continue;
     if (k === "arrow") {
       const [x0, y0] = toScreen(p, it.x, it.y), [x1, y1] = toScreen(p, it.x + it.dx, it.y + it.dy);
       if (vis(x0, y0, 80) || vis(x1, y1, 80)) { c.setLineDash(it.dash || []); strokeArrow(c, x0, y0, x1, y1, it.head ?? 0.35, lw, it.halo || 0, col, al); c.setLineDash([]); }
@@ -1998,7 +2151,9 @@ function attachPane(p) {
   cv.addEventListener("mousedown", e => { if (e.button === 2 || e.button > 2) return;     // right: the context menu; back / forward: snapshots
     if (e.button === 1) { e.preventDefault(); selectPane(S.panes.indexOf(p)); p.downAt = null; drag = {p, x: e.clientX, y: e.clientY, cx: p.view.cx, cy: p.view.cy, mid: true}; cv.style.cursor = "grabbing"; return; }   // middle: pan, or a click (window mouseup)
     if (e.altKey) { selectPane(S.panes.indexOf(p)); S.altDrag = {p, x: e.clientX, y: e.clientY, tilt0: $("tilt").value || "none", terms: []}; p.downAt = null; e.preventDefault(); return; }
-    p.downAt = [e.clientX, e.clientY]; selectPane(S.panes.indexOf(p)); drag = {p, x: e.clientX, y: e.clientY, cx: p.view.cx, cy: p.view.cy}; cv.style.cursor = "grabbing"; });
+    p.downAt = [e.clientX, e.clientY]; selectPane(S.panes.indexOf(p));
+    if (e.shiftKey) { e.preventDefault(); drag = {p, x: e.clientX, y: e.clientY, box: true}; return; }     // shift+drag: a zoom box (a shift+click still inspects at once)
+    drag = {p, x: e.clientX, y: e.clientY, cx: p.view.cx, cy: p.view.cy}; cv.style.cursor = "grabbing"; });
   cv.addEventListener("mouseleave", hoverEnd);
   cv.addEventListener("wheel", e => {     // (ctrl / shift + wheel scan the snapshots: the window's capturing listener takes those first)
     e.preventDefault(); selectPane(S.panes.indexOf(p)); const r = cv.getBoundingClientRect(), k = cv.width / r.width, px = (e.clientX - r.left) * k, py = (e.clientY - r.top) * k;
@@ -2014,8 +2169,20 @@ function attachPane(p) {
   });
   cv.addEventListener("dblclick", e => { clearTimeout(p.clickTimer); const r = cv.getBoundingClientRect(), k = cv.width / r.width; const [wx, wy] = toWorld(p, (e.clientX - r.left) * k, (e.clientY - r.top) * k); p.view.cx = wx; p.view.cy = wy; drawAll(); requestView(30); });
 }
+function mapBox(p, d, x1, y1) {   // the zoom box being drawn on a map pane (a div over the canvas), or null to remove it
+  let b = p.el.querySelector(".mbox"); if (x1 == null) { if (b) b.remove(); return; }
+  if (!b) { b = document.createElement("div"); b.className = "mbox"; p.el.appendChild(b); }
+  const r = p.el.getBoundingClientRect(); Object.assign(b.style, {left: Math.min(d.x, x1) - r.left + "px", top: Math.min(d.y, y1) - r.top + "px", width: Math.abs(x1 - d.x) + "px", height: Math.abs(y1 - d.y) + "px"});
+}
+function mapBoxZoom(p, d, x1, y1) {   // zoom the window to the box: its centre, and the larger side as the width (the window stays square)
+  const r = p.cv.getBoundingClientRect(), k = p.cv.width / r.width, a = toWorld(p, (d.x - r.left) * k, (d.y - r.top) * k), b = toWorld(p, (x1 - r.left) * k, (y1 - r.top) * k);
+  const w = Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1])); if (!(w > 0)) return false;
+  p.view.cx = (a[0] + b[0]) / 2; p.view.cy = (a[1] + b[1]) / 2; p.view.width = Math.min(1e6, Math.max(1e-6, w));
+  $("width").value = (+p.view.width).toPrecision(4); drawAll(); requestView(30); return true;
+}
 window.addEventListener("mouseup", e => {
   if (!drag) return; const d = drag, p = d.p; drag = null; p.cv.style.cursor = "grab";
+  if (d.box) { mapBox(p, d, null); if (Math.abs(e.clientX - d.x) >= 6 && Math.abs(e.clientY - d.y) >= 6) { clearTimeout(p.clickTimer); mapBoxZoom(p, d, e.clientX, e.clientY); } return; }     // smaller: a shift+click (inspect)
   if (d.mid && e.button === 1 && Math.hypot(e.clientX - d.x, e.clientY - d.y) <= 4) {     // a middle click: centre here; a second one soon after: reset the view
     const now = performance.now(), again = S.midClick && S.midClick.p === p && now - S.midClick.t < 450; S.midClick = again ? null : {p, t: now};
     if (again) return resetView(p);
@@ -2025,7 +2192,8 @@ window.addEventListener("mouseup", e => {
   requestView();
 });
 window.addEventListener("mousemove", e => {
-  if (drag) { const p = drag.p, r = p.cv.getBoundingClientRect(), k = p.cv.width / r.width, s = p.cv.width / p.view.width; p.view.cx = drag.cx - (e.clientX - drag.x) * k / s; p.view.cy = drag.cy + (e.clientY - drag.y) * k / s; drawAll(); }
+  if (drag && drag.box) { if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 4) mapBox(drag.p, drag, e.clientX, e.clientY); }
+  else if (drag) { const p = drag.p, r = p.cv.getBoundingClientRect(), k = p.cv.width / r.width, s = p.cv.width / p.view.width; p.view.cx = drag.cx - (e.clientX - drag.x) * k / s; p.view.cy = drag.cy + (e.clientY - drag.y) * k / s; drawAll(); }
   const p = drag ? drag.p : eventPane(e); if (!p) return;
   const r = p.cv.getBoundingClientRect(), k = p.cv.width / r.width, [wx, wy] = toWorld(p, (e.clientX - r.left) * k, (e.clientY - r.top) * k);
   S.cursor = {p, wx, wy};                                              // for the keys that act at the cursor (C, n, t, p, c)
@@ -2188,11 +2356,12 @@ const KEYMAP = [
   [["play"], "Enter, ctrl+m", "play / pause through the snapshots"],
   ["View"],
   [["zoom.in", "zoom.out", "zoom.out20"], "+ - _", "zoom in / out (x2), out by 20 %; drag, wheel, double click: pan, zoom about the cursor, centre here"],
+  [["view.box"], "shift+drag", "on a map: zoom to the box drawn (its centre; the larger side becomes the width); shift+click inspects at once"],
   [["view.centre.mid", "view.reset.mid"], "middle click / drag", "centre here / pan; double middle click: reset the view"],
   [["menu"], "right click", "a menu at that point: centre, zoom, nearest black hole, track, inspect, copy the coordinates or the value (series: go to that time, stack); shift+right click: the browser's menu"],
   [["view.reset", "view.centre", "view.bh"], "o, C, n", "reset the view; centre on the cursor; centre on the black hole nearest the cursor"],
   [["track"], "t", "track the particle nearest the cursor (centre rule ids:ID); t away from the map: tracking off"],
-  ["Plot panes (profile, time series, heatmap, phase diagram)"],
+  ["Plot panes (profile, time series, heatmap, phase diagram, time-averaged radial profile, spectrum; the zoom is saved in layouts as xlim / ylim)"],
   [["plot.box"], "shift+drag", "zoom to the box drawn; a drag along an axis strip (tick labels): that axis only"],
   [["plot.wheel"], "wheel, alt+wheel", "zoom about the cursor (series, heatmap: time; over an axis strip: that axis); alt: y only"],
   [["plot.pan", "plot.reset"], "drag, middle drag; double click, o", "pan a zoomed plot (phase diagram: drag = selection, middle drag pans); reset the zoom"],
@@ -2269,7 +2438,7 @@ document.addEventListener("contextmenu", e => {
   const p = S.panes.find(q => q.el === el); if (!p) return;
   if (p.kind === "map") { e.preventDefault(); selectPane(S.panes.indexOf(p)); mapMenu(p, e); }
   else if ((p.kind === "series" || p.kind === "heatmap") && e.target === p.plot) { e.preventDefault(); selectPane(S.panes.indexOf(p)); if (!plotMenu(p, e)) closeCtx(); }
-  else if ((p.kind === "profile" || p.kind === "phase") && e.target === p.plot && p.plotAxes) {     // zoom and the values under the cursor
+  else if ((p.kind === "profile" || p.kind === "phase" || p.kind === "radial" || p.kind === "spectrum") && e.target === p.plot && p.plotAxes) {     // zoom and the values under the cursor
     e.preventDefault(); selectPane(S.panes.indexOf(p)); const A = p.plotAxes, r = p.plot.getBoundingClientRect(), x = A.inv(e.clientX - r.left), y = A.invY(e.clientY - r.top);
     const items = [["Reset the zoom", () => resetPlotZoom(p), "double click"]];
     if (p.kind === "phase" && p.selCrit) items.push(["Clear the selection", () => phClear(p), "R"]);
@@ -2313,8 +2482,8 @@ window.addEventListener("keydown", e => { if (e.key === "Escape" && $("ctx").cla
 window.addEventListener("mousemove", e => { if (S.scrub && !e.ctrlKey && !e.shiftKey) endScrub(true); }, true);   // the release was missed (focus elsewhere)
 window.addEventListener("blur", () => endScrub(true));
 document.addEventListener("click", e => { if (e.target.tagName === "BUTTON") e.target.blur(); });
-for (const id of ["vv", "vB", "sv", "sB", "pbh", "pstar", "pdm", "con", "dsc"]) $("ov_" + id).addEventListener("change", ovFromControls);
-for (const id of ["grid", "density", "arrows", "extra", "cn", "cstep"]) $("ov_" + id).addEventListener("change", e => { ovFromControls(); if (e.target.tagName === "SELECT") e.target.blur(); });
+for (const id of ["lv", "lB", "lmag", "vv", "vB", "sv", "sB", "pbh", "pstar", "pdm", "con", "dsc"]) $("ov_" + id).addEventListener("change", ovFromControls);
+for (const id of ["grid", "density", "arrows", "extra", "cn", "cstep", "llen", "lal", "lco"]) $("ov_" + id).addEventListener("change", e => { ovFromControls(); if (e.target.tagName === "SELECT") e.target.blur(); });
 $("insp").addEventListener("click", e => { const c = e.target.closest(".card"), p = sel(); if (!c || !p.insp) return; p.insp.sel = +c.dataset.k; showInsp(p); drawOv(p); });
 $("snap").addEventListener("input", e => setSnap(+e.target.value));
 $("prev").onclick = () => step(-1); $("next").onclick = () => step(1);
@@ -2566,7 +2735,7 @@ $("folderlink").onclick = e => { e.preventDefault(); openPicker(false); };
       }
       $("ov_plug").append(box);
     }
-    { const hasB = st.fields.includes("Bx"); for (const id of ["ov_vB", "ov_sB"]) { $(id).closest("label").classList.toggle("hid", !hasB); if (!hasB) $(id).checked = false; } }   // B overlays only when the runs have MagneticField
+    { const hasB = st.fields.includes("Bx"); for (const id of ["ov_vB", "ov_sB", "ov_lB"]) { $(id).closest("label").classList.toggle("hid", !hasB); if (!hasB) $(id).checked = false; } }   // B overlays only when the runs have MagneticField
     S.phaseQ = st.phase_quantities || [];
     for (const f of st.phase_quantities || []) { $("ph_x").add(new Option(f, f)); $("ph_y").add(new Option(f, f)); } for (const c of st.colormaps) $("cmap").add(new Option(c, c));
     const d = st.defaults, p = makePane(); S.panes.push(p); $("stage").appendChild(p.cell);

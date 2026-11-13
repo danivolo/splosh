@@ -8,6 +8,7 @@ the same data into pixels.
 Specs.  An overlay is requested with a spec string  `name[:arg,arg,k=v,...]`  (CLI `--overlay`), or a dict {"name": ..., "args": [...], "opts": {...}}:
     vectors:v                      arrow glyphs of the projected velocity on a coarse regular grid (v: frame velocity; B: magnetic field, needs MagneticField)
     streamlines:B                  RK4 streamlines of the same gridded field
+    lic:v / lic:B                  line integral convolution: a streaky grey texture of the same field on the map's own grid, blended over the map
     contours:rho,n=8,step=0.5      lines of constant value of a field (log-spaced levels by default; see HELP['contours'])
     particles:bh,star,dm           points by type (bh = PartType5, dm = 1, dm2 = 2, type3 = 3, star = 4, or pt1 .. pt5)
     inspect-free: see `inspect()` for the click query.
@@ -27,6 +28,8 @@ Item schema (each overlay yields a list of dicts; `kind` selects the primitive; 
     "loc" ("lower left" | "lower right": where a figure puts it).
     {"kind": "text",     "x", "y", "text", "color", "size_px" (letter height, default 11), "dx_px", "dy_px" (offset of the text's lower left corner from x, y)}
     {"kind": "polygon",  "points": [[x, y], ...] (closed), "color", "alpha" (of the fill), "overlay"}            a filled shape (e.g. the disc overlay's midplane)
+    {"kind": "image",    "extent": [x0, x1, y0, y1], "nx", "ny", "encoding": "la8", "data": base64 of ny * nx (grey, alpha) byte pairs, row 0 = the TOP row,
+                         "alpha" (multiplies the per-pixel alpha), "overlay"}     a grey texture blended over the map: out = grey * a + map * (1 - a) (the LIC overlay)
     no "kind" (old plugin markers, e.g. maps.bh_markers):  a dict with "x", "y" is drawn as a ring marker.
 `compute` wraps a list of specs: {"extent", "npix", "items": [...], "notes": [str, ...]}."""
 import inspect as _inspect
@@ -34,7 +37,7 @@ import math
 from collections import OrderedDict
 
 import numpy as np
-from numba import njit as _njit
+from numba import njit as _njit, prange as _prange
 
 from . import plugins
 from .frames import make_frame
@@ -58,6 +61,7 @@ DEFAULTS = {
     "particles": {"max": 2000, "size": 0.0, "color": "", "style": "", "seed": 0, "depth": 0.0},
     "contours": {"levels": "log", "n": 8, "step": 0.5, "top": 0.0, "smooth": 2.0, "post": "none", "color": "white", "lw": 1.0, "halo": 1.0, "alpha": 0.9, "legend": True},
     "disc": {"R": 0.0, "frac": 0.8, "color": "white", "fill": 0.22, "lw": 1.2, "shape": True, "legend": True},
+    "lic": {"len": 24.0, "alpha": 0.55, "contrast": 1.5, "mag": False, "seed": 1, "grid": 0, "step": 1.0},
 }
 HELP = {
     "vectors": "grid cells per axis; arrows = prop (length ~ |v|, `ref` = the magnitude drawn as `len` cell spacings, default the 99th percentile of the drawn cells) | unit (all the same length `len`); "
@@ -69,6 +73,10 @@ HELP = {
     "contours": "the argument is the field to contour (default: the view's field), of the same window; levels = log (n levels `step` dex apart, the highest at `top` or, when 0, at the 99.5th percentile of the map) | lin "
                 "(n levels evenly between the 5th and 99.5th percentile) | explicit values joined by ';' (levels=1e-3;1e-2); smooth = Gaussian in pixels applied first (0 = none; SPH noise makes raw contours ragged); "
                 "post = a transform of the contoured map (default none: the raw field, whatever the view's own post); lw / halo in px",
+    "lic": "line integral convolution of the in-plane field (v or B) on the map's grid (grid = 0: the view's npix, at most 2048): a white-noise texture smeared along the field lines over "
+           "len pixels each way (Hann-weighted, midpoint steps of `step` px); the noise is fixed to the window's pixel grid in the frame (seed), so it does not flicker between snapshots or when panning by "
+           "whole pixels; contrast stretches the texture about mid grey; alpha = opacity over the map; mag = scale the opacity by |field| / its 95th percentile (weak-field regions fade); "
+           "pixels without a field are transparent",
     "disc": "the gas disc around the frame's centre: R (0 = the radius holding frac of the window's gas mass), its plane from the angular momentum within R "
             "(semi-transparent, alpha fill), a constant-aspect-ratio fit H/R (rims at +-H dashed, outline; shape=0 hides them), legend R, H/R, inclination",
 }
@@ -162,7 +170,7 @@ def required_data(specs, view):
     """(PartType0 datasets, particle types) a list of overlay specs needs on top of the view's own (the loader's gas_fields and types)."""
     gas, types = set(), set()
     for s in map(parse_spec, specs or ()):
-        if s["name"] in ("vectors", "streamlines"):
+        if s["name"] in ("vectors", "streamlines", "lic"):
             q = (s["args"] or ["v"])[0]
             gas |= required_gas_fields(view.with_(field="Bx" if q == "B" else "vx", mode=view.mode))
         elif s["name"] == "contours":
@@ -213,13 +221,13 @@ def _extent(view):
     return [view.cx - h, view.cx + h, view.cy - h, view.cy + h]
 
 
-def vector_grid(snap, view, quantity="v", grid=24, frame=None):
+def vector_grid(snap, view, quantity="v", grid=24, frame=None, max_grid=512):
     """The two components of the projected vector on a regular grid, as mass-weighted (or volume-weighted in a slice) maps of the view (`render_map` with field vx/vy or Bx/By
     along the view's horizontal and vertical axes, npix = grid, code units). Returns (U, W) float64 arrays [grid, grid] (row 0 = bottom, NaN where undefined), extent, field names."""
     if quantity not in ("v", "B"):
         raise ValueError("quantity must be v (velocity) or B (magnetic field)")
-    if not 8 <= int(grid) <= 512:
-        raise ValueError("grid must be between 8 and 512")
+    if not 8 <= int(grid) <= max_grid:
+        raise ValueError(f"grid must be between 8 and {max_grid}")
     if quantity == "B" and "MagneticField" not in snap:
         raise ValueError("the snapshot has no MagneticField dataset (PartType0), so there is no B overlay")
     if quantity == "v" and "Velocities" not in snap:
@@ -402,6 +410,119 @@ def streamlines(snap, frame, view, quantity="v", **opts):
         items.append({"kind": "polyline", "points": [[_f(x), _f(y)] for x, y in pts], "magnitude": _rl(m, 4), "head": (len(pts) // 2) if o["heads"] else None,
                       **_head_pack(o), "overlay": "streamlines:" + quantity})
     return items or [{"kind": "note", "text": f"streamlines:{quantity}: no line could be drawn (field undefined or stagnant)"}]
+
+
+# ----------------------------------------------------------------------------- line integral convolution (LIC)
+
+@_njit(parallel=True, cache=True)
+def _lic_kernel(U, W, noise, L, step):
+    """LIC of `noise` along the field (U, W) (same shape, row 0 = bottom, NaN = undefined): for every pixel, the Hann-weighted mean of the noise along the field line through its
+    centre, traced both ways over arc length L pixels with midpoint (RK2) steps of `step` px on the unit field (bilinear between pixel centres). NaN where the field is undefined."""
+    ny, nx = U.shape
+    out = np.full((ny, nx), np.nan)
+    for j in _prange(ny):
+        for i in range(nx):
+            u0, w0 = U[j, i], W[j, i]
+            if not (np.isfinite(u0) and np.isfinite(w0)) or (u0 == 0.0 and w0 == 0.0):
+                continue
+            acc, wsum = noise[j, i], 1.0
+            for d in range(2):
+                sg = 1.0 if d == 0 else -1.0
+                x, y, s = i + 0.5, j + 0.5, 0.0
+                while s < L:
+                    ok = True
+                    hx, hy = 0.0, 0.0
+                    for stage in range(2):             # midpoint: the direction at (x, y), then at the half step
+                        px = x + 0.5 * step * hx - 0.5 if stage == 1 else x - 0.5
+                        py = y + 0.5 * step * hy - 0.5 if stage == 1 else y - 0.5
+                        ii, jj = int(np.floor(px)), int(np.floor(py))
+                        tx, ty = px - ii, py - jj
+                        i0, i1 = min(max(ii, 0), nx - 1), min(max(ii + 1, 0), nx - 1)
+                        j0, j1 = min(max(jj, 0), ny - 1), min(max(jj + 1, 0), ny - 1)
+                        u = (U[j0, i0] * (1 - tx) + U[j0, i1] * tx) * (1 - ty) + (U[j1, i0] * (1 - tx) + U[j1, i1] * tx) * ty
+                        w = (W[j0, i0] * (1 - tx) + W[j0, i1] * tx) * (1 - ty) + (W[j1, i0] * (1 - tx) + W[j1, i1] * tx) * ty
+                        m = math.sqrt(u * u + w * w)
+                        if not (m > 0.0):                  # NaN or a stagnation point
+                            ok = False
+                            break
+                        hx, hy = sg * u / m, sg * w / m
+                    if not ok:
+                        break
+                    x += step * hx
+                    y += step * hy
+                    s += step
+                    if x < 0.0 or y < 0.0 or x >= nx or y >= ny:
+                        break
+                    wt = 0.5 * (1.0 + math.cos(math.pi * s / L))
+                    acc += wt * noise[int(y), int(x)]
+                    wsum += wt
+            out[j, i] = acc / wsum
+    return out
+
+
+def lic_noise(nx, ny, i0=0, j0=0, seed=1):
+    """White noise in [0, 1) on pixels (i0 .. i0 + nx - 1, j0 .. j0 + ny - 1) of an infinite grid: a hash of the pixel's integer coordinates and the seed, so the same pixel
+    of the frame gets the same value in every snapshot and after a pan by whole pixels (no flicker)."""
+    I = (np.arange(nx, dtype=np.int64) + int(i0)).astype(np.uint64)[None, :]
+    J = (np.arange(ny, dtype=np.int64) + int(j0)).astype(np.uint64)[:, None]
+    with np.errstate(over="ignore"):
+        h = I * np.uint64(0x9E3779B97F4A7C15) ^ (J * np.uint64(0xC2B2AE3D27D4EB4F)) ^ np.uint64((int(seed) * 0x165667B19E3779F9) & 0xFFFFFFFFFFFFFFFF)
+        for sh, mul in ((30, 0xBF58476D1CE4E5B9), (27, 0x94D049BB133111EB)):          # splitmix64 finaliser
+            h = (h ^ (h >> np.uint64(sh))) * np.uint64(mul)
+        h = h ^ (h >> np.uint64(31))
+    return (h >> np.uint64(11)).astype(np.float64) / float(1 << 53)
+
+
+def lic_texture(U, W, length=24.0, step=1.0, noise=None, seed=1):
+    """The raw LIC (see `_lic_kernel`) of the field (U, W) [ny, nx] (row 0 = bottom) over `length` pixels each way; noise: [ny, nx] in [0, 1) (default `lic_noise`)."""
+    U, W = np.ascontiguousarray(U, dtype=np.float64), np.ascontiguousarray(W, dtype=np.float64)
+    if noise is None:
+        noise = lic_noise(U.shape[1], U.shape[0], seed=seed)
+    if not (0 < length <= 4096 and 0.05 <= step <= 4):
+        raise ValueError("lic: len must be in (0, 4096] px and step in [0.05, 4] px")
+    return _lic_kernel(U, W, np.ascontiguousarray(noise, dtype=np.float64), float(length), float(step))
+
+
+def _la8(grey, alpha):
+    """(grey, alpha) [ny, nx] in [0, 1], row 0 = bottom -> base64 of the (grey, alpha) byte pairs, row 0 = top (the image item's `data`)."""
+    import base64
+    la = np.stack([np.clip(np.nan_to_num(grey[::-1]), 0, 1), np.clip(np.nan_to_num(alpha[::-1]), 0, 1)], axis=-1)
+    return base64.b64encode(np.round(la * 255).astype(np.uint8).tobytes()).decode("ascii")
+
+
+def image_la(it):
+    """an image item's (grey, alpha) float arrays [ny, nx] in [0, 1], row 0 = top; alpha includes the item's own `alpha`."""
+    import base64
+    if it.get("encoding", "la8") != "la8":
+        raise ValueError(f"image item: unknown encoding {it.get('encoding')!r}")
+    a = np.frombuffer(base64.b64decode(it["data"]), dtype=np.uint8).reshape(int(it["ny"]), int(it["nx"]), 2).astype(np.float64) / 255.0
+    return a[..., 0], a[..., 1] * float(it.get("alpha", 1.0))
+
+
+def lic(snap, frame, view, quantity="v", **opts):
+    """A LIC texture of the projected in-plane field (`vector_grid` on the map's own grid) as one image item (see the module docstring), blended over the map by the renderers."""
+    o = _opts("lic", opts)
+    n = int(o["grid"]) or int(view.npix)
+    n = max(32, min(2048, n))
+    U, W, ext, names = vector_grid(snap, view, quantity, n, frame, max_grid=2048)
+    mag = np.hypot(U, W)
+    ok = np.isfinite(mag) & (mag > 0)
+    if not ok.any():
+        return [{"kind": "note", "text": f"lic:{quantity}: no pixel has a defined field"}]
+    dx = (ext[1] - ext[0]) / n
+    noise = lic_noise(n, n, int(round(ext[0] / dx)), int(round(ext[2] / dx)), o["seed"])     # fixed to the frame's pixel grid
+    T = lic_texture(U, W, o["len"], o["step"], noise)
+    fin = np.isfinite(T)
+    if not fin.any():
+        return [{"kind": "note", "text": f"lic:{quantity}: no pixel has a defined field"}]
+    mu, sd = float(T[fin].mean()), float(T[fin].std()) or 1.0
+    grey = 0.5 + 0.18 * float(o["contrast"]) * (T - mu) / sd                 # about mid grey; contrast 1: +-1 sigma = +-0.18
+    alpha = np.where(fin, 1.0, 0.0)
+    if o["mag"]:
+        ref = float(np.percentile(mag[ok], 95)) or 1.0
+        alpha = alpha * np.sqrt(np.clip(np.nan_to_num(mag) / ref, 0.0, 1.0))
+    return [{"kind": "image", "extent": [_f(v) for v in ext], "nx": n, "ny": n, "encoding": "la8", "data": _la8(grey, alpha), "alpha": float(o["alpha"]),
+             "overlay": "lic:" + quantity}]
 
 
 # ----------------------------------------------------------------------------- particles by type
@@ -659,9 +780,9 @@ def disc(snap, frame, view, **opts):
 
 # ----------------------------------------------------------------------------- registry and compute
 
-for _n, _fn in (("vectors", vectors), ("streamlines", streamlines), ("particles", particles), ("contours", contours), ("disc", disc)):
+for _n, _fn in (("vectors", vectors), ("streamlines", streamlines), ("lic", lic), ("particles", particles), ("contours", contours), ("disc", disc)):
     plugins.register_overlay(_n, _fn)
-BUILTIN_OVERLAYS = ("vectors", "streamlines", "particles", "contours", "disc")
+BUILTIN_OVERLAYS = ("vectors", "streamlines", "lic", "particles", "contours", "disc")
 
 
 def _call(fn, snap, frame, view, args, opts):
@@ -699,7 +820,7 @@ def _compute(snap, view, specs, frame=None):
         fn = plugins.OVERLAYS.get(sp["name"])
         if fn is None:
             raise ValueError(f"unknown overlay {sp['name']!r}; known: {sorted(plugins.OVERLAYS)}")
-        if sp["name"] in ("vectors", "streamlines"):
+        if sp["name"] in ("vectors", "streamlines", "lic"):
             args = sp["args"][:1] or ["v"]
             if len(sp["args"]) > 1:
                 raise ValueError(f"{sp['name']}: one quantity (v or B), got {sp['args']}")
@@ -954,6 +1075,23 @@ def _scaled(it, g):
     return out
 
 
+def _blend_image(rgb, it, extent):
+    """an image item (grey + alpha, its own extent) blended into the picture (row 0 = top, `extent` fills it), nearest sample per picture pixel."""
+    grey, a = image_la(it)
+    ny, nx = rgb.shape[:2]
+    ie = it["extent"]
+    xs = extent[0] + (np.arange(nx) + 0.5) * (extent[1] - extent[0]) / nx
+    ys = extent[3] - (np.arange(ny) + 0.5) * (extent[3] - extent[2]) / ny                # top row first
+    si = np.floor((xs - ie[0]) / (ie[1] - ie[0]) * grey.shape[1]).astype(int)
+    sj = np.floor((ie[3] - ys) / (ie[3] - ie[2]) * grey.shape[0]).astype(int)
+    oki, okj = (si >= 0) & (si < grey.shape[1]), (sj >= 0) & (sj < grey.shape[0])
+    if not oki.any() or not okj.any():
+        return
+    J, I = np.ix_(np.nonzero(okj)[0], np.nonzero(oki)[0])
+    sub_g, sub_a = grey[np.ix_(sj[okj], si[oki])], a[np.ix_(sj[okj], si[oki])][..., None]
+    rgb[J, I] = np.clip(np.round(rgb[J, I] * (1.0 - sub_a) + 255.0 * sub_g[..., None] * sub_a), 0, 255).astype(rgb.dtype)
+
+
 def draw_items(rgb, items, extent, font_scale=1, legend=True):
     """Draw overlay items (see the module docstring) into the (ny, nx, 3) uint8 picture `rgb` (row 0 = top, the window `extent` fills it). Anti-aliased lines, arrow heads,
     discs and rings; legends (reference arrows) go to the top-right corner. Returns rgb (modified in place)."""
@@ -962,8 +1100,12 @@ def draw_items(rgb, items, extent, font_scale=1, legend=True):
     g = rgb.shape[1] / LINE_REF_PX                     # widths are given for a picture of the viewer's size: thicker on bigger pictures (movies, figures)
     if g > 1.0:
         items = [_scaled(it, g) for it in items]
+    items = sorted(items, key=lambda it: it.get("kind") != "image")          # textures (LIC) under the lines and points
     for it in items:
         k = it.get("kind")
+        if k == "image":
+            _blend_image(rgb, it, extent)
+            continue
         col, al = it.get("color", [255, 255, 255]), float(it.get("alpha", 1.0))
         if k == "arrow":
             (ax, ay), (bx, by) = [tuple(map(float, cv.px(a, b))) for a, b in ((it["x"], it["y"]), (it["x"] + it["dx"], it["y"] + it["dy"]))]

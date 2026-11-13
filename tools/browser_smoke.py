@@ -342,6 +342,7 @@ def run(pg, url, a, check, only=None):
 
     section_mouse(pg, check, shot, wait, idle)
     section_plots(pg, url, a, check, shot, wait, idle)
+    section_rs(pg, url, a, check, shot, wait, idle)
     section_explore(pg, url, a, check, shot, wait, idle)
 
     # ---- narrow window
@@ -814,6 +815,148 @@ def section_plots(pg, url, a, check, shot, wait, idle):
               f"phase pane: saved in a layout and opened again as a live phase pane with its x range ({ok}, {zr}, {ph['xr']})")
         shot("phase_pane_layout")
     ev("() => { for (const p of window.__splosh.panes) { setKind(p, 'map'); Object.assign(p, {fix: {}, pos: null, span: null, lid: '', label: '', extra: {}}); } setPanes(1); Object.assign(FIG, {name: '', extra: [], ncols: 0, dirty: false}); applyGrid(); }")
+    wait("window.__splosh.panes.length === 1 && window.__splosh.map")
+    idle()
+
+
+def section_rs(pg, url, a, check, shot, wait, idle):
+    """shift+drag box zoom on a map; the time-averaged radial-profile and spectrum panes (GET /api/series?radial= | spectrum=), their controls and zoom; the zoom of plot
+    panes saved in a layout as xlim / ylim and restored (radial, time series); the LIC overlay. Needs the run's analysis/scalars.csv with the family sig_<R>
+    (tests/test_viewer_browser.py writes it); without it the radial checks are skipped."""
+    ev = pg.evaluate
+    idle()
+    ev("() => setSnap(0)")
+    wait("window.__splosh.idx === 0")
+    idle()
+    close = lambda u, v, tol=1e-6: abs(u - v) <= tol * max(abs(u), abs(v), 1e-300)
+    AX = "(i) => { const p = window.__splosh.panes[i], A = p.plotAxes, r = p.plot.getBoundingClientRect(); return A && {L: A.L + r.left, T: A.T + r.top, w: A.w, h: A.h}; }"
+    PZ_ = "(i) => { const z = plotZoom(window.__splosh.panes[i]); return [z.x, z.y]; }"
+
+    def drag(x0, y0, x1, y1, shift=False):
+        pg.mouse.move(x0, y0)
+        if shift:
+            pg.keyboard.down("Shift")
+        pg.mouse.down()
+        pg.mouse.move(x1, y1, steps=8)
+        pg.mouse.up()
+        if shift:
+            pg.keyboard.up("Shift")
+
+    # ---- shift+drag on a map: zoom to the box (centre of the box, the larger side as the width)
+    b = pg.locator("canvas.view").first.bounding_box()
+    x0, y0, x1, y1 = b["x"] + 0.2 * b["width"], b["y"] + 0.3 * b["height"], b["x"] + 0.6 * b["width"], b["y"] + 0.5 * b["height"]
+    want = ev(f"""(() => {{ const p = window.__splosh.panes[0], r = p.cv.getBoundingClientRect(), k = p.cv.width / r.width, a = toWorld(p, ({x0} - r.left) * k, ({y0} - r.top) * k),
+                  c = toWorld(p, ({x1} - r.left) * k, ({y1} - r.top) * k); return [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2, Math.max(Math.abs(c[0] - a[0]), Math.abs(c[1] - a[1]))]; }})()""")
+    w0 = ev("window.__splosh.panes[0].view.width")
+    nins = ev("window.__splosh.panes[0].inspSeq || 0")
+    drag(x0, y0, x1, y1, shift=True)
+    wait(f"window.__splosh.map.meta.view.width < {w0} * 0.6")
+    v = ev("window.__splosh.panes[0].view")
+    near = lambda u, v_: abs(u - v_) <= 0.01 * w0                                  # (mouse events land on whole pixels)
+    nobox, ins = ev("document.querySelector('.mbox') === null"), ev("window.__splosh.panes[0].inspSeq || 0")
+    check(near(v["cx"], want[0]) and near(v["cy"], want[1]) and near(v["width"], want[2]) and close(v["width"], 0.4 * w0, 2e-2) and nobox and ins == nins,
+          f"map box zoom: shift+drag zooms the map to the box (centre, the larger side = width {w0:.3g} -> {v['width']:.3g}), no inspect "
+          f"(view {v['cx']:.4g}, {v['cy']:.4g}, {v['width']:.4g}; box {[round(x, 4) for x in want]}; box removed {nobox}; inspect {nins} -> {ins})")
+    shot("map_box_zoom")
+    pg.keyboard.press("o")
+    wait(f"window.__splosh.map.meta.view.width > {w0} * 0.99")
+    idle()
+
+    # ---- the LIC overlay: an image item blended over the map
+    oidle = lambda: wait("window.__splosh.idle() && window.__splosh.ovIdle()")
+    pg.check("#ov_lv")
+    oidle()
+    specs = ev("window.__splosh.ovSpecs(window.__splosh.panes[0])")
+    img = ev("(() => { const it = (window.__splosh.panes[0].ov.items || []).find(i => i.kind === 'image'); return it && [it.nx, it.ny, it.overlay, !!it._cv]; })()")
+    npx = ev(OVL_PIXELS)[0]
+    W = ev("document.querySelectorAll('canvas.ovl')[0].width")
+    check(specs and specs[0].startswith("lic:v,len=24") and img and img[2] == "lic:v" and img[3] and npx > 0.5 * W * W,
+          f"lic overlay: the LIC texture of v is drawn over the map ({specs[:1]}, {img}, {npx} of {W * W} pixels)")
+    shot("overlay_lic")
+    pg.fill("#ov_lal", "0.9")
+    pg.dispatch_event("#ov_lal", "change")
+    pg.check("#ov_lmag")
+    oidle()
+    specs = ev("window.__splosh.ovSpecs(window.__splosh.panes[0])")
+    check("alpha=0.9" in specs[0] and specs[0].endswith(",mag=1"), f"lic overlay: alpha and |field| modulation go into the spec ({specs[0]})")
+    pg.uncheck("#ov_lmag")
+    pg.uncheck("#ov_lv")
+    oidle()
+
+    # ---- the time-averaged radial profile (a family of the snapshot scalars against R)
+    ev("(() => { const p = window.__splosh.panes[0], st = serState(p); st.src = 'snapshots'; st.cols = []; st.pre = []; setKind(p, 'radial'); })()")
+    try:
+        wait("window.__splosh.panes[0].plotAxes", 60000)
+        has = True
+    except Exception:
+        has = False
+    if not has:
+        check(True, "radial pane: (no family sig_<R> in the run's scalars: not checked)")
+        ev("() => setKind(window.__splosh.panes[0], 'map')")
+        idle()
+        return
+    T = ev("(() => { const p = window.__splosh.panes[0]; return rsTile(p).data; })()")
+    vis = ev("['.rwin', '.rdiv', '.rslope', '.ssrc', '.scolbtn', '.sy'].every(c => getComputedStyle(document.querySelector('.pane .pk ' + c)).display !== 'none') && getComputedStyle(document.querySelector('.pane .pk .sx')).display === 'none'")
+    check(T and len(T["curves"]) == 1 and T["curves"][0]["x"] == [1, 2, 4, 8] and T["xlog"] and vis and ev("serState(window.__splosh.panes[0]).pre") == ["sig_"],
+          f"radial pane: the family sig_ averaged over the run against R, with its controls ({T and [c['label'] for c in T['curves']]})")
+    pg.fill(".pane .rwin", "3")
+    pg.dispatch_event(".pane .rwin", "change")
+    wait("(() => { const e = rsTile(window.__splosh.panes[0]); return e.data && e.data.curves.length === 3 && window.__splosh.panes[0].plotAxes; })()")
+    T = ev("rsTile(window.__splosh.panes[0]).data")
+    check(len({tuple(c["y"]) for c in T["curves"]}) == 3 and all("band" in s_ for s_ in T["styles"]), "radial pane: windows = 3 gives three curves (one per third of the run) with their bands")
+    shot("radial_pane")
+    pg.check(".pane .rslope")
+    wait("(() => { const e = rsTile(window.__splosh.panes[0]); return e.data && e.data.curves.length === 3 && !e.data.styles[0].band; })()")
+    T = ev("rsTile(window.__splosh.panes[0]).data")
+    check(all(abs(y + 1) < 1e-6 for c in T["curves"] for y in c["y"] if y is not None), "radial pane: slope draws d ln|y| / d ln R (sig ~ 1/R: -1)")
+    pg.uncheck(".pane .rslope")
+    wait("(() => { const e = rsTile(window.__splosh.panes[0]); return e.data && e.data.styles[0].band && window.__splosh.panes[0].plotAxes; })()")
+    pg.wait_for_timeout(200)
+    A = ev(AX, 0)
+    drag(A["L"] + 0.2 * A["w"], A["T"] + 0.2 * A["h"], A["L"] + 0.7 * A["w"], A["T"] + 0.8 * A["h"], shift=True)
+    z = ev(PZ_, 0)
+    check(z[0] and z[1] and 1 <= z[0][0] < z[0][1] <= 8, f"radial pane: shift+drag zooms it like the other plot panes {z}")
+    pan = ev("panelOf(window.__splosh.panes[0], 0)")
+    check(pan["type"] == "radial" and pan["source"] == "snapshots" and pan["prefix"] == "sig_" and pan["windows"] == 3 and all(close(u, v, 1e-6) for u, v in zip(pan["xlim"] + pan["ylim"], z[0] + z[1])),
+          f"zoom saved: the radial pane's layout panel has its keys and the zoom as xlim / ylim ({ {k: pan[k] for k in ('type', 'prefix', 'windows', 'xlim', 'ylim')} })")
+
+    # ---- the spectrum pane (3 snapshots: too few values for a periodogram; the request and its message)
+    ev("(() => { const p = window.__splosh.panes[0], st = serState(p); st.cols = ['gas_mass']; st.fmax = '2'; setKind(p, 'spectrum'); })()")
+    wait("(() => { const e = rsTile(window.__splosh.panes[0]); return e.data || e.error; })()")
+    T = ev("rsTile(window.__splosh.panes[0]).data")
+    pan = ev("panelOf(window.__splosh.panes[0], 0)")
+    vis = ev("['.sfmin', '.sfmax', '.sdet', '.scolbtn'].every(c => getComputedStyle(document.querySelector('.pane .pk ' + c)).display !== 'none') && getComputedStyle(document.querySelector('.pane .pk .rwin')).display === 'none'")
+    check(T is not None and T["curves"] == [] and T["xlog"] and pan["type"] == "spectrum" and pan["columns"] == ["gas_mass"] and pan["fmax"] == 2 and vis,
+          f"spectrum pane: requested with its keys (columns, fmax), a message when a column has under 8 values ({pan})")
+    shot("spectrum_pane")
+
+    # ---- the zoom of plot panes in a saved layout: a radial pane and a time series, opened again
+    if not a.layouts:
+        ev("() => setKind(window.__splosh.panes[0], 'map')")
+        idle()
+        return
+    ev("() => setPanes(2)")
+    wait("window.__splosh.panes.length === 2")
+    ev("(() => { const p = window.__splosh.panes[0]; setKind(p, 'radial'); const z = plotZoom(p); z.x = [1.5, 6]; z.y = [0.2, 1.5]; drawPlot(p); })()")
+    ev("(() => { const p = window.__splosh.panes[1], st = serState(p); st.src = 'snapshots'; st.cols = ['gas_mass']; st.xaxis = 't'; setKind(p, 'series'); })()")
+    wait("window.__splosh.panes[1].plotAxes && window.__splosh.panes[1].serX && window.__splosh.panes[0].plotAxes")
+    ev("(() => { const p = window.__splosh.panes[1]; setPlotZoom(p, [0.5, 1.5], [1.5, 2.5]); })()")
+    sp = ev("panelOf(window.__splosh.panes[1], 1)")
+    check(sp["type"] == "timeseries" and sp["xaxis"] == "time" and all(close(u, v, 1e-6) for u, v in zip(sp["xlim"] + sp["ylim"], [0.5, 1.5, 1.5, 2.5])),
+          f"zoom saved: a time series' time window goes into xlim in the panel's x units ({sp.get('xlim')}, {sp.get('ylim')})")
+    ok = ev("(async () => { document.getElementById('fg_name').value = 'smoke_zoom'; return await saveLayout(); })()")
+    ev("() => { for (const p of window.__splosh.panes) setKind(p, 'map'); setPanes(1); }")
+    idle()
+    ev("openLayout('smoke_zoom')")
+    wait("window.__splosh.panes.length === 2 && window.__splosh.panes[0].kind === 'radial' && window.__splosh.panes[1].kind === 'series' && window.__splosh.panes[0].plotAxes && window.__splosh.panes[1].plotAxes")
+    pg.wait_for_timeout(300)
+    z0 = ev(PZ_, 0)
+    st1 = ev("(() => { const p = window.__splosh.panes[1]; return [serState(p).win, plotZoom(p).y, serState(p).rwin]; })()")
+    st0 = ev("(() => { const st = serState(window.__splosh.panes[0]); return [st.pre, st.rwin, st.src]; })()")
+    check(ok and z0 == [[1.5, 6], [0.2, 1.5]] and st0 == [["sig_"], "3", "snapshots"] and st1[0] and all(close(u, v, 1e-6) for u, v in zip(st1[0] + st1[1], [0.5, 1.5, 1.5, 2.5])),
+          f"zoom saved: the layout opens with the radial pane and the time series zoomed as saved ({z0}, {st1[:2]}, {st0})")
+    shot("zoom_layout")
+    ev("() => { for (const p of window.__splosh.panes) { setKind(p, 'map'); Object.assign(p, {fix: {}, pos: null, span: null, lid: '', label: '', extra: {}, extraType: null}); } setPanes(1); Object.assign(FIG, {name: '', extra: [], ncols: 0, dirty: false}); applyGrid(); }")
     wait("window.__splosh.panes.length === 1 && window.__splosh.map")
     idle()
 

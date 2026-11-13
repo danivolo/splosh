@@ -77,3 +77,61 @@ def test_page_has_the_run_and_alignment_controls():
     html = open(VIEWER).read()
     for needle in ('id="run"', 'id="alignmode"', 'id="tol"', 'id="offsets"', 'class="clock"', 'class="nosnap"', "/api/runs", "alignedSnap", "no snapshot at this time", "snaps: {get"):
         assert needle in html or needle.replace('"', "'") in html, needle
+
+
+# ----------------------------------------------------------------------------- the radial / spectrum panes (GET /api/series?radial= | spectrum=)
+
+def _family_run(tmp_path):
+    """a run (one snapshot; P0 = 1 without a bound binary) with an analysis table of 64 rows: a family sig_<R> = R^-1 (x (1 + t / T)), dm_<R> = 2 sig_<R>, an oscillation at 0.5 / P0."""
+    from splosh.server import ViewerState
+    d = tmp_path / "frun"
+    (d / "output").mkdir(parents=True)
+    write_snapshot(str(d / "output" / "snapshot_000.hdf5"), seed=1)
+    st = ViewerState([str(d / "output")], store=MapStore(str(tmp_path / "store")), jobs_dir=str(tmp_path / "jobs"))
+    P = st.series(0)["period"] or 1.0                                               # no bound binary: x in code time, frequencies in 1 / code time
+    t = np.linspace(0, 20 * P, 64)
+    R = (0.5, 1.0, 2.0, 4.0, 8.0)
+    an = d / "analysis"                                                              # the run's own analysis table
+    an.mkdir()
+    head = ["snapshot", "time"] + [f"sig_{r:g}" for r in R] + [f"dm_{r:g}" for r in R] + ["osc"]
+    rows = [[f"s{k}", f"{tk:.17g}"] + [f"{(1 + tk / t[-1]) / r:.17g}" for r in R] + [f"{2 * (1 + tk / t[-1]) / r:.17g}" for r in R] + [f"{np.sin(2 * np.pi * 0.5 * tk / P):.17g}"]
+            for k, tk in enumerate(t)]
+    (an / "scalars.csv").write_text(",".join(head) + "\n" + "\n".join(",".join(r) for r in rows) + "\n")
+    return st, P, R
+
+
+def test_series_endpoint_radial_and_spectrum_panels(tmp_path):
+    st, P, R = _family_run(tmp_path)
+    q = lambda kind, **kw: st.series(0, {kind: [json.dumps(kw)]})
+    r = q("radial", source="snapshots", prefix="sig_", windows=2)
+    json.dumps(r, allow_nan=False)                                                   # plain JSON (NaN as null)
+    assert r["kind"] == "radial" and r["xlog"] and len(r["curves"]) == 2 and r["curves"][0]["x"] == pytest.approx(R)
+    early, late = (np.array(c["y"]) for c in r["curves"])
+    assert np.all(late > early) and early * np.array(R) == pytest.approx(np.full(5, early[0] * R[0]))     # ~ 1/R, later windows higher
+    b = r["styles"][0]["band"]
+    assert len(b) == 2 and np.all(np.array(b[0]) <= early + 1e-12) and np.all(np.array(b[1]) >= early - 1e-12)
+    assert r["styles"][0]["color"].startswith("#")
+    s = q("radial", source="snapshots", prefix="sig_", slope=True, windows="last:5")
+    assert len(s["curves"]) == 1 and np.allclose(s["curves"][0]["y"], -1.0, atol=1e-6) and "band" not in s["styles"][0]
+    d = q("radial", source="snapshots", prefixes=["dm_"], divide="sig_", windows=[[0, 10], [10, 20]])
+    assert len(d["curves"]) == 2 and np.allclose(d["curves"][0]["y"], 2.0)
+    sp = q("spectrum", source="snapshots", columns=["osc"], fmax=1.5)
+    f, pw = np.array(sp["curves"][0]["x"]), np.array(sp["curves"][0]["y"])
+    assert sp["xlog"] and sp["ylog"] and abs(f[np.argmax(pw)] - 0.5) < 0.03 and f.max() == pytest.approx(1.5)
+    for bad in ('{"source": "snapshots"}', "[1]", "nope", '{"source": "snapshots", "prefix": "zz_"}', '{"source": "snapshots", "prefix": "sig_", "windows": 99}'):
+        with pytest.raises((ValueError, KeyError)):                                  # both are a 400 for the page
+            st.series(0, {"radial": [bad]})
+
+
+def test_series_endpoint_http_errors_are_400(server):
+    import urllib.error
+    with pytest.raises(urllib.error.HTTPError) as e:
+        urllib.request.urlopen(server + "/api/series?token=tok&radial=" + urllib.request.quote('{"source": "snapshots"}'), timeout=60)
+    assert e.value.code == 400 and b"prefix" in e.value.read()
+
+
+def test_page_has_the_radial_and_spectrum_panes_and_the_zoom_keys():
+    html = open(VIEWER).read()
+    for needle in ('<option value="radial">', '<option value="spectrum">', "function drawRS", "function rsPanel", "zoomKeys", "restoreZoom", "xlim", "ylim", "mapBoxZoom", '"view.box"',
+                   'id="ov_lv"', 'id="ov_lB"', "lic:v,", 'it.kind === "image"'):
+        assert needle in html, needle

@@ -3,7 +3,7 @@
 Source for SPLASH: its in-app list (`h` in the plot window; pasted by the user 2026-11-09) and the docs
 (https://splash-viz.readthedocs.io/en/latest/basic.html, settings.html). Goal: a SPLASH user finds the same keys doing the same things;
 SPLOSH's own extras go on keys SPLASH leaves free. **Status (2026-11-09): implemented** as below, with the user's answers to the three open questions (space = next snapshot as in
-SPLASH; digits are step counts, panes by Tab; right click is NOT bound: the browser's menu stays). Not yet: `g` (line profile), `shift`+drag zoom box on a map (it works on the plot panes, below).
+SPLASH; digits are step counts, panes by Tab; right click is NOT bound: the browser's menu stays). Not yet: `g` (line profile). Since 2026-11-13 `shift`+drag zooms a map to a box too.
 "(today)" / "moved" refer to the keys before this change.
 
 Legend: **=** same key and meaning as SPLASH · **~** same key, SPLOSH's closest equivalent · **new** SPLOSH only · **moved** an SPLOSH key that changes.
@@ -24,7 +24,7 @@ Legend: **=** same key and meaning as SPLASH · **~** same key, SPLOSH's closest
 |---|---|---|
 | `+` / `-` | zoom in / out (x2); `_` out by 20 % | = |
 | wheel, drag, double click | zoom, pan, centre here *(today)* | new (SPLASH: left-drag = zoom box) |
-| `shift`+drag | zoom to the box drawn | ~ (SPLASH: left click = select/zoom box) |
+| `shift`+drag | zoom to the box drawn: its centre becomes the centre, its larger side the width (the window stays square); a shift+click (no drag) still inspects at once | ~ (SPLASH: left click = select/zoom box) |
 | `a` | adapt the colour limits to the data (auto limits on) | = (today: store A, moved to `A`) |
 | `l` | log / linear colour scale | = (today: link panes, moved to `L`) |
 | `o` | reset the view: the default centre and width (a zoomed plot pane: its zoom) | ~ (SPLASH: re-centre on the origin; today `r`) |
@@ -81,19 +81,20 @@ Legend: **=** same key and meaning as SPLASH · **~** same key, SPLOSH's closest
 | `e` / `E` | set the movie range end / start to this snapshot (then File > Movie) | ~ (SPLASH: animation sequence end point) |
 | `h`, `F1` | the key list | = (`?` is a rotation key in SPLASH) |
 
-## Zoom in the plot panes: radial profile, time series, heatmap, phase diagram (SPLOSH's own, 2026-11-13)
+## Zoom in the plot panes: radial profile, time series, heatmap, phase diagram, time-averaged radial profile, spectrum (SPLOSH's own, 2026-11-13)
 | input | action |
 |---|---|
 | `shift`+drag | zoom to the box drawn (a box under 6 px tall or wide zooms the other axis only) |
 | drag along the x-axis strip (the tick labels under the plot) / the y-axis strip (left of it) | zoom that axis to the band drawn |
 | wheel over an axis strip | zoom that axis about the cursor |
-| wheel inside the plot | time series, heatmap: zoom in time (the window is fetched again); profile, phase diagram: both axes |
+| wheel inside the plot | time series, heatmap: zoom in time (the window is fetched again); profile, phase diagram, time-averaged radial profile, spectrum: both axes |
 | `alt`+wheel inside the plot | zoom y only |
 | drag inside a zoomed plot / middle drag | pan (the zoomed axes); on a phase diagram a plain drag draws a selection (lasso), so it pans with the middle button |
 | double click, `o`, right click > Reset the zoom | reset the zoom (the whole run, automatic y; a phase diagram's automatic ranges) |
 | `R` on a phase-diagram pane | clear its selection and the highlight on the maps |
 
-A zoomed y replaces the automatic y limits until the reset; `ctrl` / `shift`+wheel still scan the snapshots over a plot pane. Zoom is not saved in layouts, except a phase pane's ranges.
+A zoomed y replaces the automatic y limits until the reset; `ctrl` / `shift`+wheel still scan the snapshots over a plot pane. The zoom is saved in layouts as the panel keys
+`xlim` / `ylim` (in the panel's x and y units: a time window in t/P0, Myr or code time as the panel's `xaxis` says) and restored when the layout is opened; a phase pane keeps its `xr` / `yr`.
 
 ## Mouse and window (SPLOSH's own, 2026-11-12)
 | input | action |
