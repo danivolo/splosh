@@ -1,4 +1,4 @@
-"""splosh command line:  info | render | tiles | shot | sheet | movie | overlays | inspect | analyze | compare | serve | fields | store."""
+"""splosh command line:  info | render | tiles | shot | sheet | movie | overlays | inspect | analyze | compare | serve | fields | store | products | figure | dmd."""
 import argparse
 import json
 import os
@@ -435,6 +435,8 @@ def main(argv=None):
     p.set_defaults(fn=cmd_serve)
     from . import prefetch
     prefetch.add_parser(sub)
+    from . import dmd
+    dmd.add_parser(sub)
     p = sub.add_parser("overlays", help="list the overlays and their options"); p.set_defaults(fn=cmd_overlays)
     p = sub.add_parser("inspect", help="particles contributing at a map position (JSON): X Y in the window coordinates of the view"); p.add_argument("snapshot")
     p.add_argument("x", type=float); p.add_argument("y", type=float); p.add_argument("--limit", type=int, default=20); add_view_options(p); p.set_defaults(fn=cmd_inspect)

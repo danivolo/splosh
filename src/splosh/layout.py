@@ -34,7 +34,7 @@ import re
 import numpy as np
 
 SCHEMA = "splosh-layout-1"
-PANEL_TYPES_NAMES = ("map", "profile", "timeseries", "heatmap", "radial", "spectrum", "phase", "text")
+PANEL_TYPES_NAMES = ("map", "profile", "timeseries", "heatmap", "radial", "spectrum", "phase", "text", "hist", "pk", "dmd")   # hist / pk / dmd: plotpanels.py
 SCOPES = ("snapshot", "run")
 XAXES = ("time", "time_myr", "index", "orb")      # orb: t / P0 (the binary period at the first snapshot)
 _COMMON = {"id": None, "type": None, "row": None, "col": None, "rowspan": 1, "colspan": 1, "label": None, "xlim": None, "ylim": None}   # xlim / ylim: a plot's zoom ([lo, hi]; maps ignore them)
@@ -92,6 +92,7 @@ def _view_keys():
 
 def panel_types():
     """{type: {key: default}} for every panel type (the common keys are included in each); None = unset / required."""
+    from . import plotpanels
     from .maps import View
     v = View()
     view = {k: getattr(v, k) for k in _view_keys()}
@@ -108,7 +109,8 @@ def panel_types():
                          "tmin": None, "tmax": None, "vlines": []},
             "phase": {**_COMMON, "type": "phase", "x": None, "y": None, "xlog": True, "ylog": True, "hweight": "mass", "bins": 256, "xr": None, "yr": None,
                       "cmap": "magma", **view},
-            "text": {**_COMMON, "type": "text", "text": ""}}
+            "text": {**_COMMON, "type": "text", "text": ""},
+            **{t: {**_COMMON, **keys} for t, keys in plotpanels.types(view).items()}}
 
 
 # ----------------------------------------------------------------------------- safe expressions
@@ -343,6 +345,12 @@ def validate_layout(layout):
             if not p["source"] or not cols:
                 raise LayoutError(f"{where}: a spectrum panel needs `source` and `columns`")
             p["columns"] = cols
+        elif t in ("hist", "pk", "dmd"):                 # distributions, power spectra, DMD results (plotpanels.py)
+            from . import plotpanels
+
+            def _err(msg):
+                raise LayoutError(msg)
+            p = plotpanels.validate(t, p, raw, where, _err)
         elif t == "timeseries":
             cols = [p["columns"]] if isinstance(p["columns"], str) else list(p["columns"])
             if not cols:
@@ -809,12 +817,17 @@ def render_layout(layout, tiles, header="", title=None):
             hz = np.asarray(t["heat"]["z"], float)[::-1]
             zs = t["heat"]["zscale"]
             fin = hz[np.isfinite(hz) & ((hz > 0) if zs == "log" else True)]
-            if zs == "symlog":                            # diverging about 0: symmetric limits, linear within 1e-3 of the largest |z|
+            if t["heat"].get("zlim") is not None:           # fixed limits (a DMD mode: symmetric about 0)
+                rgb, _ = imaging.colorize(hz.astype(np.float32), heat_cmap(t["heat"]), "linear", *map(float, t["heat"]["zlim"]))
+            elif zs == "symlog":                          # diverging about 0: symmetric limits, linear within 1e-3 of the largest |z|
                 m_ = float(np.max(np.abs(fin))) if fin.size else 1.0
                 rgb, _ = imaging.colorize(hz.astype(np.float32), heat_cmap(t["heat"]), imaging.parse_scale("asinh:0.001"), -m_ or -1.0, m_ or 1.0)
             else:
                 lo_, hi_ = (float(np.percentile(fin, 1)), float(np.max(fin))) if fin.size else (0.0, 1.0)
                 rgb, _ = imaging.colorize(hz.astype(np.float32), t["heat"]["cmap"], "log" if zs == "log" else "linear", lo_, hi_)
+            if t["heat"].get("aspect") == "equal":         # a small square grid (a DMD mode): enlarged by a whole factor to fill the cell
+                f_ = max(1, min(h // rgb.shape[0], w // rgb.shape[1]))
+                rgb = np.repeat(np.repeat(rgb, f_, axis=0), f_, axis=1)
             canvas[y0:y0 + h, x0:x0 + w] = fg._fit(rgb, (h, w))
             fg.draw_text(canvas, x0 + 3 * s, y0 + 2 * s, lab, s, fg.FG)
             if t.get("xnow") is not None:

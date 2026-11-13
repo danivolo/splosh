@@ -302,7 +302,9 @@ Quantities a plugin computes once per snapshot (`plugins.register_product`; see 
 snapshot's signature, the product's version and parameters) and read as the time-series source `prod_<name>` (a family `<prefix><number>` is a heatmap against
 time). `splosh serve` computes what is missing in the background when a run is opened (a `products` job in the job list, on a free node when `--slurm` is set;
 `--no-auto-products` turns it off; `POST /api/jobs {kind: "products", run}` starts it by hand). Parallel over snapshots: at most the physical cores, and as many
-processes as leave ~4x a snapshot's size of memory to each.
+processes as leave ~4x a snapshot's size of memory to each. A run's own product parameters: `<run>/analysis_viewer/products/params.toml`, a table per product
+(it also switches on the opt-in products such as `pk`); see [PLOTS.md](PLOTS.md). Core products: `disc` ([DISC.md](DISC.md)), `hist`, `modes`, `pk`
+([PLOTS.md](PLOTS.md)); `splosh dmd RUN` decomposes all the maps of a run at once (DMD).
 
 ## Analysis pipeline and run comparison
 `splosh analyze RUN [--config analyze.toml] [--out DIR] [--jobs N] [--only NAMES] [--every N] [--force] [--dry-run]` computes, per snapshot, the products a TOML config declares and keeps them in a
@@ -327,6 +329,9 @@ selector, saved as the panel's `stack`) draw it (`layout.stack_tile`). [verified
 [DISC.md](DISC.md). `phase` (a phase diagram of the gas in the panel's view window): `x`, `y` (quantities as in the viewer's phase diagram), `xlog`, `ylog`,
 `hweight` (mass | count | volume: the histogram's weight; `weight` stays the map view's), `bins` (8-1024), `xr` / `yr` ([lo, hi] in axis units, log10 on a log
 axis), `cmap`, and the view keys (width, center, align, ...). Every plot panel (not maps) takes `xlim` / `ylim` = [lo, hi]: its zoom, saved from the viewer.
+`hist` (PDF / CDF of quantities in the view window, several quantities or snapshots), `pk` (the isotropic power spectrum of a map, reference slopes) and `dmd`
+(a saved `splosh dmd` result: spectrum, eigenvalues, singular values, a mode): see [PLOTS.md](PLOTS.md), with the products `hist`, `modes` (azimuthal
+modes A_m(R), phases, bending, the gas quadrupole) and `pk`.
 
 **Heatmap scales** (heatmap keys): `zscale = "log" | "lin" | "symlog"`; symlog is diverging about 0 for signed quantities (torque density dT/dR(R, t), Mdot(R, t), a
 butterfly diagram of B_phi(z, t)): limits -m..m with m the largest |z|, linear within 1e-3 m, colours `RdBu_r` unless the panel names a `cmap` other than the default

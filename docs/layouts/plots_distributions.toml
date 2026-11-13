@@ -1,0 +1,47 @@
+# Distributions of the gas (panel type `hist`, docs/PLOTS.md): density and temperature PDFs and CDFs in a window about the binary, the PDF of the
+# cylindrical radius (where the mass is), and the density distribution against time (product `hist`: a heatmap of its family density_).
+# A dashboard: one picture per snapshot; the `snaps` panel overlays four snapshots spread over the run.
+
+schema = "splosh-layout-1"
+name = "plots_distributions"
+scope = "snapshot"
+ncols = 2
+figure = {panel_in = 5.0}
+
+[[panel]]
+type = "hist"
+id = "dens"
+label = "density (mass-weighted), PDF and CDF"
+quantities = ["density"]
+show = "both"
+center = "bh"
+width = 10.0
+
+[[panel]]
+type = "hist"
+id = "temp"
+label = "temperature, four snapshots"
+quantities = ["T"]
+show = "cdf"
+center = "bh"
+width = 10.0
+snaps = 4
+
+[[panel]]
+type = "hist"
+id = "radius"
+label = "where the mass is: dM / dlog R / M"
+quantities = ["R"]
+center = "bh"
+tilt = "Lbh"
+width = 20.0
+
+[[panel]]
+type = "heatmap"
+id = "dens_t"
+label = "density PDF against time (product hist)"
+source = "prod_hist"
+prefix = "density_"
+xaxis = "orb"
+ylabel = "log10 density"
+zlabel = "dM / dlog rho / M"

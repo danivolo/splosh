@@ -1,0 +1,62 @@
+# Azimuthal modes of the disc (product `modes`, docs/PLOTS.md): A_2(R, t) and A_1(R, t) as heatmaps, the time-averaged A_m(R) profiles, the global
+# amplitudes (1.5-5 a) and the pattern orientation against time, and the gas quadrupole (tidal tensor) at the binary.
+
+schema = "splosh-layout-1"
+name = "plots_modes"
+scope = "run"
+ncols = 2
+figure = {panel_in = 5.0}
+
+[[panel]]
+type = "heatmap"
+id = "A2"
+label = "A_2(R, t)"
+source = "prod_modes"
+prefix = "A2_"
+xaxis = "orb"
+yscale = "log"
+ylabel = "R / a"
+
+[[panel]]
+type = "heatmap"
+id = "A1"
+label = "A_1(R, t)"
+source = "prod_modes"
+prefix = "A1_"
+xaxis = "orb"
+yscale = "log"
+ylabel = "R / a"
+
+[[panel]]
+type = "radial"
+id = "Am"
+label = "A_m(R), time average"
+source = "prod_modes"
+prefixes = ["A1_", "A2_", "A3_", "A4_"]
+windows = 1
+xlabel = "R / a"
+yscale = "log"
+
+[[panel]]
+type = "timeseries"
+id = "global"
+label = "A_m over 1.5-5 a"
+source = "prod_modes"
+xaxis = "orb"
+columns = ["A1", "A2", "A3", "A4"]
+
+[[panel]]
+type = "timeseries"
+id = "phase"
+label = "pattern orientation [deg]"
+source = "prod_modes"
+xaxis = "orb"
+columns = ["phi1", "phi2"]
+
+[[panel]]
+type = "timeseries"
+id = "quad"
+label = "gas tide at the binary [G M / a^3]"
+source = "prod_modes"
+xaxis = "orb"
+columns = ["Qzz", "Q22"]

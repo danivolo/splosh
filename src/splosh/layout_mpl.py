@@ -153,6 +153,8 @@ def render(layout, tiles, header=""):
             _sizes(ax, fo)
         else:                                        # profile / timeseries: curves
             _draw_curves(ax, t)
+            if t.get("aspect") == "equal":
+                ax.set_aspect("equal", adjustable="datalim")
             ax.set_xlabel(t.get("xlabel") or ("r" if p["type"] == "profile" else "time"))
             if p["type"] == "radial" and t.get("xlog") and t["curves"]:        # radii in units of a or R_L: plain numbers
                 import matplotlib.ticker as mt
@@ -212,6 +214,8 @@ def _draw_heat(fig, ax, t):
         m = float(np.abs(z.compressed()).max()) if z.compressed().size else 1.0
         m = m or 1.0
         norm = mc.SymLogNorm(linthresh=1e-3 * m, vmin=-m, vmax=m)
+    elif hm.get("zlim") is not None:                  # fixed limits (a DMD mode: symmetric about 0)
+        norm = mc.Normalize(vmin=float(hm["zlim"][0]), vmax=float(hm["zlim"][1]))
     elif hm.get("zscale") == "log" and pos.size:
         norm = mc.LogNorm(vmin=max(pos.min(), pos.max() * 1e-6), vmax=pos.max())
         z = np.ma.masked_less_equal(z, 0)
@@ -236,6 +240,8 @@ def _draw_heat(fig, ax, t):
     if t.get("xnow") is not None:
         ax.axvline(t["xnow"], color="#ffd23c", lw=1.0)
     ax.set_ylim(ye[0], ye[-1])                         # the grid's rows (an overlay curve does not stretch the axis)
+    if hm.get("aspect") == "equal":
+        ax.set_aspect("equal")
     ax.set_xlabel(t.get("xlabel") or "time")
     ax.set_ylabel(t.get("ylabel") or "")
 
