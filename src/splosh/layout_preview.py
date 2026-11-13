@@ -221,6 +221,11 @@ def tiles_for(layout, path, load, store, products=None, table=None, time=None, c
                                        "zscale": "log", "cmap": p.get("cmap") or "magma", "norm": "none", "label": p["hweight"]},
                               "curves": [], "styles": [], "xnow": None, "xlabel": lab(meta["x"], p["x"], p["xlog"]), "ylabel": lab(meta["y"], p["y"], p["ylog"]),
                               "yscale": "lin"}
+            elif p["type"] in ("hist", "pk", "dmd"):           # distributions, map power spectra, DMD results (plotpanels.py)
+                from . import plotpanels
+                tiles[pid] = plotpanels.tile(p, lo, path, load, store)
+                if tiles[pid].get("blank"):
+                    notes[pid] = tiles[pid]["blank"]
             elif p["type"] in ("radial", "spectrum", "scatter", "parray"):   # time-averaged profiles, spectra, scatter of a series source; stored product arrays
                 from . import series as SR
                 ctx = _cached(cache, ("seriesctx", os.path.dirname(os.path.abspath(path))), lambda: SR.context_for_snapshot(path))

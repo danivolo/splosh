@@ -1,0 +1,34 @@
+# A DMD of the run (`splosh dmd RUN [--align bh] ...`, docs/PLOTS.md): the spectrum (amplitude against frequency), the eigenvalues on the unit circle,
+# the singular values, and the real parts of the two strongest modes with f >= 0 (index 0 is usually the steady f = 0 part).
+
+schema = "splosh-layout-1"
+name = "plots_dmd"
+scope = "run"
+ncols = 2
+figure = {panel_in = 5.0}
+
+[[panel]]
+type = "dmd"
+id = "spectrum"
+label = "DMD spectrum"
+show = "spectrum"
+
+[[panel]]
+type = "dmd"
+id = "eigs"
+label = "eigenvalues"
+show = "eigs"
+
+[[panel]]
+type = "dmd"
+id = "mode1"
+label = "mode 1 (real part)"
+show = "mode"
+mode = 1
+
+[[panel]]
+type = "dmd"
+id = "mode2"
+label = "mode 2 (real part)"
+show = "mode"
+mode = 2

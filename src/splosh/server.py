@@ -213,7 +213,7 @@ class ViewerState:
         from . import products as PR
         plugins.load_plugins()
         paths = self.runs[run].paths
-        names = [n for n in (names or sorted(PR.PRODUCTS)) if n in PR.PRODUCTS and PR.applicable(n, paths)]
+        names = [n for n in (names or PR.default_names(self._rundir(run))) if n in PR.PRODUCTS and PR.applicable(n, paths)]
         return names, len(PR.missing(self._rundir(run), names, paths))
 
     def job_products(self, b):

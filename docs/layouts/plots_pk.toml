@@ -1,0 +1,52 @@
+# Spatial power spectra (panel type `pk` and product `pk`, docs/PLOTS.md): the spectrum of the face-on surface density contrast (delta = Sigma / <Sigma>
+# - 1) in a window about the binary with Kolmogorov / Burgers reference slopes, the same for log Sigma, and the spectrum against time (opt-in product:
+# `splosh products RUN --names pk`, or a [pk] table in <run>/analysis_viewer/products/params.toml).
+
+schema = "splosh-layout-1"
+name = "plots_pk"
+scope = "snapshot"
+ncols = 2
+figure = {panel_in = 5.0}
+
+[[panel]]
+type = "map"
+id = "sigma"
+label = "surface density"
+field = "rho"
+center = "bh"
+tilt = "Lbh"
+width = 16.0
+npix = 256
+
+[[panel]]
+type = "pk"
+id = "pk_delta"
+label = "P(k) of Sigma / <Sigma> - 1"
+center = "bh"
+tilt = "Lbh"
+width = 16.0
+npix = 256
+subtract = "delta"
+slopes = [-1.6667, -2.0, -3.6667]
+
+[[panel]]
+type = "pk"
+id = "pk_log"
+label = "P(k) of log Sigma, compensated by k^(11/3)"
+center = "bh"
+tilt = "Lbh"
+width = 16.0
+npix = 256
+subtract = "log"
+compensate = 3.6667
+slopes = [-3.6667]
+
+[[panel]]
+type = "heatmap"
+id = "pk_t"
+label = "P(k) against time (product pk)"
+source = "prod_pk"
+prefix = "P_"
+xaxis = "orb"
+yscale = "log"
+ylabel = "k L / 2 pi"
