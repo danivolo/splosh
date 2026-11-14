@@ -239,3 +239,36 @@ def test_flux_hook_dataset_and_means(run):
         assert all(v > 0 for c, v in s.items() if c.startswith("Fkv_"))           # Keplerian shear: outward viscous flux
     finally:
         D.FLUXES.pop("kv", None)
+
+
+def test_other_torques_outside_R(run):
+    """Tgrav from the cells' Acceleration dataset (a known field), Tbulge of a Plummer sphere (zero at the binary's centre, not offset), Tframe."""
+    pos, vel, m, rho, u = kepler_disc(n=30_000, r0=1.5, r1=8.0)
+    p = write(run / "output" / "snapshot_000.hdf5", pos, vel, m, rho, u, [[0.5, 0, 0], [-0.5, 0, 0]], [[0, 0.5, 0], [0, -0.5, 0]], [0.5, 0.5])
+    c = 0.01
+    with h5py.File(p, "a") as f:
+        f["PartType0"]["Acceleration"] = np.column_stack([-c * pos[:, 1], c * pos[:, 0], np.zeros(len(m))])    # (r x a)_z = c R^2
+    plugins.load_plugins()
+    base = P.params_of("disc", {"r_min": 2.0, "r_max": 7.0, "nbins": 5, "exclude_ids": [], "fluxes": []})
+    s = P.PRODUCTS["disc"]["fn"](p, {**base, "plummer": [100.0, 3.0, 0.0, 0.0, 0.0]})["scalars"]
+    R = np.hypot(pos[:, 0], pos[:, 1])
+    a, Om = 1.0, 1.0                                                     # a = 1, G M = 1: a^2 Omega_b = 1
+    e = np.logspace(np.log10(2.0), np.log10(7.0), 6)
+    exact = {f"{x:.4g}": x for x in np.sqrt(e[1:] * e[:-1])}
+    for k in [c_ for c_ in s if c_.startswith("Tgrav_")]:
+        Rk = exact[k[6:]]
+        want = np.sum(m[R > Rk] * c * R[R > Rk] ** 2) / (a * a * Om)
+        assert s[k] == pytest.approx(want, rel=1e-9)
+    assert max(abs(v) for c_, v in s.items() if c_.startswith("Tbulge_")) < 1e-9                 # centred: radial force, no torque
+    assert all(abs(v) < 1e-9 for c_, v in s.items() if c_.startswith("Tframe_"))                  # the Plummer pull on a centred binary is zero
+    s2 = P.PRODUCTS["disc"]["fn"](p, {**base, "plummer": [100.0, 3.0, 2.0, 0.0, 0.0]})["scalars"]
+    d = pos - np.array([2.0, 0.0, 0.0])
+    acc = -100.0 * d / (((d ** 2).sum(1) + 9.0) ** 1.5)[:, None]
+    tzc = pos[:, 0] * acc[:, 1] - pos[:, 1] * acc[:, 0]                     # about the binary's centre (the origin), z along its orbit normal
+    e = np.logspace(np.log10(2.0), np.log10(7.0), 6)
+    exact = {f"{x:.4g}": x for x in np.sqrt(e[1:] * e[:-1])}                 # the column names round R to 4 digits: cut at the exact centre
+    for k in [c_ for c_ in s2 if c_.startswith("Tbulge_")]:
+        Rk = exact[k[7:]]
+        assert s2[k] == pytest.approx(np.sum(m[R > Rk] * tzc[R > Rk]), rel=1e-6, abs=1e-12)        # offset: the direct sum
+    assert any(abs(v) > 0 for c_, v in s2.items() if c_.startswith("Tframe_"))
+    assert any(c_.startswith("jdotb_") for c_ in s2) and any(c_.startswith("jdotg_") for c_ in s2)

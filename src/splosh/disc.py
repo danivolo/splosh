@@ -24,6 +24,8 @@ Per cylindrical shell (columns <name>_<R>, a family per quantity, R the shell's 
                                                                                         every R (Mdot ell_0 / Mdot = ell_0: divide jdot by mdot)
     qshear      d ln Omega / d ln R of the shells (Omega = <v_phi>/R; -1.5 Keplerian)
     nu, alphaeff, tvisc   the effective viscosity of all the stresses with the measured shear (F = -2 pi R^3 nu Sigma dOmega/dR), nu Omega / c_s^2, R^2 / nu in orbits
+    Tbulge, Tframe, Tgrav   torques on the gas outside R: a static Plummer sphere (param plummer), the accelerating frame, all gravity (the cells'
+                'Acceleration' dataset); jdotb = jdot - Tbulge - Tframe, jdotg = (fluxes) - Tgrav: the budget with them
     Jout        angular momentum of the gas outside R (units of a^2 Omega_b x mass): closure test d(Jout)/dt = -jdot between snapshots (no outer losses)
   With exclude_ids, the left-out gas (e.g. injected wind cells): mdotx, Fx (its advective J flux), jdotx = jdot - Fx, mdott = mdot + mdotx.
   Magnetic (snapshots with MagneticField; B in code units, mu_0 = 1, via UnitMagneticField_in_gauss):
@@ -182,6 +184,18 @@ def _dataset(path, name, keep):
         return np.asarray(g[name][...], np.float64)[keep] if name in g else None
 
 
+def _bh_accel(path, bm):
+    """the acceleration of the black holes' centre of mass from their 'Acceleration' dataset (ascending IDs), or None when the snapshot has none."""
+    import h5py
+    with h5py.File(path, "r") as f:
+        b = f.get("PartType5")
+        if b is None or "Acceleration" not in b or len(b["Acceleration"]) != len(bm):
+            return None
+        o = np.argsort(b["ParticleIDs"][:].astype(np.int64), kind="stable")
+        acc = np.asarray(b["Acceleration"][:], np.float64)[o]
+    return (bm[:, None] * acc).sum(0) / bm.sum()
+
+
 def _load(path, params):
     from .io import load_snapshot
     s = load_snapshot(path, gas_fields=("Coordinates", "Velocities", "Masses", "Density", "InternalEnergy", "SmoothingLength", "?MagneticField", "?ParticleIDs"))
@@ -284,14 +298,44 @@ def disc(path, params):
                 ok = np.isfinite(val)
                 with np.errstate(invalid="ignore", divide="ignore"):
                     fam[key] = _bin(np.where(ok, idx, -1), len(Rmid), m * np.where(ok, val, 0.0)) / _bin(np.where(ok, idx, -1), len(Rmid), m)
+    # sums over ALL the kept gas outside each R (cylindrical, all z, no outer cut: the same region as Jout)
+    o_R = np.argsort(R)
+    k_R = np.searchsorted(R[o_R], Rmid * a)
+
+    def outside(vals):
+        t = np.cumsum(np.asarray(vals, np.float64)[o_R][::-1])[::-1]
+        return np.where(k_R < len(t), t[np.minimum(k_R, len(t) - 1)], 0.0)
+
+    def tz(acc):                                                    # (r x acc) . z_hat about the centre, per cell
+        acc = np.broadcast_to(acc, rel.shape)
+        return np.cross(rel, acc) @ zhat
     if binary:
         tau = binary_torque({**s, "Coordinates": pos, "SmoothingLength": np.asarray(s["SmoothingLength"])[keep]})
         tg = -_bin(idx, len(Rmid), m * tau) / lunit               # torque of the binary on the gas, per shell
         fam["dTdR"] = tg / np.diff(edges)
-        fam["Tout"] = np.cumsum(tg[::-1])[::-1]
+        fam["Tout"] = outside(-m * tau) / lunit
         fam["jdot"] = jin - fam["Tout"]
     else:
         fam["jdot"] = jin
+    # other torques on the gas outside R (the closure test d Jout/dt = -jdot): a static Plummer sphere (param plummer = [G M, scale, x0, y0, z0]: Tbulge),
+    # the frame (J is measured about the centre, which accelerates: -m r x a_centre: Tframe; a_centre from the black holes' Acceleration dataset when the
+    # snapshot has it, else the Plummer pull on them), and the total gravity from the gas cells' own 'Acceleration' dataset when present (Tgrav, about
+    # the accelerating centre): jdotb = jdot - Tbulge - Tframe, jdotg = jin - Tgrav (all gravity, binary included)
+    a_c = _bh_accel(path, bm) if binary or len(bp) else None
+    pl = params.get("plummer")
+    if pl:
+        GMp, ap, cp = float(pl[0]), float(pl[1]), np.asarray(pl[2:5] if len(pl) >= 5 else (0.0, 0.0, 0.0), np.float64)
+        plum = lambda x: -GMp * (x - cp) / ((((x - cp) ** 2).sum(-1) + ap * ap) ** 1.5)[..., None]
+        fam["Tbulge"] = outside(m * tz(plum(pos))) / lunit
+        if a_c is None:
+            a_c = (bm[:, None] * plum(bp)).sum(0) / bm.sum()
+    if a_c is not None:
+        fam["Tframe"] = outside(-m * tz(a_c)) / lunit
+        fam["jdotb"] = fam["jdot"] - fam.get("Tbulge", 0.0) - fam["Tframe"]
+    acc = _dataset(path, "Acceleration", keep)
+    if acc is not None and acc.ndim == 2:
+        fam["Tgrav"] = outside(m * tz(acc - (a_c if a_c is not None else 0.0))) / lunit
+        fam["jdotg"] = jin - fam["Tgrav"]
     # the gas left out by exclude_ids (e.g. injected wind cells): its mass and advective angular-momentum fluxes through the same cylinders
     if not keep.all():
         xp = np.asarray(s["Coordinates"], np.float64)[~keep] - com
@@ -418,12 +462,13 @@ FAMILIES = {"sigma_": "Sigma", "hr_": "H/R", "rhomid_": "rho_mid", "cs2_": "c_s^
             "beta_": "beta", "Brms_": "B_rms", "vA2_": "v_A^2", "Psi_": "Psi", "PsiAbs_": "|Psi|", "vRPsi_": "|v_R| |Psi|", "Qz_": "Q_z", "Qphi_": "Q_phi",
             "epsP_": "epsilon_P", "toomre_": "Toomre Q", "hH_": "<h> / H", "nH_": "cells per H", "mdotx_": "Mdot of the excluded gas",
             "Fx_": "excluded gas (advective)", "jdotx_": "J inflow incl. excluded gas", "mdott_": "Mdot of all gas", "nu_": "nu_eff", "tvisc_": "t_visc [orbits]",
-            "alphaeff_": "alpha_eff (all stresses)", "qshear_": "d ln Omega / d ln R", "Jout_": "J of the gas outside R", "Jxout_": "J of the excluded gas outside R"}
+            "alphaeff_": "alpha_eff (all stresses)", "qshear_": "d ln Omega / d ln R", "Jout_": "J of the gas outside R", "Jxout_": "J of the excluded gas outside R", "Tbulge_": "Plummer torque outside R",
+            "Tframe_": "frame torque outside R", "Tgrav_": "all-gravity torque outside R", "jdotb_": "J inflow - all known torques", "jdotg_": "J inflow - gravity (dataset)"}
 
 plugins.register_product("disc", disc, needs=("Coordinates", "Velocities", "Masses", "Density", "InternalEnergy", "SmoothingLength", "?MagneticField", "?ParticleIDs",
                                               "PartType5"),
-                         version=3, label="disc: profiles, angular-momentum budget, eccentricity, minidiscs", applies=_applies,
-                         params={"gamma": None, "r_min": 0.5, "r_max": 12.0, "nbins": 44, "exclude_ids": [], "z_cut": None, "fluxes": []}, defaults=["r_cav"],
+                         version=4, label="disc: profiles, angular-momentum budget, eccentricity, minidiscs", applies=_applies,
+                         params={"gamma": None, "r_min": 0.5, "r_max": 12.0, "nbins": 44, "exclude_ids": [], "z_cut": None, "fluxes": [], "plummer": None}, defaults=["r_cav"],
                          meta={**{k: {"label": a, "group": g} for k, (a, g) in META.items()}, "varpi_disc": {"label": META["varpi_disc"][0], "group": "disc", "wrap": 360.0},
                                "phi_lump": {"label": META["phi_lump"][0], "group": "disc", "wrap": 360.0},
                                **{k: {"label": v, "group": "profiles"} for k, v in FAMILIES.items()}})
