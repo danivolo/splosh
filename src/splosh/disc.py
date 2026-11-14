@@ -26,6 +26,8 @@ Per cylindrical shell (columns <name>_<R>, a family per quantity, R the shell's 
     nu, alphaeff, tvisc   the effective viscosity of all the stresses with the measured shear (F = -2 pi R^3 nu Sigma dOmega/dR), nu Omega / c_s^2, R^2 / nu in orbits
     Tbulge, Tframe, Tgrav   torques on the gas outside R: a static Plummer sphere (param plummer), the accelerating frame, all gravity (the cells'
                 'Acceleration' dataset); jdotb = jdot - Tbulge - Tframe, jdotg = (fluxes) - Tgrav: the budget with them
+    Thydro, jdoth   the hydro forces' torque on the gas outside R (the cells' 'HydroAcceleration'), and -(Fadvtot + Tgrav + Thydro): with both datasets
+                the identity d Jout/dt = -jdoth holds exactly up to the time sampling (it compares the code's forces with the stress fluxes Frey+Fmax+Fvisc)
     Jout        angular momentum of the gas outside R (units of a^2 Omega_b x mass): closure test d(Jout)/dt = -jdot between snapshots (no outer losses)
   With exclude_ids, the left-out gas (e.g. injected wind cells): mdotx, Fx (its advective J flux), jdotx = jdot - Fx, mdott = mdot + mdotx.
   Magnetic (snapshots with MagneticField; B in code units, mu_0 = 1, via UnitMagneticField_in_gauss):
@@ -339,6 +341,13 @@ def disc(path, params):
     if acc is not None and acc.ndim == 2:
         fam["Tgrav"] = outside(m * tz(acc - (a_c if a_c is not None else 0.0))) / lunit
         fam["jdotg"] = jin - fam["Tgrav"]
+    # the hydrodynamic forces as the code applied them ('HydroAcceleration': pressure, viscosity, magnetic): their torque on the gas outside R. Then
+    # the material identity d Jout/dt = Fadvtot (cells crossing R) + Tgrav + Thydro holds whatever the scheme conserves: jdoth = -(Fadvtot + Tgrav + Thydro)
+    ah = _dataset(path, "HydroAcceleration", keep)
+    if ah is not None and ah.ndim == 2:
+        fam["Thydro"] = outside(m * tz(ah)) / lunit
+        if "Tgrav" in fam:
+            fam["jdoth"] = -(fam["Fadvtot"] + fam["Tgrav"] + fam["Thydro"])
     # the gas left out by exclude_ids (e.g. injected wind cells): its mass and advective angular-momentum fluxes through the same cylinders
     if not keep.all():
         xp = np.asarray(s["Coordinates"], np.float64)[~keep] - com
@@ -466,11 +475,12 @@ FAMILIES = {"sigma_": "Sigma", "hr_": "H/R", "rhomid_": "rho_mid", "cs2_": "c_s^
             "epsP_": "epsilon_P", "toomre_": "Toomre Q", "hH_": "<h> / H", "nH_": "cells per H", "mdotx_": "Mdot of the excluded gas",
             "Fx_": "excluded gas (advective)", "jdotx_": "J inflow incl. excluded gas", "mdott_": "Mdot of all gas", "nu_": "nu_eff", "tvisc_": "t_visc [orbits]",
             "alphaeff_": "alpha_eff (all stresses)", "qshear_": "d ln Omega / d ln R", "Jout_": "J of the gas outside R", "Jxout_": "J of the excluded gas outside R", "Tbulge_": "Plummer torque outside R",
-            "Tframe_": "frame torque outside R", "Tgrav_": "all-gravity torque outside R", "jdotb_": "J inflow - all known torques", "jdotg_": "J inflow - gravity (dataset)"}
+            "Tframe_": "frame torque outside R", "Tgrav_": "all-gravity torque outside R", "jdotb_": "J inflow - all known torques", "jdotg_": "J inflow - gravity (dataset)", "Thydro_": "hydro torque outside R (dataset)",
+            "jdoth_": "-(Fadvtot + Tgrav + Thydro) (datasets)"}
 
 plugins.register_product("disc", disc, needs=("Coordinates", "Velocities", "Masses", "Density", "InternalEnergy", "SmoothingLength", "?MagneticField", "?ParticleIDs",
                                               "PartType5"),
-                         version=5, label="disc: profiles, angular-momentum budget, eccentricity, minidiscs", applies=_applies,
+                         version=6, label="disc: profiles, angular-momentum budget, eccentricity, minidiscs", applies=_applies,
                          params={"gamma": None, "r_min": 0.5, "r_max": 12.0, "nbins": 44, "exclude_ids": [], "z_cut": None, "fluxes": [], "plummer": None}, defaults=["r_cav"],
                          meta={**{k: {"label": a, "group": g} for k, (a, g) in META.items()}, "varpi_disc": {"label": META["varpi_disc"][0], "group": "disc", "wrap": 360.0},
                                "phi_lump": {"label": META["phi_lump"][0], "group": "disc", "wrap": 360.0},
