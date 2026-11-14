@@ -50,7 +50,8 @@ def register_flux(name, fn, label=None):
     """add a term F<name>_<R> to the CBD budget (and to jdot): fn(ctx) -> per-particle weights w such that the outward angular-momentum flux through
     the cylinder R is sum over the shell of w / dR (code units; e.g. an explicit viscosity: w = -m nu R^2 dOmega/dR). ctx: the gas arrays after
     exclude_ids (pos, vel, m, rho, u, ids), the frame (com, vcom, zhat, bh_pos, bh_vel, bh_mass, a, sep, G), the cylindrical R and per-particle shell
-    dOmega/dR about the centre (R, dOmega_dR), gamma and the product's params. A run computes it when its name is in the product parameter `fluxes`."""
+    dOmega/dR about the centre (R, dOmega_dR), gamma, the product's params, and ctx["dataset"](name) for any other PartType0 dataset (None if missing).
+    fn may also return {"w": weights, "means": {family: per-particle values}}: the values' mass-weighted shell means become families <family>_<R>. A run computes it when its name is in the product parameter `fluxes`."""
     FLUXES[name] = (fn, label or name)
 
 
@@ -173,6 +174,14 @@ def shells(rel, vel, m, rho, u, edges, zhat, GM, gamma, B=None, quad=0.0, a=1.0,
     return out
 
 
+def _dataset(path, name, keep):
+    """a PartType0 dataset of the snapshot for the kept gas (for register_flux functions: ctx["dataset"](name)); None when the file lacks it."""
+    import h5py
+    with h5py.File(path, "r") as f:
+        g = f["PartType0"]
+        return np.asarray(g[name][...], np.float64)[keep] if name in g else None
+
+
 def _load(path, params):
     from .io import load_snapshot
     s = load_snapshot(path, gas_fields=("Coordinates", "Velocities", "Masses", "Density", "InternalEnergy", "SmoothingLength", "?MagneticField", "?ParticleIDs"))
@@ -261,10 +270,20 @@ def disc(path, params):
         dOm = np.gradient(np.nan_to_num(Om), st["_Rm"])
         ctx = {"pos": pos, "vel": vel, "m": m, "rho": rho, "u": u, "ids": np.asarray(s["ParticleIDs"])[keep] if "ParticleIDs" in s else None, "com": com,
                "vcom": vcom, "zhat": zhat, "bh_pos": bp, "bh_vel": bv, "bh_mass": bm, "a": a, "sep": sep if binary else None, "G": G, "R": R,
-               "dOmega_dR": np.where(okb, dOm[np.clip(idx, 0, len(dOm) - 1)], 0.0), "gamma": gamma, "params": params, "path": path}
+               "dOmega_dR": np.where(okb, dOm[np.clip(idx, 0, len(dOm) - 1)], 0.0), "gamma": gamma, "params": params, "path": path,
+               "dataset": lambda name: _dataset(path, name, keep)}
         for n in names:
-            fam["F" + n] = fl(np.asarray(FLUXES[n][0](ctx), dtype=np.float64))
+            r = FLUXES[n][0](ctx)
+            means = {}
+            if isinstance(r, dict):                # {"w": weights, "means": {name: per-particle values}}: extra families, mass-weighted shell means
+                r, means = r["w"], r.get("means") or {}
+            fam["F" + n] = fl(np.asarray(r, dtype=np.float64))
             jin = jin - fam["F" + n]
+            for key, val in means.items():
+                val = np.asarray(val, np.float64)
+                ok = np.isfinite(val)
+                with np.errstate(invalid="ignore", divide="ignore"):
+                    fam[key] = _bin(np.where(ok, idx, -1), len(Rmid), m * np.where(ok, val, 0.0)) / _bin(np.where(ok, idx, -1), len(Rmid), m)
     if binary:
         tau = binary_torque({**s, "Coordinates": pos, "SmoothingLength": np.asarray(s["SmoothingLength"])[keep]})
         tg = -_bin(idx, len(Rmid), m * tau) / lunit               # torque of the binary on the gas, per shell

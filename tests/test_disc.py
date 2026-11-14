@@ -216,3 +216,26 @@ def test_resolution_fields(run):
     r = np.linalg.norm(pos, axis=1)
     R = np.hypot(pos[:, 0], pos[:, 1])
     assert np.allclose(hres, 0.1 * R ** -0.5 * r ** 1.5 / 0.01, rtol=1e-4)              # c_s = 0.1 v_K(R), Omega_K = r^-3/2 (G = M = 1)
+
+
+def test_flux_hook_dataset_and_means(run):
+    """a flux function can read any PartType0 dataset (ctx['dataset']) and return extra per-shell mass-weighted means."""
+    from splosh import disc as D
+    pos, vel, m, rho, u = kepler_disc(n=40_000, r0=1.5, r1=8.0)
+    p = write(run / "output" / "snapshot_000.hdf5", pos, vel, m, rho, u, [[0.5, 0, 0], [-0.5, 0, 0]], [[0, 0.5, 0], [0, -0.5, 0]], [0.5, 0.5])
+    with h5py.File(p, "a") as f:
+        f["PartType0"]["KViscosity"] = np.full(len(m), 0.25)
+    plugins.load_plugins()
+
+    def fn(ctx):
+        nu = ctx["dataset"]("KViscosity")
+        assert ctx["dataset"]("NoSuchDataset") is None
+        return {"w": -ctx["m"] * nu * ctx["R"] ** 2 * ctx["dOmega_dR"], "means": {"nuK": nu}}
+    D.register_flux("kv", fn)
+    try:
+        s = P.PRODUCTS["disc"]["fn"](p, P.params_of("disc", {"r_min": 2.0, "r_max": 7.0, "nbins": 5, "exclude_ids": [], "fluxes": ["kv"]}))["scalars"]
+        nuk = [v for c, v in s.items() if c.startswith("nuK_")]
+        assert len(nuk) == 5 and np.allclose(nuk, 0.25)
+        assert all(v > 0 for c, v in s.items() if c.startswith("Fkv_"))           # Keplerian shear: outward viscous flux
+    finally:
+        D.FLUXES.pop("kv", None)
