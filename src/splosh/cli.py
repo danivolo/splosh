@@ -48,8 +48,8 @@ def view_from_args(a):
 def add_view_options(p):
     p.add_argument("--preset", help="named bundle of settings from a plugin")
     p.add_argument("--view", help="k=v,k=v overrides, e.g. width=5,npix=1024,mode=slice")
-    p.add_argument("--center", help="com | bh | mass-weighted | peak | ids:A,B | xyz:x,y,z   (default bh)")
-    p.add_argument("--align", help="none | bh | pair:A,B | vec:x,y,z   rotation about z so that the vector points along +x")
+    p.add_argument("--center", help="com | bh | mass-weighted | peak | ids:A,B | xyz:x,y,z | origin | box   (default bh)")
+    p.add_argument("--align", help="none | bh | pair:A,B | vec:x,y,z   rotation about z so that the vector points along +x;  orbit[:ID]   orbital frame of one particle (default the only / most massive black hole): its L about the centre along +z, the particle on +x")
     p.add_argument("--tilt", help="none | incl:I[,PA] | euler:A,B,C | los:x,y,z | L[:R] | Lbh, joined by '+' (degrees): any 3D rotation after --align, e.g. L:2+incl:60")
     p.add_argument("--axes", choices=["xy", "xz", "yz"], help="third letter is the line of sight")
     p.add_argument("--mode", choices=["proj", "slice", "volume"], help="volume: emission + absorption front to back (rho: the opacity; a field: the value of the gas you see)")

@@ -12,6 +12,7 @@ prefer (the pane's current snapshot)."""
 import glob
 import math
 import os
+import re
 
 import h5py
 import numpy as np
@@ -32,6 +33,152 @@ def run_snapshots(path):
 def find_snapshots(paths):
     from .server import find_snapshots as f          # server imports this module: import it late
     return f(paths)
+
+
+SNAP_EXT = (".hdf5", ".h5")
+
+
+def _count_snaps(path):
+    try:
+        return sum(1 for e in os.scandir(path) if e.name.endswith(SNAP_EXT) and e.is_file())
+    except OSError:
+        return 0
+
+
+def snapshot_dir(path):
+    """(the folder whose snapshots a run directory opens, their number): <path>/output when it has snapshots (run_snapshots), else `path` itself."""
+    out = os.path.join(path, "output")
+    if os.path.isdir(out):
+        n = _count_snaps(out)
+        if n:
+            return out, n
+    return path, _count_snaps(path)
+
+
+# ---- short descriptions of run folders (the viewer's folder picker): small files only, cached by modification time
+NOTE_FILES = ("readme", "readme.md", "readme.txt", "description", "description.txt", "notes", "notes.md", "notes.txt", "about", "about.txt")
+DESC_MAX = 200
+_DESC = {}
+
+
+def _head(path, nbytes=8192):
+    try:
+        with open(path, "rb") as f:
+            return f.read(nbytes).decode("utf-8", "replace")
+    except OSError:
+        return ""
+
+
+def _first_line(text):
+    for ln in text.splitlines():
+        ln = ln.strip().lstrip("#").strip()
+        if ln and not ln.startswith(("---", "===", "<!--")):
+            return ln
+    return ""
+
+
+def _keyvals(text):
+    """key=value (or 'key: value') lines; a key that repeats keeps its last value (STATUS files append state changes)."""
+    kv = {}
+    for ln in text.splitlines():
+        m = None
+        for sep in ("=", ":"):
+            k, _, v = ln.partition(sep)
+            if _ and k.strip() and " " not in k.strip():
+                m = (k.strip().lower(), v.strip())
+                break
+        if m:
+            kv[m[0]] = m[1]
+    return kv
+
+
+def _snap_time(path):
+    try:
+        with h5py.File(path, "r") as f:
+            return float(f["Header"].attrs["Time"])
+    except Exception:
+        return None
+
+
+def _fmt_t(t):
+    return "?" if t is None else f"{t:.4g}"
+
+
+def folder_description(path):
+    """a one-line description of a run folder, read cheaply: the first line of a README / DESCRIPTION / notes file, the '#question:' of a campaign file
+    (CAMPAIGN or *.campaign) in the folder, RUNINFO (project, binary name, layout, nice, campaign), STATUS (state, progress, start / end) and the
+    number and time range of the snapshots the folder opens (headers of the first and last). Cached until the folder or one of these files changes."""
+    path = os.path.realpath(path)
+    try:
+        ents = {e.name: e for e in os.scandir(path)}
+    except OSError:
+        return ""
+    sdir, n = snapshot_dir(path)
+    names = sorted(k for k, e in ents.items() if (k.lower() in NOTE_FILES or k in ("RUNINFO", "STATUS", "CAMPAIGN") or k.endswith(".campaign")))
+    sig = []
+    for k in names:
+        try:
+            st = ents[k].stat()
+            sig.append((k, st.st_mtime_ns, st.st_size))
+        except OSError:
+            pass
+    try:
+        sig.append((sdir, os.stat(sdir).st_mtime_ns, n))
+    except OSError:
+        pass
+    sig = tuple(sig)
+    hit = _DESC.get(path)
+    if hit and hit[0] == sig:
+        return hit[1]
+    parts = []
+    for k in names:
+        if k.lower() in NOTE_FILES and ents[k].is_file():
+            line = _first_line(_head(ents[k].path, 4096))
+            if line:
+                parts.append(line)
+                break
+    for k in names:
+        if (k == "CAMPAIGN" or k.endswith(".campaign")) and ents[k].is_file():
+            for ln in _head(ents[k].path, 4096).splitlines():
+                if ln.lower().startswith("#question:"):
+                    parts.append("Q: " + ln.split(":", 1)[1].strip())
+                    break
+            break
+    if "RUNINFO" in ents:
+        txt = _head(ents["RUNINFO"].path)
+        kv = _keyvals(txt)
+        bits = [kv.get("project", "")]
+        if kv.get("binary"):
+            bits.append(os.path.basename(kv["binary"]))
+        if kv.get("layout"):
+            bits.append(kv["layout"])
+        if kv.get("nice") not in (None, "", "0"):
+            bits.append("nice " + kv["nice"])
+        if kv.get("campaign"):
+            bits.append("campaign " + kv["campaign"])
+        bits = [b for b in bits if b]
+        if not bits and not parts:
+            bits = [_first_line(txt)]
+        parts += [b for b in bits if b]
+    if "STATUS" in ents:
+        kv = _keyvals(_head(ents["STATUS"].path))
+        st = kv.get("state", "")
+        if kv.get("progress"):
+            st += " " + kv["progress"]
+        when = kv.get("end") if st.startswith(("COMPLETED", "FAILED", "CANCELLED", "TIMEOUT")) and kv.get("end") else kv.get("start")
+        if when:
+            st += " " + when.split()[0]
+        if st.strip():
+            parts.append(st.strip())
+    if n:
+        snaps = sorted((e.name for e in os.scandir(sdir) if e.name.endswith(SNAP_EXT)), key=lambda x: [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", x)])
+        t0, t1 = _snap_time(os.path.join(sdir, snaps[0])), _snap_time(os.path.join(sdir, snaps[-1]))
+        where = " in output/" if sdir != path else ""
+        parts.append(f"{n} snapshot{'s' if n > 1 else ''}{where}, t = {_fmt_t(t0)}" + (f"-{_fmt_t(t1)}" if n > 1 else ""))
+    out = " \u00b7 ".join(parts)
+    out = out if len(out) <= DESC_MAX else out[:DESC_MAX - 1] + "\u2026"
+    _DESC[path] = (sig, out)
+    return out
 
 ALIGNS = ("time", "time_myr", "index", "offset", "orbits")
 G_CGS = 6.6743e-8

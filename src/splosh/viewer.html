@@ -113,8 +113,8 @@ body.mapsonly #menubar{transform:translateY(-100%);transition:transform .15s}bod
 #picker.on{display:flex}#picker>div{background:#1a1f26;border:1px solid #456;padding:12px 16px;width:min(720px,96vw);max-height:92vh;display:flex;flex-direction:column}
 #pk_list{overflow:auto;flex:1;min-height:120px;margin:6px 0;border:1px solid #333;font:12px ui-monospace,monospace}
 #pk_list div{display:flex;gap:6px;align-items:center;padding:2px 6px;border-bottom:1px solid #222}#pk_list div:hover{background:#223}
-#pk_list .nm{flex:1;cursor:pointer;color:#cde;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#pk_list .nm.leaf{cursor:default;color:#9ab}
-#pk_list .ct{color:#8a8;width:110px;text-align:right}#pk_dir{font:12px ui-monospace,monospace;color:#fc8;word-break:break-all}#pk_msg{color:#e98;font:12px ui-monospace,monospace;min-height:1em}
+#pk_list .nm{flex:0 1 auto;max-width:45%;cursor:pointer;color:#cde;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#pk_list .ds,#pk_recent .ds{flex:1;min-width:0;color:#89a;font:11px system-ui,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#pk_list .nm.leaf{cursor:default;color:#9ab}
+#pk_list .ct{color:#8a8;width:110px;flex:none;text-align:right}#pk_dir{font:12px ui-monospace,monospace;color:#fc8;word-break:break-all}#pk_msg{color:#e98;font:12px ui-monospace,monospace;min-height:1em}
 #help{position:fixed;inset:0;background:#000d;display:none;align-items:center;justify-content:center;z-index:10}
 #help.on{display:flex}#help div{background:#1a1f26;border:1px solid #456;padding:14px 22px;max-width:min(560px,94vw);max-height:92vh;overflow:auto}
 #help h2{margin:0 0 8px;font-size:15px}#help td.grp{color:#9bd;font:bold 12px sans-serif;padding-top:8px}
@@ -2544,8 +2544,9 @@ function ruleBox(id, opts) {
   inp.sync();
 }
 ruleBox("center", [["bh", "black holes (binary c.o.m.)"], ["com", "centre of mass (all)"], ["mass-weighted", "gas centre of mass"], ["peak", "densest gas particle"],
-                   ["ids:", "particles by ID", "IDs: 500000,500001"], ["xyz:", "fixed point", "x,y,z"]]);
-ruleBox("align", [["none", "no rotation"], ["bh", "BH pair along +x"], ["pair:", "two particles along +x", "IDs: A,B"], ["vec:", "a vector along +x", "x,y,z"]]);
+                   ["ids:", "particles by ID", "IDs: 500000,500001"], ["xyz:", "fixed point", "x,y,z"], ["origin", "origin (0,0,0)"], ["box", "box centre"]]);
+ruleBox("align", [["none", "no rotation"], ["bh", "BH pair along +x"], ["pair:", "two particles along +x", "IDs: A,B"], ["vec:", "a vector along +x", "x,y,z"],
+                  ["orbit", "orbital frame of the (most massive) BH"], ["orbit:", "orbital frame of a particle", "ID"]]);
 ruleBox("tilt", [["none", "no tilt"], ["L", "face-on to the gas disc (all gas)"], ["L:", "face-on to the gas within R", "R"], ["Lbh", "face-on to the BH orbit"],
                  ["incl:", "inclination", "I[,PA] degrees: 90 = edge-on"], ["los:", "line of sight along a vector", "x,y,z"], ["euler:", "Euler angles z-x-z", "A,B,C degrees"]]);
 $("setA").onclick = () => storeState("A"); $("setB").onclick = () => storeState("B"); $("blink").onclick = blink;
@@ -2558,17 +2559,18 @@ async function pkList() {
   try {
     const b = await api("/api/browse", {dir: PK.dir, deep: deep ? 1 : 0});
     PK.dir = b.dir; PK.parent = b.parent; $("pk_root").textContent = b.root;
-    $("pk_dir").textContent = "/" + b.dir + (b.n ? "   (" + b.n + " snapshot files here)" : "");
+    $("pk_dir").textContent = "/" + b.dir + (b.n ? "   (" + b.n + (b.output ? " snapshots in output/)" : " snapshot files here)") : "");
     $("pk_up").disabled = b.parent === null;
     const box = $("pk_list"); box.replaceChildren();
     for (const e of b.entries) {
-      const row = document.createElement("div"), cb = document.createElement("input"), nm = document.createElement("span"), ct = document.createElement("span");
-      cb.type = "checkbox"; cb.checked = PK.sel.has(e.path); cb.disabled = !e.n && !deep; cb.title = e.n ? "open as a run" : "no snapshot files directly in this folder";
+      const row = document.createElement("div"), cb = document.createElement("input"), nm = document.createElement("span"), ds = document.createElement("span"), ct = document.createElement("span");
+      cb.type = "checkbox"; cb.checked = PK.sel.has(e.path); cb.disabled = !e.n && !deep; cb.title = e.n ? "open as a run" + (e.output ? " (its snapshots are in output/)" : "") : "no snapshot files in this folder or its output/";
       cb.onchange = () => { cb.checked ? PK.sel.add(e.path) : PK.sel.delete(e.path); pkSel(); };
       nm.className = "nm" + (deep && !e.sub ? " leaf" : ""); nm.textContent = e.name + (e.sub && !deep ? "/" : "");
       nm.onclick = () => { PK.dir = e.path; pkList(); };
-      ct.className = "ct"; ct.textContent = e.n ? e.n + " snapshots" : "";
-      row.append(cb, nm, ct); box.append(row);
+      ds.className = "ds"; ds.textContent = e.desc || ""; ds.title = e.desc || "";
+      ct.className = "ct"; ct.textContent = e.n ? e.n + (e.n == 1 ? " snapshot" : " snapshots") : ""; if (e.output) ct.title = "in " + e.path + "/output";
+      row.append(cb, nm, ds, ct); box.append(row);
     }
     if (!b.entries.length) box.textContent = deep ? "no folders with snapshot files below" : "no subfolders";
     $("pk_msg").textContent = b.truncated ? "search stopped early (too many folders): go into a subfolder first" : "";
@@ -2597,7 +2599,8 @@ async function pkRecent() {
   const h = document.createElement("div"); h.innerHTML = "<small>open recent</small>"; box.append(h);
   for (const r of rs) {
     const d = document.createElement("div"); d.className = "rc" + (r.exists ? "" : " gone"); d.title = r.paths.join("\n") + (r.exists ? "" : "\n(no longer there)");
-    d.innerHTML = "<small></small><span></span>"; d.querySelector("small").textContent = r.when; d.querySelector("span").textContent = recentLabel(r);
+    d.innerHTML = "<small></small><span></span><span class=ds></span>"; d.querySelector("small").textContent = r.when; d.querySelector("span").textContent = recentLabel(r);
+    d.querySelector(".ds").textContent = r.desc || ""; if (r.desc) d.title += "\n" + r.desc;
     if (r.exists) d.onclick = () => openPaths(r.paths);
     box.append(d);
   }

@@ -370,10 +370,62 @@ def run(pg, url, a, check, only=None):
     idle()
     check(ids_box_shown and ev("document.getElementById('center').value") == (c0 if c0 in ("bh", "com", "peak", "mass-weighted") else "bh"),
           "centre rule menu: com re-requests the map, xyz: asks for the point, back to the start value")
+    section_orbit_and_picker(pg, url, a, check, shot, wait, idle)
     if a.extra_run:
         section_runs(pg, url, a, check, shot, wait, idle)
     if a.layouts:
         section_layout(pg, url, a, check)
+
+
+def section_orbit_and_picker(pg, url, a, check, shot, wait, idle):
+    """align orbit:ID from the menu (the particle on +x, its orbit face-on), and the folder picker: a run whose snapshots are in output/ is listed as the run,
+    with a description."""
+    ev = pg.evaluate
+    a0 = ev("document.getElementById('align').value")
+    ids = sorted(m["id"] for m in ev("window.__splosh.markers"))
+    pg.select_option("#align + .row select", "orbit:")
+    pg.fill("#align + .row input", str(ids[0]))
+    pg.dispatch_event("#align + .row input", "change")
+    wait(f"window.__splosh.map && window.__splosh.map.meta.frame.align_spec === 'orbit:{ids[0]}'")
+    idle()
+    wait("window.__splosh.markers && window.__splosh.markers.length > 0")
+    mk = [m for m in ev("window.__splosh.markers") if m["id"] == ids[0]]
+    axes = ev("window.__splosh.view.axes") if ev("window.__splosh.view") else "xy"
+    check(len(mk) == 1 and (axes != "xy" or (mk[0]["x"] > 0 and abs(mk[0]["y"]) < 1e-6 * max(1.0, abs(mk[0]["x"])))),
+          f"align orbit:{ids[0]} from the menu: that black hole on +x ({mk[:1]}, axes {axes})")
+    shot("align_orbit")
+    pg.select_option("#align + .row select", a0 if a0 in ("none", "bh") else "none")
+    idle()
+    # ---- the folder picker: a run folder with its snapshots in output/ (and a RUNINFO) next to the served folder
+    root = fetch_json(url, "/api/state", {})["root"]
+    snapdir = os.path.realpath(a.snapdir)
+    if not snapdir.startswith(root + os.sep):
+        print("  (skipped: the folder picker check needs the snapshot folder under the server's root)")
+        return
+    parent = os.path.dirname(snapdir)
+    run = os.path.join(parent, "pickrun_smoke")
+    os.makedirs(os.path.join(run, "output"), exist_ok=True)
+    first = sorted(f for f in os.listdir(snapdir) if f.endswith(".hdf5"))[0]
+    if not os.path.exists(os.path.join(run, "output", first)):
+        os.symlink(os.path.join(snapdir, first), os.path.join(run, "output", first))
+    with open(os.path.join(run, "RUNINFO"), "w") as f:
+        f.write("project=smoke\nlayout=1x2x1\n")
+    try:
+        ev(f"PK.dir = {json.dumps(os.path.relpath(parent, root))}; document.getElementById('pk_deep').checked = true; openPicker(false)")
+        wait("[...document.querySelectorAll('#pk_list .nm')].some(e => e.textContent === 'pickrun_smoke')", 60000)
+        names = ev("[...document.querySelectorAll('#pk_list .nm')].map(e => e.textContent)")
+        desc = ev("[...document.querySelectorAll('#pk_list div')].filter(d => d.querySelector('.nm') && d.querySelector('.nm').textContent === 'pickrun_smoke').map(d => d.querySelector('.ds').textContent)[0]")
+        check("pickrun_smoke/output" not in names and desc.startswith("smoke \u00b7 1x2x1 \u00b7 1 snapshot in output/"),
+              f"folder picker (all subfolders): the run is listed as the folder, not folder/output, with a description ({desc!r})")
+        shot("picker")
+        ev("document.getElementById('pk_deep').checked = false"); ev("pkList()")
+        wait("[...document.querySelectorAll('#pk_list .nm')].some(e => e.textContent === 'pickrun_smoke/')", 60000)
+        row = ev("[...document.querySelectorAll('#pk_list div')].filter(d => d.querySelector('.nm') && d.querySelector('.nm').textContent === 'pickrun_smoke/').map(d => [d.querySelector('input').disabled, d.querySelector('.ct').textContent])[0]")
+        check(row == [False, "1 snapshot"], f"folder picker (one level): the run folder opens its output/ ({row})")
+        pg.click("#pk_close")
+    finally:
+        import shutil
+        shutil.rmtree(run, ignore_errors=True)
 
 
 def section_layout(pg, url, a, check):

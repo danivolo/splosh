@@ -157,9 +157,13 @@ def test_start_empty_browse_and_open_folders(tmp_path):
         top = json.load(get(f"{base}/api/browse?dir=", H))
         assert [x["name"] for x in top["entries"]] == ["empty", "proj"] and top["parent"] is None
         proj = json.load(get(f"{base}/api/browse?dir=proj", H))
-        assert [(x["name"], x["n"]) for x in proj["entries"]] == [("loop", 0), ("runA", 0), ("runB", 1)] and proj["parent"] == ""
+        assert [(x["name"], x["n"]) for x in proj["entries"]] == [("loop", 0), ("runA", 2), ("runB", 1)] and proj["parent"] == ""   # runA opens its output/
+        assert [x["output"] for x in proj["entries"]] == [False, True, False]
         deep = json.load(get(f"{base}/api/browse?dir=&deep=1", H))
-        assert [(x["path"], x["n"]) for x in deep["entries"]] == [("proj/runA/output", 2), ("proj/runB", 1)]
+        assert [(x["path"], x["n"], x["output"]) for x in deep["entries"]] == [("proj/runA", 2, True), ("proj/runB", 1, False)]   # the run, not its output/
+        assert deep["entries"][0]["desc"].startswith("2 snapshots in output/, t = ")
+        inside = json.load(get(f"{base}/api/browse?dir=proj/runA&deep=1", H))               # inside the run: its output/ is the only folder below
+        assert [(x["path"], x["n"]) for x in inside["entries"]] == [("proj/runA/output", 2)] and inside["n"] == 2 and inside["output"]
         for bad in ("..", "../..", "/etc", "proj/loop"):
             with pytest.raises(urllib.error.HTTPError) as e:
                 get(f"{base}/api/browse?dir={bad}", H)

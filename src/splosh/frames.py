@@ -7,6 +7,8 @@ Centre rules (`center` spec string):
     peak              position of the densest gas particle
     ids:A,B,...       mass-weighted centre of the particles (black holes, or gas if ParticleIDs were loaded) with these IDs; `pair:A,B` is an alias
     xyz:x,y,z         a fixed point (x,y,z or just 'x,y,z'); velocity 0
+    origin            the coordinate origin (= xyz:0,0,0)
+    box               the centre of the box (BoxSize / 2 along every axis; needs a header with BoxSize > 0); velocity 0
 Black-hole masses are the dynamical `Masses` dataset (what gravity sees), not the sub-grid `BH_Mass`.
 
 Alignment rules (`align` spec string): a rotation about the z axis (the disc normal stays z), applied after centring:
@@ -16,6 +18,12 @@ Alignment rules (`align` spec string): a rotation about the z axis (the disc nor
     vec:x,y,z         the xy-projection of this vector becomes +x
 Rotation angle theta = atan2(dy, dx) of the vector; positions and velocities are rotated by -theta (active rotation, matrix [[c,s],[-s,c]] with c = cos theta,
 s = sin theta), the same as rotating a pynbody snapshot with rotate_z(-theta in degrees).
+One alignment rule is a full 3D rotation instead (the orbital frame of one particle):
+    orbit[:ID]        the particle ID (default: the only black hole, or the most massive one by dynamical mass) relative to the centre: first its orbital angular
+                      momentum L = r x v about the centre (r, v relative to the centre's position and velocity) becomes +z (frames.to_z), then the particle is
+                      put on the +x axis by a rotation about z. With centre `origin` (or `box`, `xyz:...`) this is the orbital frame of a body orbiting a
+                      fixed central mass. When L = 0 (radial motion, or at rest) only the rotation about z is made. Positions and velocities are rotated
+                      the same way: the velocities are those of the instantaneous rotated frame (no Omega x r is subtracted).
 
 Tilt rules (`tilt` spec string): an arbitrary 3D rotation applied after centring and alignment, so any line of sight can be the view's z axis. Terms joined by '+'
 are applied left to right (each acts on the result of the previous ones); angles in degrees; every rotation is active (p' = R p, velocities too):
@@ -40,9 +48,12 @@ class Frame:
     align_spec: str = "none"
     tilt: np.ndarray = field(default_factory=lambda: np.eye(3))     # the tilt rotation, applied after the alignment
     tilt_spec: str = "none"
+    align_rot: object = None                # a full 3D alignment rotation (align 'orbit'), used instead of the rotation about z by `angle`
 
     @property
     def rot(self):
+        if self.align_rot is not None:
+            return self.tilt @ self.align_rot
         c, s = np.cos(self.angle), np.sin(self.angle)
         return self.tilt @ np.array([[c, s, 0.0], [-s, c, 0.0], [0.0, 0.0, 1.0]])
 
@@ -56,7 +67,8 @@ class Frame:
     def describe(self):
         return {"center": [float(c) for c in self.center], "velocity": [float(c) for c in self.velocity], "angle_deg": float(np.degrees(self.angle)),
                 "center_spec": self.center_spec, "align_spec": self.align_spec,
-                "tilt_spec": self.tilt_spec, "tilt": [[float(x) for x in r] for r in self.tilt]}
+                "tilt_spec": self.tilt_spec, "tilt": [[float(x) for x in r] for r in self.tilt],
+                **({"align_rot": [[float(x) for x in r] for r in self.align_rot]} if self.align_rot is not None else {})}
 
 
 def _bh_mass(snap):
@@ -117,7 +129,15 @@ def resolve_center(snap, spec="bh"):
         return _wmean(pos, m), _wmean(vel, m)
     if key == "xyz" or (arg == "" and "," in key):
         return _parse_floats(arg if key == "xyz" else spec, 3), np.zeros(3)
-    raise ValueError(f"unknown centre rule {spec!r} (com|bh|mass-weighted|peak|ids:A,B|xyz:x,y,z)")
+    if key == "origin":
+        return np.zeros(3), np.zeros(3)
+    if key == "box":
+        box = (snap.get("header") or {}).get("BoxSize", 0.0)
+        box = np.broadcast_to(np.asarray(box, dtype=np.float64), (3,)).copy()
+        if not (box > 0).all():
+            raise ValueError("centre 'box': the header has no BoxSize > 0 (use origin or xyz:x,y,z)")
+        return 0.5 * box, np.zeros(3)
+    raise ValueError(f"unknown centre rule {spec!r} (com|bh|mass-weighted|peak|ids:A,B|xyz:x,y,z|origin|box)")
 
 
 def resolve_angle(snap, spec="none"):
@@ -140,8 +160,10 @@ def resolve_angle(snap, spec="none"):
         d = pos2[0] - pos[0]
     elif key == "vec":
         d = _parse_floats(arg, 3)
+    elif key == "orbit":
+        raise ValueError("align 'orbit' is a 3D rotation: use resolve_orbit (make_frame does)")
     else:
-        raise ValueError(f"unknown align rule {spec!r} (none|bh|pair:A,B|vec:x,y,z)")
+        raise ValueError(f"unknown align rule {spec!r} (none|bh|pair:A,B|vec:x,y,z|orbit[:ID])")
     if d[0] == 0 and d[1] == 0:
         raise ValueError("alignment vector has no xy component")
     return float(np.arctan2(d[1], d[0]))
@@ -201,7 +223,7 @@ def resolve_tilt(snap, spec, frame):
         elif key == "los":
             R = to_z(_parse_floats(arg, 3))
         elif key in ("L", "Lbh"):
-            cur = Frame(center=frame.center, velocity=frame.velocity, angle=frame.angle, tilt=T)
+            cur = Frame(center=frame.center, velocity=frame.velocity, angle=frame.angle, tilt=T, align_rot=frame.align_rot)
             if key == "L":
                 if "Velocities" not in snap:
                     raise ValueError("tilt 'L' needs the gas Velocities (load them)")
@@ -223,9 +245,41 @@ def resolve_tilt(snap, spec, frame):
     return T
 
 
+def orbit_particle(snap, arg=""):
+    """(position, velocity) of the particle of align 'orbit[:ID]': that ID, else the only black hole, else the most massive one (dynamical mass)."""
+    arg = (arg or "").strip()
+    if arg:
+        pos, vel, _ = _find_ids(snap, [int(arg)])
+        return pos[0], vel[0]
+    if "bh_pos" not in snap or len(snap["bh_pos"]) == 0:
+        raise ValueError("align 'orbit': the snapshot has no black-hole particles (give a particle: orbit:ID)")
+    k = int(np.argmax(_bh_mass(snap)))
+    return np.asarray(snap["bh_pos"][k], np.float64), np.asarray(snap["bh_vel"][k], np.float64)
+
+
+def resolve_orbit(snap, arg, center, velocity):
+    """(3x3 rotation, angle about z in radians) of align 'orbit[:ID]' about this centre (see the module docstring)."""
+    p, v = orbit_particle(snap, arg)
+    r, u = p - np.asarray(center, np.float64), v - np.asarray(velocity, np.float64)
+    if not np.linalg.norm(r) > 0:
+        raise ValueError("align 'orbit': the particle sits on the centre (choose another centre, e.g. origin, box or xyz:...)")
+    L = np.cross(r, u)
+    R1 = to_z(L) if np.linalg.norm(L) > 1e-12 * np.linalg.norm(r) * max(np.linalg.norm(u), 1e-300) else np.eye(3)
+    q = R1 @ r
+    if q[0] == 0 and q[1] == 0:
+        raise ValueError("align 'orbit': the particle lies on the z axis and does not move about it")
+    phi = float(np.arctan2(q[1], q[0]))
+    return _rz(-phi) @ R1, phi
+
+
 def make_frame(snap, center="bh", align="none", tilt="none"):
     c, v = resolve_center(snap, center)
-    f = Frame(center=c, velocity=v, angle=resolve_angle(snap, align), center_spec=center, align_spec=align)
+    key, _, arg = (align or "none").strip().partition(":")
+    if key.lower() == "orbit":
+        R, phi = resolve_orbit(snap, arg, c, v)
+        f = Frame(center=c, velocity=v, angle=phi, center_spec=center, align_spec=align, align_rot=R)
+    else:
+        f = Frame(center=c, velocity=v, angle=resolve_angle(snap, align), center_spec=center, align_spec=align)
     if (tilt or "none").strip() not in ("", "none"):
         f.tilt = resolve_tilt(snap, tilt, f)
         f.tilt_spec = tilt

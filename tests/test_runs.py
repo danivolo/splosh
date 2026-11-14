@@ -235,3 +235,27 @@ def test_binary_period_from_a_circular_orbit_and_the_orbits_alignment(tmp_path):
     with h5py.File(str(d / "snap_001.hdf5"), "r+") as f:                      # far apart and fast: unbound, no period
         f["PartType5/Velocities"][...] = np.array([[0, 100.0, 0], [0, -100.0, 0]])
     assert binary_period(str(d / "snap_001.hdf5")) is None
+
+
+def test_folder_description_and_snapshot_dir(tmp_path):
+    from conftest import write_snapshot
+    from splosh import runs as R
+    run = tmp_path / "r1"
+    (run / "output").mkdir(parents=True)
+    write_snapshot(str(run / "ic.hdf5"), n_gas=50, seed=1)                    # initial conditions next to output/: the run opens output/
+    for k in range(3):
+        write_snapshot(str(run / "output" / f"snapshot_{k:03d}.hdf5"), n_gas=50, seed=k, time=0.5 * k)
+    assert R.snapshot_dir(str(run)) == (str(run / "output"), 3)
+    assert R.folder_description(str(run)) == "3 snapshots in output/, t = 0-1"
+    (run / "RUNINFO").write_text("project=demo\nbinary=/x/y/GIZMO_demo\nlayout=1x4x1\nnice=0\ncampaign=pilot\n")
+    (run / "STATUS").write_text("jobid=1\nstart=2026-01-02 03:04:05\nstate=RUNNING\nend=2026-01-03 00:00:00\nstate=COMPLETED\n")
+    (run / "pilot.campaign").write_text("#name: pilot\n#question: does it run?\nproj r1\n")
+    d = R.folder_description(str(run))
+    assert d == "Q: does it run? · demo · GIZMO_demo · 1x4x1 · campaign pilot · COMPLETED 2026-01-03 · 3 snapshots in output/, t = 0-1"
+    (run / "README.md").write_text("\n# A short note\n\nmore text\n")
+    assert R.folder_description(str(run)).startswith("A short note · Q: does it run?")       # the cache follows the new file
+    free = tmp_path / "r2"
+    free.mkdir()
+    (free / "RUNINFO").write_text("project: demo (line A): what this run does\nscript: x.py\n")
+    assert R.folder_description(str(free)) == "demo (line A): what this run does"
+    assert R.folder_description(str(tmp_path / "missing")) == ""

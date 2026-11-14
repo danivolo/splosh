@@ -13,7 +13,8 @@
     GET /api/bh?snap=I&...        black-hole markers in the view coordinates of that map request
     GET /api/png?snap=I&...       the same map as a PNG (cmap, scale, vmin, vmax)
     GET /api/lut?name=viridis     256x3 colour table
-    GET /api/browse?dir=REL[&deep=1]   folders under the browsable root (--root, default home) with their snapshot counts; deep: every folder below with snapshots
+    GET /api/browse?dir=REL[&deep=1]   folders under the browsable root (--root, default home) with their snapshot counts (a run's output/ counts as the run's)
+                                       and short descriptions; deep: every folder below with snapshots
     GET /api/jobs, POST /api/jobs {kind: movie | prefetch | products {run, names?}, ...}, POST /api/jobs/cancel {id}, GET /api/jobs/file?id=&name=   long jobs (jobs.py): a free node at once
                                   (serve --slurm "srun options"), else here; their folders under --jobs-dir
     POST /api/open {paths: [REL, ...], add: false}   serve these folders as the runs (replacing the current ones, or adding); `serve` without paths starts empty
@@ -153,19 +154,16 @@ class ViewerState:
             raise ValueError(f"{rel!r} is outside the browsable root {self.root}")
         return p
 
-    def browse(self, rel="", deep=False, max_dirs=4000, seconds=4.0):
-        """the folders under root/rel: {'dir', 'parent', 'n' (snapshots in dir itself), 'entries': [{'path', 'name', 'n', 'sub'}]}. Not deep: the direct
-        subfolders (n = snapshot files directly inside, sub = has subfolders); deep: every folder below that holds snapshot files (hidden folders skipped,
-        symlinks not followed; at most max_dirs folders or `seconds`, then 'truncated')."""
+    def browse(self, rel="", deep=False, max_dirs=4000, seconds=4.0, desc_seconds=3.0):
+        """the folders under root/rel: {'dir', 'parent', 'n', 'entries': [{'path', 'name', 'n', 'sub', 'output', 'desc'}]}. n is the number of snapshots the
+        folder opens as a run (runs.snapshot_dir: those of its output/ subfolder when it has any, then 'output' is true, else the files directly inside).
+        Not deep: the direct subfolders (sub = has subfolders); deep: every folder below that opens snapshots, a run's output/ folder listed as the run
+        itself (hidden folders skipped, symlinks not followed; at most max_dirs folders or `seconds`, then 'truncated'). desc: a short description
+        (runs.folder_description, also for a folder without snapshots in the one-level listing; within `desc_seconds` in all, the rest None)."""
+        from . import runs as R
         d = self._inside(rel)
         if not os.path.isdir(d):
             raise ValueError(f"not a folder: {rel!r}")
-
-        def count(path):
-            try:
-                return sum(1 for e in os.scandir(path) if e.is_file() and e.name.endswith((".hdf5", ".h5")))
-            except OSError:
-                return 0
         rel_of = lambda p: os.path.relpath(p, self.root) if p != self.root else ""
         out, truncated = [], False
         if not deep:
@@ -178,19 +176,36 @@ class ViewerState:
                     sub = any(x.is_dir() and not x.name.startswith(".") for x in os.scandir(e.path))
                 except OSError:
                     sub = False
-                out.append({"path": rel_of(e.path), "name": e.name, "n": count(e.path), "sub": sub})
+                sd, n = R.snapshot_dir(e.path)
+                out.append({"path": rel_of(e.path), "name": e.name, "n": n, "sub": sub, "output": sd != e.path, "abs": e.path})
         else:
-            t0, seen = time.time(), 0
+            t0, seen, at = time.time(), 0, {}
             for top, dirs, files in os.walk(d, followlinks=False):
                 dirs[:] = sorted((x for x in dirs if not x.startswith(".")), key=natural_key)
                 seen += 1
                 if seen > max_dirs or time.time() - t0 > seconds:
                     truncated = True
                     break
-                n = sum(1 for f in files if f.endswith((".hdf5", ".h5")))
-                if n and top != d:
-                    out.append({"path": rel_of(top), "name": os.path.relpath(top, d), "n": n, "sub": bool(dirs)})
-        return {"root": self.root, "dir": rel_of(d), "parent": None if d == self.root else rel_of(os.path.dirname(d)), "n": count(d), "entries": out, "truncated": truncated}
+                n = sum(1 for f in files if f.endswith(R.SNAP_EXT))
+                if not n or top == d:
+                    continue
+                up = os.path.dirname(top)
+                if os.path.basename(top) == "output" and up != d:          # a run's output/: the run is its parent folder (which opens these snapshots)
+                    if up in at:
+                        at[up].update(n=n, output=True)
+                    else:
+                        at[up] = {"path": rel_of(up), "name": os.path.relpath(up, d), "n": n, "sub": True, "output": True, "abs": up}
+                        out.append(at[up])
+                    continue
+                at[top] = {"path": rel_of(top), "name": os.path.relpath(top, d), "n": n, "sub": bool(dirs), "output": False, "abs": top}
+                out.append(at[top])
+        t0 = time.time()
+        for e in out:
+            p = e.pop("abs")
+            e["desc"] = R.folder_description(p) if (e["n"] or not deep) and time.time() - t0 < desc_seconds else None
+        here, n_here = R.snapshot_dir(d)
+        return {"root": self.root, "dir": rel_of(d), "parent": None if d == self.root else rel_of(os.path.dirname(d)), "n": n_here, "output": here != d,
+                "entries": out, "truncated": truncated}
 
     def open_runs(self, rels, add=False):
         """replace (or, add=True, extend) the runs by these folders / files (relative to root): every folder is a run, as on the command line."""
@@ -818,12 +833,15 @@ def make_handler(state):
                     if not os.path.isfile(f):
                         return self._send(404, "no such layout")
                     return self._send(200, json.dumps({"raw": lay.migrate(lay._read(f)), "file": os.path.basename(f)}), "application/json")
-                if u.path == "/api/recent":                   # the recently opened folder sets (relative to the root when inside it)
+                if u.path == "/api/recent":                   # the recently opened folder sets (relative to the root when inside it), with a description of a single folder
+                    from . import runs as R
                     out = []
                     for r in recent_sets():
                         rel = [os.path.relpath(p, state.root) for p in r["paths"] if p == state.root or p.startswith(state.root + os.sep)]
                         if len(rel) == len(r["paths"]):
-                            out.append({"paths": rel, "when": r.get("when", ""), "exists": all(os.path.exists(p) for p in r["paths"])})
+                            ok = all(os.path.exists(p) for p in r["paths"])
+                            out.append({"paths": rel, "when": r.get("when", ""), "exists": ok,
+                                        "desc": R.folder_description(r["paths"][0]) if ok and len(r["paths"]) == 1 and os.path.isdir(r["paths"][0]) else ""})
                     return self._send(200, json.dumps({"recent": out, "root": state.root}), "application/json")
                 if u.path == "/api/progress":                 # what the render in flight is doing (the viewer's progress bar); answers while a render runs
                     return self._send(200, json.dumps(progress.current()), "application/json")

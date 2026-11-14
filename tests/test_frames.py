@@ -170,3 +170,63 @@ def test_tilt_in_maps_conserves_mass_and_matches_the_axes_view(snapfile):
     c, _ = render_map(s, v.with_(tilt="incl:90"))
     d, _ = render_map(s, v.with_(axes="xz"))
     assert np.allclose(c, d[::-1, :], rtol=1e-4, atol=1e-6 * d.max())
+
+
+def _orbit_snap(ids=(42,), masses=(1.0,), incl=37.0, node=-120.0, phase=55.0, r=2.0, vc=0.7, centre=(0.0, 0.0, 0.0), extra=None):
+    """black holes; the first one on a circular orbit of radius r about `centre`, in a plane inclined by incl about the line of nodes at angle `node`."""
+    from splosh.frames import _rx, _rz
+    R = _rz(np.radians(node)) @ _rx(np.radians(incl))                  # orbital plane -> snapshot frame
+    ph = np.radians(phase)
+    p = np.asarray(centre) + R @ (r * np.array([np.cos(ph), np.sin(ph), 0.0]))
+    v = R @ (vc * np.array([-np.sin(ph), np.cos(ph), 0.0]))
+    pos, vel = [p], [v]
+    for k in range(1, len(ids)):
+        pos.append(extra[k - 1][0]); vel.append(extra[k - 1][1])
+    s = {"bh_pos": np.array(pos, float), "bh_vel": np.array(vel, float), "bh_id": np.array(ids), "bh_mdyn": np.array(masses, float),
+         "bh_mass": np.array(masses, float), "header": {"BoxSize": 10.0},
+         "Coordinates": np.zeros((1, 3)), "Velocities": np.zeros((1, 3)), "Masses": np.ones(1), "Density": np.ones(1)}
+    return s, R, ph
+
+
+def test_align_orbit_puts_the_particle_on_plus_x_and_its_L_on_plus_z():
+    s, R, ph = _orbit_snap()
+    f = make_frame(s, "origin", "orbit")
+    p, v = f.pos(s["bh_pos"])[0], f.vel(s["bh_vel"])[0]
+    assert np.allclose(p, [2.0, 0, 0], atol=1e-12)                     # on +x at its orbital radius
+    assert np.allclose(v, [0, 0.7, 0], atol=1e-12)                     # circular: moving along +y, so L = r x v along +z
+    assert np.allclose(np.cross(p, v) / np.linalg.norm(np.cross(p, v)), [0, 0, 1])
+    assert np.allclose(f.rot @ f.rot.T, np.eye(3)) and np.isclose(np.linalg.det(f.rot), 1.0)
+    # every vector rotates like the positions: a gas particle elsewhere keeps its distance and its velocity's angle to the BH's
+    q, w = np.array([[0.3, -1.2, 0.8]]), np.array([[0.1, 0.2, -0.3]])
+    assert np.isclose(np.linalg.norm(f.pos(q)), np.linalg.norm(q)) and np.isclose(f.vel(w)[0] @ v, w[0] @ s["bh_vel"][0])
+    assert np.allclose(f.vel(w)[0], f.rot @ w[0])
+    assert f.describe()["align_spec"] == "orbit" and "align_rot" in f.describe()
+
+
+def test_align_orbit_by_id_box_centre_most_massive_and_tilt():
+    other = [(np.array([4.0, 4.0, 4.0]), np.array([0.0, 0.0, 0.0]))]
+    s, R, ph = _orbit_snap(ids=(42, 7), masses=(1.0, 3.0), centre=(5.0, 5.0, 5.0), extra=other)
+    f = make_frame(s, "box", "orbit:42")
+    assert np.allclose(f.center, [5, 5, 5])
+    assert np.allclose(f.pos(s["bh_pos"])[0], [2.0, 0, 0], atol=1e-12)
+    # the default particle is the most massive black hole (id 7, at rest relative to the box centre: L = 0 -> rotation about z only, z kept)
+    g = make_frame(s, "box", "orbit")
+    pg = g.pos(s["bh_pos"])[1]
+    assert pg[0] > 0 and abs(pg[1]) < 1e-12 and np.isclose(pg[2], -1.0)
+    # a tilt acts after the orbit alignment: incl:90 puts L (+z) onto -y
+    t = make_frame(s, "box", "orbit:42", "incl:90")
+    assert np.allclose(t.pos(s["bh_pos"])[0], [2.0, 0, 0], atol=1e-12)
+    pv = t.vel(s["bh_vel"])[0]
+    assert np.allclose(np.cross(t.pos(s["bh_pos"])[0], pv) / (2.0 * 0.7), [0, -1, 0], atol=1e-12)
+
+
+def test_align_orbit_errors():
+    s, _, _ = _orbit_snap()
+    with pytest.raises(ValueError, match="sits on the centre"):
+        make_frame(s, "bh", "orbit")                          # a single black hole is its own centre
+    with pytest.raises(KeyError):
+        make_frame(s, "origin", "orbit:999")
+    s["header"] = {"BoxSize": 0.0}
+    with pytest.raises(ValueError, match="BoxSize"):
+        resolve_center(s, "box")
+    assert np.allclose(resolve_center(s, "origin")[0], 0)

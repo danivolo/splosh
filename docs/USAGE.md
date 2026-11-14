@@ -20,9 +20,14 @@ View options (shared by `render`, `shot`, `sheet`, `movie` and `serve`, which us
 
 ## Frames
 Centre (`--center`): `com` (mass-weighted gas + black holes), `mass-weighted` (gas), `bh` (black-hole particles; the binary centre of mass for two), `peak` (densest gas particle),
-`ids:A,B,...` (alias `pair:A,B`), `xyz:x,y,z`. Black-hole masses are the dynamical `Masses` dataset. The centre velocity is subtracted from velocity fields.
+`ids:A,B,...` (alias `pair:A,B`), `xyz:x,y,z`, `origin` (= `xyz:0,0,0`), `box` (the box centre, BoxSize / 2). Black-hole masses are the dynamical `Masses` dataset. The centre velocity is subtracted from velocity fields.
 Alignment (`--align`): a rotation about z only, applied after centring: `bh` (the vector from the lowest-ID to the second-lowest-ID black hole becomes +x), `pair:A,B` (A to B becomes +x),
 `vec:x,y,z`, `none`. The rotation is the active rotation by -theta with theta = atan2(dy, dx) of that vector, the same as `rotate_z(-theta in degrees)` in pynbody (tested).
+`orbit[:ID]` is the one 3D alignment: the orbital frame of one particle (default: the only black hole, or the most massive one by dynamical mass; `orbit:ID` any
+black hole, or a gas particle when ParticleIDs are loaded). Its orbital angular momentum r x v about the centre (position and velocity relative to the centre rule's)
+becomes +z, then the particle is put on +x by a rotation about z; velocities rotate with the positions (the instantaneous frame: no Omega x r is subtracted).
+For a black hole orbiting a fixed central mass alone, use `--center origin --align orbit` (or `box`, `xyz:...`): every snapshot shows it at the same place,
+on +x, moving towards +y. With L = 0 (radial motion) only the rotation about z is made. A tilt applies after it (e.g. `--tilt incl:90` for the edge-on view).
 
 Tilt (`--tilt`, the viewer's "tilt" menu, `tilt` in profiles): any 3D rotation after the alignment, so any line of sight can be the view's z axis. Terms joined by `+`
 apply left to right, angles in degrees: `incl:I[,PA]` (rotate by PA about z, then by I about x: 0 face-on, 90 edge-on), `euler:A,B,C` (z-x-z), `los:x,y,z` (that
@@ -357,7 +362,12 @@ each snapshot's `orbits`, and `shot --orbits` / `movie --orbits` (and the movie 
 time. It browses the tree under `--root` (default: the home directory; nothing outside it can be listed or opened, symlinks out of it included), shows the snapshot
 files per folder, and with "show all subfolders with snapshots" lists every folder below that has any (hidden folders skipped, symlinks not followed, stops after a few
 thousand folders). Tick folders: **open** replaces the runs, **add as runs** adds them (each folder is a run, a run directory's `output/` is found as on the command
-line); the page then reloads. `GET /api/browse?dir=REL[&deep=1]`, `POST /api/open {paths, add}`. [verified: tests/test_server.py, headless browser run]
+line); the page then reloads. A folder's count is that of the snapshots it opens: a run whose snapshots are in `folder/output` is listed (and ticked) as
+`folder`, with the count of its `output/`, in both listings (the deep listing no longer shows `folder/output` instead of the run). Every listed folder (in the
+deep listing those with snapshots) and every recent single folder has a short description (`splosh.runs.folder_description`), read from small files only and cached until they change: the first line
+of a `README` / `DESCRIPTION` / `notes` file, the `#question:` of a campaign file (`CAMPAIGN` or `*.campaign`) in the folder, from `RUNINFO` (`key=value` or
+`key: value`) the project, binary name, layout, nice and campaign, from `STATUS` the last state (with progress) and its date, and the number and time range of
+the snapshots (the headers of the first and the last). `GET /api/browse?dir=REL[&deep=1]` (entries: `path`, `name`, `n`, `sub`, `output`, `desc`), `POST /api/open {paths, add}`. [verified: tests/test_server.py, tests/test_runs.py, headless browser run]
 
 **Long jobs from the page** (side panel, "long jobs"): **movie of this pane** (the selected pane's view and colours over a snapshot range, every N, fps, colour limits the same
 for all frames / per frame / as now) and **prefetch all** (every snapshot of every pane's run, with the pane's view, into the map store; afterwards stepping is instant).
