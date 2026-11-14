@@ -18,7 +18,7 @@ Per cylindrical shell (columns <name>_<R>, a family per quantity, R the shell's 
     A1, A1phi   m = 1 azimuthal Fourier amplitude |sum m e^{i phi}| / sum m and its phase
   CBD only, the angular-momentum budget (outward fluxes through the cylinder R, in units of a^2 Omega_b, Omega_b = sqrt(G M / a^3); divide by mdot
   for the specific angular momentum ell = flux / Mdot in a^2 Omega_b):
-    Fadv        advective sum m v_R j / dR (j = R v_phi)                      Frey     Reynolds R sum m dv_R dv_phi / dR
+    Fadv        advective, mean flow: Fadvtot - Frey (Fadvtot = sum m v_R j / dR, j = R v_phi)   Frey   Reynolds R sum m dv_R dv_phi / dR
     Fmax        Maxwell -R sum V B_R B_phi / dR                               dTdR     torque of the binary on the gas per unit R/a (sum -m tau_bin / d(R/a))
     Tout        torque of the binary on all gas outside R                     jdot     -(Fadv + Frey + Fmax) - Tout: in steady state Mdot ell_0, the same at
                                                                                         every R (Mdot ell_0 / Mdot = ell_0: divide jdot by mdot)
@@ -271,8 +271,11 @@ def disc(path, params):
     j = R * st["_vphi"]
     fl = lambda wts: _bin(idx, len(Rmid), wts) / st["_dR"] / lunit
     fam = {k: v for k, v in st.items() if not k.startswith("_")}
-    fam["Fadv"] = fl(m * st["_vR"] * j)
+    # the total advective flux sum m v_R j contains the fluctuations: split it exactly into the mean flow and the Reynolds part (dv about the shell's
+    # mass-weighted means: the cross terms vanish), so Fadv + Frey = sum m v_R j / dR and the budget never counts the Reynolds stress twice
     fam["Frey"] = fl(R * m * st["_dvR"] * st["_dvphi"])
+    fam["Fadvtot"] = fl(m * st["_vR"] * j)
+    fam["Fadv"] = fam["Fadvtot"] - fam["Frey"]
     jin = -(fam["Fadv"] + fam["Frey"])
     if B is not None:
         V = m / rho
@@ -380,7 +383,7 @@ def disc(path, params):
     reach = np.where(np.nan_to_num(fam["tvisc"], nan=np.inf) < t_orb)[0]
     sc["r_steady"] = float(Rmid[reach.max()]) if len(reach) else np.nan          # largest R whose viscous time is shorter than the time so far
     few = st["_n"] < 20
-    for k in ["Fadv", "Frey", "Fmax", "jdot", "nu", "tvisc", "alphaeff", "qshear"] + ["F" + n for n in names]:
+    for k in ["Fadv", "Fadvtot", "Frey", "Fmax", "jdot", "nu", "tvisc", "alphaeff", "qshear"] + ["F" + n for n in names]:
         if k in fam:
             fam[k] = np.where(few, np.nan, fam[k])
     for k, arr in fam.items():
@@ -457,7 +460,7 @@ CLOSURE_SLOPES = {
 
 FAMILIES = {"sigma_": "Sigma", "hr_": "H/R", "rhomid_": "rho_mid", "cs2_": "c_s^2", "vphi_": "v_phi", "vR_": "v_R", "vrat_": "v_phi / v_K", "mdot_": "Mdot (> 0 in)",
             "vsup_": "H Omega_K / c_s", "vsupA_": "H Omega_K / sqrt(c_s^2 + v_A^2)", "gauss_": "Sigma / (sqrt(2 pi) rho_mid H)", "aR_": "alpha Reynolds",
-            "aM_": "alpha Maxwell", "ecc_": "e_d", "eccphi_": "periapsis [deg]", "A1_": "m = 1 amplitude", "A1phi_": "m = 1 phase [deg]", "Fadv_": "advective",
+            "aM_": "alpha Maxwell", "ecc_": "e_d", "eccphi_": "periapsis [deg]", "A1_": "m = 1 amplitude", "A1phi_": "m = 1 phase [deg]", "Fadv_": "advective (mean flow)", "Fadvtot_": "advective (total)",
             "Frey_": "Reynolds", "Fmax_": "Maxwell", "dTdR_": "binary torque density", "Tout_": "binary torque outside R", "jdot_": "J inflow - torque outside",
             "beta_": "beta", "Brms_": "B_rms", "vA2_": "v_A^2", "Psi_": "Psi", "PsiAbs_": "|Psi|", "vRPsi_": "|v_R| |Psi|", "Qz_": "Q_z", "Qphi_": "Q_phi",
             "epsP_": "epsilon_P", "toomre_": "Toomre Q", "hH_": "<h> / H", "nH_": "cells per H", "mdotx_": "Mdot of the excluded gas",
@@ -467,7 +470,7 @@ FAMILIES = {"sigma_": "Sigma", "hr_": "H/R", "rhomid_": "rho_mid", "cs2_": "c_s^
 
 plugins.register_product("disc", disc, needs=("Coordinates", "Velocities", "Masses", "Density", "InternalEnergy", "SmoothingLength", "?MagneticField", "?ParticleIDs",
                                               "PartType5"),
-                         version=4, label="disc: profiles, angular-momentum budget, eccentricity, minidiscs", applies=_applies,
+                         version=5, label="disc: profiles, angular-momentum budget, eccentricity, minidiscs", applies=_applies,
                          params={"gamma": None, "r_min": 0.5, "r_max": 12.0, "nbins": 44, "exclude_ids": [], "z_cut": None, "fluxes": [], "plummer": None}, defaults=["r_cav"],
                          meta={**{k: {"label": a, "group": g} for k, (a, g) in META.items()}, "varpi_disc": {"label": META["varpi_disc"][0], "group": "disc", "wrap": 360.0},
                                "phi_lump": {"label": META["phi_lump"][0], "group": "disc", "wrap": 360.0},

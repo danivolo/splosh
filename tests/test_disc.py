@@ -272,3 +272,19 @@ def test_other_torques_outside_R(run):
         assert s2[k] == pytest.approx(np.sum(m[R > Rk] * tzc[R > Rk]), rel=1e-6, abs=1e-12)        # offset: the direct sum
     assert any(abs(v) > 0 for c_, v in s2.items() if c_.startswith("Tframe_"))
     assert any(c_.startswith("jdotb_") for c_ in s2) and any(c_.startswith("jdotg_") for c_ in s2)
+
+
+def test_advective_split_counts_reynolds_once(run):
+    """Fadv (mean flow) + Frey (fluctuations) = Fadvtot = sum m v_R j / dR: the Reynolds stress is not counted twice in jdot."""
+    pos, vel, m, rho, u = kepler_disc(n=40_000, r0=1.5, r1=8.0)
+    rng = np.random.default_rng(5)
+    vel = vel + 0.05 * rng.normal(size=vel.shape) * np.array([1, 1, 0])          # turbulence: dv_R dv_phi correlations on average zero, noise not
+    vel[:, 0] += 0.02 * pos[:, 0] / np.hypot(pos[:, 0], pos[:, 1])            # a mean radial outflow
+    vel[:, 1] += 0.02 * pos[:, 1] / np.hypot(pos[:, 0], pos[:, 1])
+    p = write(run / "output" / "snapshot_000.hdf5", pos, vel, m, rho, u, [[0.5, 0, 0], [-0.5, 0, 0]], [[0, 0.5, 0], [0, -0.5, 0]], [0.5, 0.5])
+    plugins.load_plugins()
+    s = P.PRODUCTS["disc"]["fn"](p, P.params_of("disc", {"r_min": 2.0, "r_max": 7.0, "nbins": 5, "exclude_ids": [], "fluxes": []}))["scalars"]
+    for k in [c for c in s if c.startswith("Fadvtot_")]:
+        r = k[8:]
+        assert s["Fadv_" + r] + s["Frey_" + r] == pytest.approx(s[k], rel=1e-9)
+        assert s["jdot_" + r] == pytest.approx(-s[k] - s["Tout_" + r], rel=1e-9, abs=1e-12)
