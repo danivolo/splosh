@@ -75,6 +75,24 @@ def context(run_dir, snapshots=(), analysis=None, period=None):
     return {"run_dir": os.path.abspath(run_dir), "snapshots": list(snapshots), "analysis": analysis, "period": period}
 
 
+def run_events(ctx):
+    """the run's marked events (seams: a restart with changed parameters, a switch, ...): `<run>/events.tsv` (or analysis_viewer/events.tsv), one line
+    `TIME<TAB>LABEL` (code time), '#' comments. Every time plot of the run draws them as labelled vertical lines."""
+    out = []
+    for f in (os.path.join(ctx["run_dir"], "events.tsv"), os.path.join(ctx["run_dir"], "analysis_viewer", "events.tsv")):
+        try:
+            for line in open(f, encoding="utf-8", errors="replace"):
+                if line.strip() and not line.startswith("#"):
+                    t, _, lab = line.rstrip("\n").partition("\t")
+                    try:
+                        out.append((float(t), lab.strip()))
+                    except ValueError:
+                        pass
+        except OSError:
+            pass
+    return out
+
+
 def output_file(ctx, *names):
     """the first existing, non-empty file among <run>/output/NAME and <run>/NAME."""
     for base in (os.path.join(ctx["run_dir"], "output"), ctx["run_dir"]):
@@ -435,7 +453,8 @@ def panel_tile(p, ctx, tnow=None, n=3000):
     return {"curves": out, "styles": styles, "xnow": fx(tnow) if (tnow is not None and p.get("marker", True)) else None, "xlabel": xlabel,
             "ylabel": ylabel, "yscale": auto_scale(cat("left"), p.get("yscale") or ("log" if p.get("ylog") else "auto")),
             "twin_scale": auto_scale(cat("right"), p.get("twin_scale") or "auto") if right else None, "twin_label": twin_label,
-            "hlines": [float(h) for h in (p.get("hlines") or [])], "xlog": bool(p.get("xlog")), "ylog": False, "note": tab.note}
+            "hlines": [float(h) for h in (p.get("hlines") or [])], "xlog": bool(p.get("xlog")), "ylog": False, "note": tab.note,
+            "events": [[float(fx(t)), lab] for t, lab in run_events(ctx)]}
 
 
 from . import perf  # noqa: E402,F401  (registers the GIZMO performance sources: cpu, timebin, timings, balance)
@@ -513,7 +532,8 @@ def heat_tile(p, ctx, tnow=None):
     out = {"heat": {"x": fx(edges), "y": Y, "z": Z, "zscale": p.get("zscale") or "log", "cmap": p.get("cmap") or "magma", "norm": p.get("norm", "none"),
                     "label": p.get("zlabel") or ("fraction" if p.get("norm") == "column" else p["prefix"].rstrip("_"))},
            "curves": [], "styles": [], "xnow": fx(tnow) if (tnow is not None and p.get("marker", True)) else None, "xlabel": xlabel,
-           "ylabel": p.get("ylabel") or p["prefix"].rstrip("_"), "yscale": p.get("yscale") or "lin", "note": tab.note}
+           "ylabel": p.get("ylabel") or p["prefix"].rstrip("_"), "yscale": p.get("yscale") or "lin", "note": tab.note,
+           "events": [[float(fx(t)), lab] for t, lab in run_events(ctx)]}
     for c in p.get("overlay") or []:                     # curves on the same y axis (e.g. the lowest occupied bin over the occupancy)
         for cv in curves(tab, [c], ids=p.get("ids"), n=1500):
             out["curves"].append((tab.meta.get(c, {}).get("label", c), fx(np.asarray(cv["t"], float)), np.asarray(cv["y"], float)))

@@ -22,7 +22,9 @@ Per cylindrical shell (columns <name>_<R>, a family per quantity, R the shell's 
     Fmax        Maxwell -R sum V B_R B_phi / dR                               dTdR     torque of the binary on the gas per unit R/a (sum -m tau_bin / d(R/a))
     Tout        torque of the binary on all gas outside R                     jdot     -(Fadv + Frey + Fmax) - Tout: in steady state Mdot ell_0, the same at
                                                                                         every R (Mdot ell_0 / Mdot = ell_0: divide jdot by mdot)
-    nu, alphaeff, tvisc   the effective viscosity of all the stresses (F = 3 pi nu Sigma R^2 Omega), nu Omega / c_s^2, and R^2 / nu in binary orbits
+    qshear      d ln Omega / d ln R of the shells (Omega = <v_phi>/R; -1.5 Keplerian)
+    nu, alphaeff, tvisc   the effective viscosity of all the stresses with the measured shear (F = -2 pi R^3 nu Sigma dOmega/dR), nu Omega / c_s^2, R^2 / nu in orbits
+    Jout        angular momentum of the gas outside R (units of a^2 Omega_b x mass): closure test d(Jout)/dt = -jdot between snapshots (no outer losses)
   With exclude_ids, the left-out gas (e.g. injected wind cells): mdotx, Fx (its advective J flux), jdotx = jdot - Fx, mdott = mdot + mdotx.
   Magnetic (snapshots with MagneticField; B in code units, mu_0 = 1, via UnitMagneticField_in_gauss):
     beta        sum V P / sum V B^2/2           Brms  sqrt(sum V B^2 / sum V)        vA2   sum V B^2 / sum m
@@ -287,19 +289,35 @@ def disc(path, params):
         fam["Fx"] = _bin(xi, len(Rmid), xm * XvR * Xj) / st["_dR"] / lunit
         fam["jdotx"] = fam["jdot"] - fam["Fx"]                     # J inflow including the excluded gas
         fam["mdott"] = fam["mdot"] + fam["mdotx"]                  # Mdot of all the gas
-    # effective viscosity of all the stresses (Reynolds, Maxwell, registered terms) and the viscous time: F = 3 pi nu Sigma R^2 Omega (Keplerian)
+    # effective viscosity of all the stresses (Reynolds, Maxwell, registered terms) with the MEASURED shear of the shells: F = -2 pi R^3 nu Sigma dOmega/dR
+    # (Omega = <v_phi>/R; Keplerian shear would give F = 3 pi nu Sigma R^2 Omega), and the viscous time
     fstress = fam["Frey"] + (fam["Fmax"] if "Fmax" in fam else 0.0) + sum(fam["F" + n] for n in names)
     with np.errstate(invalid="ignore", divide="ignore"):
-        OmR = np.sqrt(GM / st["_Rm"] ** 3)
-        nu = fstress * lunit / (3 * np.pi * fam["sigma"] * st["_Rm"] ** 2 * OmR)
+        Rm_ = st["_Rm"]
+        Om = fam["vphi"] / Rm_
+        dlnOm = np.gradient(np.log(np.abs(Om)), np.log(Rm_))          # d ln Omega / d ln R (-1.5 Keplerian)
+        fam["qshear"] = dlnOm
+        nu = fstress * lunit / (-2 * np.pi * Rm_ ** 2 * fam["sigma"] * Om * dlnOm)
         fam["nu"] = nu
-        fam["tvisc"] = np.where(nu > 0, st["_Rm"] ** 2 / nu, np.nan) / (2 * np.pi / Om_b)     # in binary orbits (2 pi / Omega_b)
-        fam["alphaeff"] = nu * OmR / fam["cs2"]
+        fam["tvisc"] = np.where(nu > 0, Rm_ ** 2 / nu, np.nan) / (2 * np.pi / Om_b)     # in binary orbits (2 pi / Omega_b)
+        fam["alphaeff"] = nu * Om / fam["cs2"]
+    # the angular momentum of the gas outside each R (cylindrical, all z; in units of a^2 Omega_b): with no outer losses d(Jout)/dt = -jdot
+    # between two snapshots (the binary's torque on that gas is in jdot): the closure test of the budget. Jxout: the excluded gas outside R.
+    jz = m * j
+    o = np.argsort(R)
+    tail = np.cumsum((jz[o])[::-1])[::-1]
+    k = np.searchsorted(R[o], Rmid * a)
+    fam["Jout"] = np.where(k < len(tail), tail[np.minimum(k, len(tail) - 1)], 0.0) / lunit
+    if not keep.all():
+        oo = np.argsort(XR)
+        xt = np.cumsum((xm * Xj)[oo][::-1])[::-1]
+        kk = np.searchsorted(XR[oo], Rmid * a)
+        fam["Jxout"] = np.where(kk < len(xt), xt[np.minimum(kk, len(xt) - 1)], 0.0) / lunit
     t_orb = float(s["time"]) / (2 * np.pi / Om_b)
     reach = np.where(np.nan_to_num(fam["tvisc"], nan=np.inf) < t_orb)[0]
     sc["r_steady"] = float(Rmid[reach.max()]) if len(reach) else np.nan          # largest R whose viscous time is shorter than the time so far
     few = st["_n"] < 20
-    for k in ["Fadv", "Frey", "Fmax", "jdot", "nu", "tvisc", "alphaeff"] + ["F" + n for n in names]:
+    for k in ["Fadv", "Frey", "Fmax", "jdot", "nu", "tvisc", "alphaeff", "qshear"] + ["F" + n for n in names]:
         if k in fam:
             fam[k] = np.where(few, np.nan, fam[k])
     for k, arr in fam.items():
@@ -381,11 +399,11 @@ FAMILIES = {"sigma_": "Sigma", "hr_": "H/R", "rhomid_": "rho_mid", "cs2_": "c_s^
             "beta_": "beta", "Brms_": "B_rms", "vA2_": "v_A^2", "Psi_": "Psi", "PsiAbs_": "|Psi|", "vRPsi_": "|v_R| |Psi|", "Qz_": "Q_z", "Qphi_": "Q_phi",
             "epsP_": "epsilon_P", "toomre_": "Toomre Q", "hH_": "<h> / H", "nH_": "cells per H", "mdotx_": "Mdot of the excluded gas",
             "Fx_": "excluded gas (advective)", "jdotx_": "J inflow incl. excluded gas", "mdott_": "Mdot of all gas", "nu_": "nu_eff", "tvisc_": "t_visc [orbits]",
-            "alphaeff_": "alpha_eff (all stresses)"}
+            "alphaeff_": "alpha_eff (all stresses)", "qshear_": "d ln Omega / d ln R", "Jout_": "J of the gas outside R", "Jxout_": "J of the excluded gas outside R"}
 
 plugins.register_product("disc", disc, needs=("Coordinates", "Velocities", "Masses", "Density", "InternalEnergy", "SmoothingLength", "?MagneticField", "?ParticleIDs",
                                               "PartType5"),
-                         version=2, label="disc: profiles, angular-momentum budget, eccentricity, minidiscs", applies=_applies,
+                         version=3, label="disc: profiles, angular-momentum budget, eccentricity, minidiscs", applies=_applies,
                          params={"gamma": None, "r_min": 0.5, "r_max": 12.0, "nbins": 44, "exclude_ids": [], "z_cut": None, "fluxes": []}, defaults=["r_cav"],
                          meta={**{k: {"label": a, "group": g} for k, (a, g) in META.items()}, "varpi_disc": {"label": META["varpi_disc"][0], "group": "disc", "wrap": 360.0},
                                "phi_lump": {"label": META["phi_lump"][0], "group": "disc", "wrap": 360.0},

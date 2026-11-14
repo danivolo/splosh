@@ -158,3 +158,10 @@ def test_heatmap_panel_from_indexed_columns(tmp_path):
     assert list(hm["y"]) == [37.0, 38.0, 39.0, 40.0]               # contiguous rows, the empty 38 and 39 included
     assert np.isnan(hm["z"][1]).all() and np.nanmax(hm["z"][3]) == 103.0
     assert layout_mpl.render_bytes(lo, tiles, h)[:4] == b"\x89PNG" and lay.render_layout(lo, tiles, h).ndim == 3
+
+
+def test_run_events_drawn_on_time_plots(tmp_path):
+    """<run>/events.tsv (time TAB label): series.run_events reads it; time tiles carry the events in their x units."""
+    from splosh import series as SR
+    (tmp_path / "events.tsv").write_text("# seams\n3.5\tcap switch\nnot-a-time\tx\n4.03\tMaxHsml 10\n")
+    assert SR.run_events(SR.context(str(tmp_path))) == [(3.5, "cap switch"), (4.03, "MaxHsml 10")]

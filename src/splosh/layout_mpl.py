@@ -239,6 +239,7 @@ def _draw_heat(fig, ax, t):
         ax.legend(fontsize="x-small", frameon=True, framealpha=0.7, edgecolor="none")
     if t.get("xnow") is not None:
         ax.axvline(t["xnow"], color="#ffd23c", lw=1.0)
+    _events(ax, t)
     ax.set_ylim(ye[0], ye[-1])                         # the grid's rows (an overlay curve does not stretch the axis)
     if hm.get("aspect") == "equal":
         ax.set_aspect("equal")
@@ -322,6 +323,7 @@ def _draw_curves(ax, t):
         ax.set_yscale("log")
     if t.get("xnow") is not None:
         ax.axvline(t["xnow"], color="0.4", lw=0.8, ls="--")
+    _events(ax, t)
     labelled = [c for c, s in zip(t["curves"], styles) if s.get("legend", True)]
     if t.get("ylabel"):
         ax.set_ylabel(t["ylabel"])
@@ -440,3 +442,12 @@ def save(layout, tiles, path, header=""):
     with open(path, "wb") as f:
         f.write(data)
     return path
+
+
+def _events(ax, t):
+    """the run's events (series.run_events): labelled dotted vertical lines."""
+    for x, lab in t.get("events") or []:
+        ax.axvline(x, color="#b5651d", lw=0.9, ls=(0, (2, 2)))
+        if lab:
+            ax.annotate(lab, (x, 1.0), xycoords=("data", "axes fraction"), xytext=(2, -2), textcoords="offset points", rotation=90, ha="left", va="top",
+                        fontsize="xx-small", color="#b5651d")
