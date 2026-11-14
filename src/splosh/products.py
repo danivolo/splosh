@@ -116,11 +116,15 @@ def compute_one(run_dir, name, path, params=None):
 
 
 def applicable(name, paths):
-    """whether a product applies to a run (its `applies` on the first snapshot; True without one)."""
+    """whether a product applies to a run (its `applies` on the first snapshot; without one: True for particle runs, False for a run of a kind (kinds.py),
+    whose files a particle product cannot read)."""
     plugins.load_plugins()
     fn = PRODUCTS[name].get("applies")
-    if not fn or not paths:
+    if not paths:
         return True
+    if not fn:
+        from . import kinds
+        return kinds.kind_of_file(paths[0]) is None
     try:
         return bool(fn(paths[0]))
     except Exception:

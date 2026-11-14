@@ -32,6 +32,9 @@ def snapshot_info(path, plugin_sections=True, units="code"):
     if units not in SYSTEMS:
         raise ValueError(f"units must be one of {list(SYSTEMS)}")
     path = str(path)
+    from . import kinds
+    if kinds.kind_of_file(path) is not None:
+        return mesh_info(path)
     info = {"file": os.path.abspath(path), "size_bytes": os.path.getsize(path)}
     warn = []
     with h5py.File(path, "r") as f:
@@ -146,8 +149,32 @@ def _vec(v):
     return "(" + ", ".join(_f(c, 6) for c in v) + ")"
 
 
+def mesh_info(path):
+    """snapshot_info of a kind's mesh snapshot (kinds.py, mesh.py): time, levels (dx, origin, centring, patches, boxes, index range), variables, fields."""
+    from . import kinds
+    kind = kinds.kind_of_file(path)
+    obj = kinds.open_mesh(path, kind)
+    levels = []
+    for li, lev in enumerate(obj.levels):
+        lo = np.min([p[0] for p in lev.patches], axis=0).tolist() if lev.patches else None
+        hi = np.max([p[1] for p in lev.patches], axis=0).tolist() if lev.patches else None
+        levels.append({"level": li, "dx": lev.dx, "origin": list(lev.origin), "centring": lev.centring, "periodic": bool(lev.periodic), "patches": len(lev.patches),
+                       "boxes": [[list(a), list(b)] for a, b in lev.boxes], "index_lo": lo, "index_hi": hi})
+    return {"file": os.path.abspath(path), "size_bytes": os.path.getsize(path), "kind": kind, "time": float(obj.time), "units": kinds.units(kind),
+            "levels": levels, "variables": [str(v) for v in getattr(obj, "variables", ())], "fields": sorted(kinds.field_specs(kind, obj))}
+
+
 def format_info(info):
     """human-readable text of snapshot_info()."""
+    if "kind" in info:
+        un = info["units"].get("length", "")
+        L = [f"{info['file']}  ({info['size_bytes'] / 1e6:.1f} MB)  kind {info['kind']}", f"time {info['time']:.8g} {info['units'].get('time', '')}".rstrip()]
+        for lv in info["levels"]:
+            L.append(f"level {lv['level']}: dx {lv['dx']:.6g} {un}, {lv['centring']}-centred{', periodic' if lv['periodic'] else ''}, {lv['patches']} patches, "
+                     f"{len(lv['boxes'])} boxes, index {lv['index_lo']}..{lv['index_hi']}")
+        L.append("variables: " + ", ".join(info["variables"]))
+        L.append("fields: " + ", ".join(info["fields"]))
+        return "\n".join(L)
     L = []
     u = info["units"]
     L.append(f"{info['file']}  ({info['size_bytes'] / 1e6:.1f} MB)")

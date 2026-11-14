@@ -462,9 +462,9 @@ function draw(p) {
     ctx.moveTo(sx - 9, sy); ctx.lineTo(sx + 9, sy); ctx.moveTo(sx, sy - 9); ctx.lineTo(sx, sy + 9); ctx.stroke();
   }
   // scale bar: a round 1 / 2 / 5 x 10^n length in the map's length unit (pc in astro units, cm in cgs), else in code length
-  const lu = p.map && p.map.meta && p.map.meta.length_unit, f = lu && lu.factor > 0 && lu.unit && !/code/.test(lu.unit) ? lu.factor : 1;
+  const lu = p.map && p.map.meta && p.map.meta.length_unit, named = !!(lu && lu.factor > 0 && lu.unit && !/code/.test(lu.unit)), f = named ? lu.factor : 1;   // named: a unit of its own (pc, cm, or a kind's unit such as M)
   const wPhys = p.view.width * f, mag = Math.pow(10, Math.floor(Math.log10(wPhys / 3))), barPhys = [5, 2, 1].map(m => m * mag).find(b => b <= wPhys / 3) || mag;
-  const sc = W / p.view.width, bar = barPhys / f, lab = (+barPhys.toPrecision(2)).toString() + (f !== 1 ? " " + lu.unit : " (code length)");
+  const sc = W / p.view.width, bar = barPhys / f, lab = (+barPhys.toPrecision(2)).toString() + (named ? " " + lu.unit : " (code length)");
   ctx.fillStyle = "#000c"; ctx.fillRect(12, W - 36, bar * sc + 4, 7); ctx.fillStyle = "#fff"; ctx.fillRect(14, W - 34, bar * sc, 3);   // dark backing: legible on the white of a difference map
   ctx.font = "13px sans-serif"; ctx.lineWidth = 3; ctx.strokeStyle = "#000c"; ctx.strokeText(lab, 14, W - 40); ctx.fillText(lab, 14, W - 40);
   drawOv(p);

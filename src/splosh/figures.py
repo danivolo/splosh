@@ -75,6 +75,9 @@ def _near(value, table, default):
 def unit_names(header):
     """Names of the code units from the snapshot header's cgs factors: {'L','M','V','T' (names), 'notes' (definitions of the names that are not standard units), 'tcgs'}."""
     header = header or {}
+    if "_unit_names" in header:                                 # a kind's own unit names (kinds.py: e.g. lengths and times in M), no cgs scale
+        un = header["_unit_names"] or {}
+        return {"L": un.get("L") or "L", "M": un.get("M") or "M", "V": un.get("V") or "V", "notes": [], "tcgs": None, "Tname": un.get("T") or ""}
     L, nl = _near(header.get("UnitLength_In_CGS"), _LENGTH, "L")
     M, nm = _near(header.get("UnitMass_In_CGS"), _MASS, "M")
     V, nv = _near(header.get("UnitVelocity_In_CGS"), _VEL, "V")
@@ -84,7 +87,7 @@ def unit_names(header):
 
 def time_text(t, names, physical=True, period=None):
     """'t = 1.23 (4.5 Myr)'; with `period` (the binary's P0, code time) also ', 2.47 P0'."""
-    s = f"t = {t:.4g}"
+    s = f"t = {t:.4g}" + (f" {names['Tname']}" if names.get("Tname") else "")
     orb = f", {t / period:.3g} P0" if period else ""
     if physical and names["tcgs"]:
         sec = t * names["tcgs"]

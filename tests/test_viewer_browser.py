@@ -82,3 +82,68 @@ def test_group_ran_and_passed(smoke_output, word, n):
     got = lines(out, word)
     assert len(got) >= n, out
     assert all(l.startswith("ok") for l in got), "\n".join(got)
+
+
+MESH_SCRIPT = r'''
+import sys
+from playwright.sync_api import sync_playwright
+url = sys.argv[1]
+errs = []
+with sync_playwright() as p:
+    b = p.chromium.launch()
+    pg = b.new_page(viewport={"width": 1300, "height": 900})
+    pg.on("console", lambda m: errs.append(m.text) if m.type == "error" else None)
+    pg.on("pageerror", lambda e: errs.append(str(e)))
+    pg.goto(url)
+    pg.wait_for_function("window.__splosh && window.__splosh.panes && window.__splosh.panes.length > 0 && window.__splosh.map", timeout=120000)
+    m = pg.evaluate("(() => { const m = window.__splosh.map.meta; return {kind: m.kind, field: m.view.field, mode: m.view.mode, center: m.view.center, lu: m.length_unit.unit, n: window.__splosh.map.data.length}; })()")
+    print("MAP", m)
+    assert m["kind"] == "meshref" and m["field"] == "pot" and m["mode"] == "slice" and m["center"] == "origin" and m["lu"] == "M" and m["n"] > 0, m
+    fields = pg.evaluate("[...document.getElementById('field').options].map(o => o.value)")
+    assert "lin2" in fields and "rho" not in fields, fields
+    distinct = pg.evaluate("(() => { const c = document.querySelector('canvas.view'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const s = new Set(); for (let i = 0; i < d.length; i += 4 * 97) s.add(d[i] + ',' + d[i + 1] + ',' + d[i + 2]); return s.size; })()")
+    assert distinct > 20, distinct
+    pg.check('input[data-plug="mesh_boxes"]')
+    pg.wait_for_function("window.__splosh.panes[0].ov && window.__splosh.panes[0].ov.items.some(i => i.overlay === 'mesh_boxes')", timeout=120000)
+    print("OVERLAY", pg.evaluate("window.__splosh.panes[0].ov.items.filter(i => i.kind === 'polyline').length"))
+    assert not errs, errs
+    b.close()
+print("MESH OK")
+'''
+
+
+def test_mesh_run_opens_and_shows_a_map(tmp_path):
+    """a run folder of a mesh kind (the tests' reference format, loaded as a plugin by the server) opens on its default view: a slice with a picture."""
+    import re
+    import secrets
+    import time
+    import meshref
+    py = browser_python()
+    out = tmp_path / "meshrun" / "output"
+    out.mkdir(parents=True)
+    for k in range(2):
+        meshref.write_mesh(str(out / f"snapshot_{k:03d}{meshref.EXT}"), time=k)
+        write_snapshot(str(out / f"snapshot_{k:03d}.hdf5"), n_gas=200, seed=k, time=k)
+    token = secrets.token_urlsafe(12)
+    env = dict(os.environ, PYTHONPATH=os.pathsep.join([os.path.join(ROOT, "src"), os.path.join(ROOT, "tests"), os.environ.get("PYTHONPATH", "")]),
+               SPLOSH_PLUGINS="meshref", SPLOSH_STORE=str(tmp_path / "store"), SPLOSH_RECENT=str(tmp_path / "recent.json"))
+    srv = subprocess.Popen([sys.executable, "-m", "splosh", "serve", str(tmp_path / "meshrun"), "--token=" + token, "--port", "0"], stdout=subprocess.PIPE,
+                           stderr=subprocess.STDOUT, text=True, env=env)
+    try:
+        url, t0 = None, time.time()
+        while time.time() - t0 < 300:
+            line = srv.stdout.readline()
+            m = re.search(r"open\s+(http://\S+)", line)
+            if m:
+                url = m.group(1)
+                break
+            if not line and srv.poll() is not None:
+                break
+        assert url, "server did not start"
+        script = tmp_path / "mesh_browser.py"
+        script.write_text(MESH_SCRIPT)
+        r = subprocess.run([py, str(script), url], capture_output=True, text=True, timeout=600)
+        assert r.returncode == 0 and "MESH OK" in r.stdout, r.stdout + r.stderr
+    finally:
+        srv.kill()
+        srv.wait()

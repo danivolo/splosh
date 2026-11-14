@@ -22,9 +22,30 @@ def _coerce(name, text):
     return t(text)
 
 
+def _kind_of_args(a):
+    """the kind (kinds.py) of the snapshot or the first path the command names, or None."""
+    from . import kinds
+    p = getattr(a, "snapshot", None) or (list(getattr(a, "paths", None) or []) or [None])[0]
+    if not p or not isinstance(p, str):
+        return None
+    p = os.path.expanduser(p.split("=", 1)[1] if "=" in p and not os.path.exists(p) else p)
+    if os.path.isdir(p):
+        from .runs import folder_kind
+        return folder_kind(p)
+    return kinds.kind_of_file(p) if os.path.isfile(p) else None
+
+
 def view_from_args(a):
-    """View from --preset, the individual options and --view k=v,k=v (later wins)."""
+    """View from --preset (without one: the default view of the kind of the named snapshot or run, kinds.py), the individual options and --view k=v,k=v (later wins)."""
     kw = {}
+    if not getattr(a, "preset", None):
+        k = _kind_of_args(a)
+        if k is not None:
+            from . import kinds
+            p = kinds.default_view(k)
+            if "fov" in p:
+                p["width"] = p.pop("fov")
+            kw.update({key: v for key, v in p.items() if key in _VIEW_TYPES})
     if getattr(a, "preset", None):
         plugins.load_plugins()
         if a.preset not in plugins.PRESETS:
@@ -67,6 +88,7 @@ def add_view_options(p):
     p.add_argument("--mu", type=float, help="mean molecular weight for T (default: from ElectronAbundance)")
     p.add_argument("--post", help="transform of the map: resid (contrast against the azimuthal mean about the centre) | resid:mean | resid:smooth:S | grad | grad:S (see docs/USAGE.md, 'Residual and gradient maps')")
     p.add_argument("--exact", action="store_true", default=None, help="exact (slower) engine instead of the multi-resolution one")
+    p.add_argument("--interp", choices=["linear", "nearest"], help="mesh data (a kind's snapshots, docs/KINDS.md): trilinear (default) or nearest-point sampling")
 
 
 def add_style_options(p):
@@ -331,6 +353,8 @@ def cmd_fields(a):
     print(format_fields())
     plugins.load_plugins()
     print("presets:", ", ".join(sorted(plugins.PRESETS)) or "(none)")
+    for name, k in sorted(plugins.KINDS.items()):         # kinds of runs (docs/KINDS.md): their own fields, besides the variables of their files
+        print(f"kind {name} ({k['label']}): fields " + (", ".join(sorted(k["fields"])) or "(the file's variables)") + (f"; units {k['units']}" if k["units"] else ""))
     print("plugins:", plugins.load_plugins(), plugins.errors() or "")
 
 

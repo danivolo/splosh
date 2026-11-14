@@ -783,6 +783,8 @@ def disc(snap, frame, view, **opts):
 for _n, _fn in (("vectors", vectors), ("streamlines", streamlines), ("lic", lic), ("particles", particles), ("contours", contours), ("disc", disc)):
     plugins.register_overlay(_n, _fn)
 BUILTIN_OVERLAYS = ("vectors", "streamlines", "lic", "particles", "contours", "disc")
+from . import mesh as _mesh             # noqa: E402,F401  (registers the mesh overlays mesh_boxes and mesh_markers)
+MESH_OVERLAYS = ("mesh_boxes", "mesh_markers")
 
 
 def _call(fn, snap, frame, view, args, opts):

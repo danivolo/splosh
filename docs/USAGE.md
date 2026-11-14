@@ -15,8 +15,11 @@
 | `splosh overlays` / `splosh inspect SNAP X Y [--limit N]` | the overlays with their options; the gas particles contributing at a map position (JSON, see Overlays). |
 | `splosh fields`, `splosh store [--clear]` | list fields with their cgs unit and the PartType0 datasets each needs, presets, plugins; mapstore statistics. |
 
+Runs of another kind (block-structured mesh data, registered by a plugin: [KINDS.md](KINDS.md)) open with the same commands: the picker counts their snapshots,
+maps are slices of the finest level covering each pixel (`--interp linear|nearest`), overlays `mesh_boxes` and `mesh_markers`.
+
 View options (shared by `render`, `shot`, `sheet`, `movie` and `serve`, which uses them as defaults): `--center`, `--align`, `--axes xy|xz|yz`, `--mode proj|slice`, `--field`, `--width`, `--npix`,
-`--cx --cy` (pan), `--z0` (slice plane), `--weight auto|mass|volume|column`, `--units code|cgs|astro`, `--gamma`, `--xh`, `--mu`, `--bunit`, `--post SPEC`, `--exact`, `--preset NAME`, `--view k=v,k=v`.
+`--cx --cy` (pan), `--z0` (slice plane), `--weight auto|mass|volume|column`, `--units code|cgs|astro`, `--gamma`, `--xh`, `--mu`, `--bunit`, `--post SPEC`, `--exact`, `--interp linear|nearest` (mesh data), `--preset NAME`, `--view k=v,k=v`.
 
 ## Frames
 Centre (`--center`): `com` (mass-weighted gas + black holes), `mass-weighted` (gas), `bh` (black-hole particles; the binary centre of mass for two), `peak` (densest gas particle),

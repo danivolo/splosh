@@ -173,6 +173,10 @@ class TileRenderer:
             raise ValueError("tiles are raw maps: View.post (a transform of the whole window) cannot be tiled; render the map without tiles")
         self.snap, self.view, self.grid = snap, view, grid
         self.frame = make_frame(snap, view.center, view.align, view.tilt)
+        self.mesh = "mesh" in snap                             # mesh data (mesh.py): every tile is a slice of its own window, nothing to cull
+        if self.mesh:
+            self.n = 0
+            return
         ia, ib, il = AXES[view.axes]
         pos = self.frame.pos(snap["Coordinates"])
         self.n = len(pos)
@@ -226,6 +230,9 @@ class TileRenderer:
 
     def render(self, ix, iy):
         """(image (tile, tile) float32, meta) of one tile, by render_map on the culled particles."""
+        if self.mesh:
+            img, meta = render_map(self.snap, _tile_view(self.view, self.grid, ix, iy), frame=self.frame)
+            return np.ascontiguousarray(img[HALO:-HALO, HALO:-HALO]), meta
         cand = self.candidates(ix, iy)
         sub = _subset(self.snap, self.ids[cand], self.n)
         tv = _tile_view(self.view, self.grid, ix, iy)

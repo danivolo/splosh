@@ -17,11 +17,16 @@ import re
 import h5py
 import numpy as np
 
+from . import kinds
 
 
 def run_snapshots(path):
-    """the snapshots of a run given its directory: those of <path>/output when it has any (a run directory may also hold its initial conditions or other
-    snapshot files next to output/), else those found under `path` itself (find_snapshots)."""
+    """the snapshots of a run given its directory: a kind's snapshots when a kind claims the directory (kinds.py); else those of <path>/output when it has
+    any (a run directory may also hold its initial conditions or other snapshot files next to output/; a kind claiming output/ gives its own), else those
+    found under `path` itself (find_snapshots)."""
+    k = kinds.kind_of_dir(path)
+    if k is not None:
+        return kinds.snapshots(k, path)
     out = os.path.join(path, "output")
     if os.path.isdir(out):
         got = find_snapshots([out])
@@ -39,6 +44,9 @@ SNAP_EXT = (".hdf5", ".h5")
 
 
 def _count_snaps(path):
+    k = kinds.kind_of_dir(path)
+    if k is not None:
+        return len(kinds.snapshots(k, path))
     try:
         return sum(1 for e in os.scandir(path) if e.name.endswith(SNAP_EXT) and e.is_file())
     except OSError:
@@ -46,7 +54,10 @@ def _count_snaps(path):
 
 
 def snapshot_dir(path):
-    """(the folder whose snapshots a run directory opens, their number): <path>/output when it has snapshots (run_snapshots), else `path` itself."""
+    """(the folder whose snapshots a run directory opens, their number): `path` when a kind claims it, <path>/output when it has snapshots (run_snapshots),
+    else `path` itself."""
+    if kinds.kind_of_dir(path) is not None:
+        return path, _count_snaps(path)
     out = os.path.join(path, "output")
     if os.path.isdir(out):
         n = _count_snaps(out)
@@ -92,12 +103,24 @@ def _keyvals(text):
     return kv
 
 
-def _snap_time(path):
+def _snap_time(path, kind=None):
     try:
+        if kind is not None:
+            return kinds.snapshot_time(path, kind)
         with h5py.File(path, "r") as f:
-            return float(f["Header"].attrs["Time"])
+            return float(np.ravel(f["Header"].attrs["Time"])[0])
     except Exception:
         return None
+
+
+def folder_kind(path):
+    """the kind (kinds.py) of the run a folder opens: the kind claiming it or its output/, else None (particles)."""
+    k = kinds.kind_of_dir(path)
+    if k is None:
+        sd, n = snapshot_dir(path)
+        if sd != path:
+            k = kinds.kind_of_dir(sd)
+    return k
 
 
 def _fmt_t(t):
@@ -171,10 +194,15 @@ def folder_description(path):
         if st.strip():
             parts.append(st.strip())
     if n:
-        snaps = sorted((e.name for e in os.scandir(sdir) if e.name.endswith(SNAP_EXT)), key=lambda x: [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", x)])
-        t0, t1 = _snap_time(os.path.join(sdir, snaps[0])), _snap_time(os.path.join(sdir, snaps[-1]))
+        kd = kinds.kind_of_dir(sdir)
+        if kd is not None:
+            snaps = kinds.snapshots(kd, sdir)
+        else:
+            snaps = sorted((e.name for e in os.scandir(sdir) if e.name.endswith(SNAP_EXT)), key=lambda x: [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", x)])
+        t0, t1 = _snap_time(os.path.join(sdir, snaps[0]), kd), _snap_time(os.path.join(sdir, snaps[-1]), kd)
         where = " in output/" if sdir != path else ""
-        parts.append(f"{n} snapshot{'s' if n > 1 else ''}{where}, t = {_fmt_t(t0)}" + (f"-{_fmt_t(t1)}" if n > 1 else ""))
+        what = f"{kinds.label(kd)} " if kd else ""
+        parts.append(f"{n} {what}snapshot{'s' if n > 1 else ''}{where}, t = {_fmt_t(t0)}" + (f"-{_fmt_t(t1)}" if n > 1 else ""))
     out = " \u00b7 ".join(parts)
     out = out if len(out) <= DESC_MAX else out[:DESC_MAX - 1] + "\u2026"
     _DESC[path] = (sig, out)
@@ -219,8 +247,11 @@ def group_runs(args):
     return out
 
 
-def snapshot_times(path):
-    """(time in code units or nan, time in Myr or None) from the header of a snapshot."""
+def snapshot_times(path, kind=None):
+    """(time in code units or nan, time in Myr or None) from the header of a snapshot (a kind's snapshot: the kind's time, no Myr)."""
+    if kind is not None:
+        t = _snap_time(path, kind)
+        return (float("nan") if t is None else t), None
     try:
         with h5py.File(path, "r") as f:
             h = {k: np.asarray(v).tolist() for k, v in f["Header"].attrs.items()}
@@ -272,7 +303,8 @@ def binary_period(path):
 class Run:
     def __init__(self, label, paths):
         self.label, self.paths = label, list(paths)
-        tt = [snapshot_times(p) for p in self.paths]
+        self.kind = kinds.kind_of_file(self.paths[0]) if self.paths else None      # a kind of run (kinds.py), None for particle snapshots
+        tt = [snapshot_times(p, self.kind) for p in self.paths]
         self.times = [t for t, _ in tt]
         self.times_myr = [m for _, m in tt]
 
@@ -280,7 +312,7 @@ class Run:
     def period(self):
         """the binary's orbital period P0 at the run's first snapshot (code time), or None (binary_period)."""
         if not hasattr(self, "_period"):
-            self._period = binary_period(self.paths[0]) if self.paths else None
+            self._period = binary_period(self.paths[0]) if self.paths and self.kind is None else None
         return self._period
 
     @property

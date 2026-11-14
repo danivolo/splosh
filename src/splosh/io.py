@@ -11,7 +11,13 @@ from . import progress
 def load_snapshot(path, gas_fields=("Coordinates", "SmoothingLength", "Masses", "Density", "InternalEnergy", "Velocities"), types=(), rows=None):
     """gas_fields: the PartType0 datasets to read (add "ParticleIDs" to centre on gas particles by ID); a name starting with "?" is optional.
     types: other particle types to read for particle overlays, e.g. (1, 4): snap["pt"][t] = dict(pos float64 (N, 3), mass, id, vel when present); a type the file lacks is skipped
-    (type 5, the black holes, is always read into the bh_* keys)."""
+    (type 5, the black holes, is always read into the bh_* keys).
+    A snapshot of a registered kind (kinds.py, e.g. block-structured mesh data) gives mesh.snap_dict instead: time, header, path, kind, mesh (the opened object)."""
+    from . import kinds
+    kind = kinds.kind_of_file(path)
+    if kind is not None:
+        from .mesh import snap_dict
+        return snap_dict(path, kind)
     out = {}
     with h5py.File(path, "r") as f:
         hd = f["Header"].attrs

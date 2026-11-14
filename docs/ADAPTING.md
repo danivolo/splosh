@@ -23,7 +23,8 @@ splosh fields                                  # fields, presets, plugins it kno
     - `register_scalar(name, fn)`: one number per snapshot for `splosh analyze` and the time-series panes;
     - `register_series(name, fn, files, ...)`: time series read from your code's text logs (series.py; GIZMO's `energy.txt` and `blackholes.txt` are the built-in examples);
     - `register_preset(name, settings)`: named view settings for your set-ups;
-    - `register_info_section(fn)`: extra lines in `splosh info`.
+    - `register_info_section(fn)`: extra lines in `splosh info`;
+    - `register_kind(name, detect, snapshots, open, ...)`: a kind of run that is not particles, e.g. block-structured mesh data (slices of the finest level, box outlines): see [KINDS.md](KINDS.md).
 - **What the loader assumes** (`src/splosh/io.py`): GADGET/GIZMO HDF5 with `PartType0` `Coordinates`, `SmoothingLength` (GIZMO's kernel support radius H), `Masses`, `Density`, `InternalEnergy`, `Velocities`; other datasets are read when a field needs them; header `Time`, `BoxSize`, units if present.
   - A different kernel convention (H = support vs H = 2 x support) is the `hscale` view option. Check one map against SPLASH or your own tool before trusting numbers (VALIDATION.md shows how).
 - **Black holes are optional**: the centre rule `bh`, the `bh` markers and the binary period only apply when the snapshot has `PartType5`. Without it, use `--center com` (or `peak`, `mass-weighted`, or a particle ID; see `splosh render --help`), `--align none`, and `--tilt L` to look face-on onto a disc.

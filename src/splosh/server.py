@@ -68,11 +68,15 @@ def natural_key(s):
 
 
 def find_snapshots(paths):
-    """sorted list of snapshot files from files and directories (*.hdf5 / *.h5)."""
+    """sorted list of snapshot files from files and directories (*.hdf5 / *.h5; a directory claimed by a kind (kinds.py): that kind's snapshots)."""
+    from . import kinds
     out = []
     for p in paths:
         p = os.path.expanduser(p)
-        if os.path.isdir(p):
+        k = kinds.kind_of_dir(p) if os.path.isdir(p) else None
+        if k is not None:
+            out += kinds.snapshots(k, p)
+        elif os.path.isdir(p):
             out += glob.glob(os.path.join(p, "*.hdf5")) + glob.glob(os.path.join(p, "*.h5"))
         else:
             out.append(p)
@@ -101,7 +105,8 @@ class ViewerState:
             if not self.runs:
                 raise SystemExit("no snapshots found")
         self.store = store or MapStore()
-        self.defaults = defaults or View()
+        self.base_defaults = defaults or View()  # the command line's view; a run of a kind (kinds.py) replaces the settings left at View()'s defaults by the kind's default view
+        self.defaults = self._kind_defaults()
         self.token = token or secrets.token_urlsafe(18)
         self.keep = keep
         self._snaps = OrderedDict()
@@ -137,6 +142,21 @@ class ViewerState:
     @property
     def times(self):
         return self.runs[0].times if self.runs else []
+
+    def _kind_defaults(self):
+        base = getattr(self, "base_defaults", None) or View()
+        kind = self.runs[0].kind if self.runs else None
+        if kind is None:
+            return base
+        from . import kinds
+        plain = View().as_dict()
+        d = base.as_dict()
+        for k, v in kinds.default_view(kind).items():
+            if k == "fov":
+                k = "width"
+            if k in d and d[k] == plain[k]:
+                d[k] = v
+        return View(**d).validate()
 
     @staticmethod
     def _make_runs(paths):
@@ -177,7 +197,7 @@ class ViewerState:
                 except OSError:
                     sub = False
                 sd, n = R.snapshot_dir(e.path)
-                out.append({"path": rel_of(e.path), "name": e.name, "n": n, "sub": sub, "output": sd != e.path, "abs": e.path})
+                out.append({"path": rel_of(e.path), "name": e.name, "n": n, "sub": sub, "output": sd != e.path, "abs": e.path, "kind": R.folder_kind(e.path)})
         else:
             t0, seen, at = time.time(), 0, {}
             for top, dirs, files in os.walk(d, followlinks=False):
@@ -186,25 +206,27 @@ class ViewerState:
                 if seen > max_dirs or time.time() - t0 > seconds:
                     truncated = True
                     break
-                n = sum(1 for f in files if f.endswith(R.SNAP_EXT))
+                kd = R.kinds.kind_of_dir(top)
+                n = len(R.kinds.snapshots(kd, top)) if kd else sum(1 for f in files if f.endswith(R.SNAP_EXT))
                 if not n or top == d:
                     continue
                 up = os.path.dirname(top)
                 if os.path.basename(top) == "output" and up != d:          # a run's output/: the run is its parent folder (which opens these snapshots)
                     if up in at:
-                        at[up].update(n=n, output=True)
+                        if not at[up].get("kind"):                          # a run folder its kind claims keeps its own count
+                            at[up].update(n=n, output=True, kind=kd)
                     else:
-                        at[up] = {"path": rel_of(up), "name": os.path.relpath(up, d), "n": n, "sub": True, "output": True, "abs": up}
+                        at[up] = {"path": rel_of(up), "name": os.path.relpath(up, d), "n": n, "sub": True, "output": True, "abs": up, "kind": kd}
                         out.append(at[up])
                     continue
-                at[top] = {"path": rel_of(top), "name": os.path.relpath(top, d), "n": n, "sub": bool(dirs), "output": False, "abs": top}
+                at[top] = {"path": rel_of(top), "name": os.path.relpath(top, d), "n": n, "sub": bool(dirs), "output": False, "abs": top, "kind": kd}
                 out.append(at[top])
         t0 = time.time()
         for e in out:
             p = e.pop("abs")
             e["desc"] = R.folder_description(p) if (e["n"] or not deep) and time.time() - t0 < desc_seconds else None
         here, n_here = R.snapshot_dir(d)
-        return {"root": self.root, "dir": rel_of(d), "parent": None if d == self.root else rel_of(os.path.dirname(d)), "n": n_here, "output": here != d,
+        return {"root": self.root, "dir": rel_of(d), "parent": None if d == self.root else rel_of(os.path.dirname(d)), "n": n_here, "output": here != d, "kind": R.folder_kind(d),
                 "entries": out, "truncated": truncated}
 
     def open_runs(self, rels, add=False):
@@ -216,6 +238,7 @@ class ViewerState:
         remember_recent([os.path.realpath(p) for p in paths], add)
         with self.work():
             self.runs = (self.runs + new) if add else new
+            self.defaults = self._kind_defaults()
             self._snaps.clear()
             self.__dict__.pop("_tile_renderers", None)
             self._preview_cache.clear()
@@ -517,7 +540,7 @@ class ViewerState:
 
     def snap_for(self, i, view, run=0, margin=0.5):
         """the snapshot dict to render `view` from: a loaded region (region.py) when partial loading applies and pays off, else the whole snapshot."""
-        if self.partial == "off":
+        if self.partial == "off" or self.runs[run].kind is not None:      # a mesh kind reads only the patches a slice needs anyway (mesh.py)
             return self.snap(i, view, run)
         from . import region
         path = self.path(run, i)
@@ -543,7 +566,7 @@ class ViewerState:
     def view_from_query(self, q):
         d = self.defaults.as_dict()
         for k, typ in (("center", str), ("align", str), ("tilt", str), ("axes", str), ("mode", str), ("field", str), ("weight", str), ("npix", int), ("width", float),
-                       ("cx", float), ("cy", float), ("z0", float), ("hscale", float), ("units", str), ("gamma", float), ("xh", float), ("mu", float), ("bunit", float), ("post", str), ("kappa", float), ("exact", lambda v: v in ("1", "true", "True"))):
+                       ("cx", float), ("cy", float), ("z0", float), ("hscale", float), ("units", str), ("gamma", float), ("xh", float), ("mu", float), ("bunit", float), ("post", str), ("kappa", float), ("interp", str), ("exact", lambda v: v in ("1", "true", "True"))):
             if k in q:
                 d[k] = typ(q[k][0])
         # quantise so that panning and zooming revisit cache entries
@@ -745,13 +768,24 @@ def remember_recent(paths, add=False):
 def available_fields(state):
     """the fields the open runs can show: those whose PartType0 datasets are all in the first snapshot of at least one run (B and beta need
     MagneticField, divB needs DivergenceOfMagneticField, ...). Every field when no run is open or a snapshot cannot be read."""
-    from . import datasets
-    for r in state.runs:                                    # the runs' own datasets become fields too (WindFraction, TimeStep, Metallicity_0, ...)
+    from . import datasets, kinds
+    mesh_names = []
+    for r in state.runs:                                    # a run of a kind (kinds.py): the kind's fields and the variables of its first snapshot
+        if r.kind is not None and r.paths:
+            try:
+                obj = kinds.open_mesh(r.paths[0], r.kind)
+            except Exception:
+                obj = None
+            mesh_names += [n for n in kinds.field_specs(r.kind, obj) if n not in mesh_names]
+    prt = [r for r in state.runs if r.kind is None]
+    if mesh_names and not prt:
+        return mesh_names
+    for r in prt:                                           # the runs' own datasets become fields too (WindFraction, TimeStep, Metallicity_0, ...)
         if r.paths:
             datasets.from_file(r.paths[0])
     names = field_names()
     present = set()
-    for r in state.runs:
+    for r in prt:
         if not r.paths:
             continue
         try:
@@ -760,7 +794,7 @@ def available_fields(state):
         except (OSError, KeyError):
             return names
     if not present:
-        return names
+        return names + [n for n in mesh_names if n not in names]
     out = []
     for n in names:
         try:
@@ -769,7 +803,12 @@ def available_fields(state):
             need = set()
         if need <= present:
             out.append(n)
-    return out
+    return out + [n for n in mesh_names if n not in out]
+
+
+def _mesh_overlays():
+    from .overlays import MESH_OVERLAYS        # offered only when a run of a mesh kind is open
+    return MESH_OVERLAYS
 
 
 def _builtin_overlays():
@@ -849,12 +888,13 @@ def make_handler(state):
                     plugins.load_plugins()
                     return self._send(200, json.dumps({
                         "snapshots": [{"i": i, "name": os.path.basename(p), "time": _finite(t)} for i, (p, t) in enumerate(zip(state.paths, state.times))],
-                        "runs": [{"run": r, "label": run.label, "n": len(run.paths)} for r, run in enumerate(state.runs)],
+                        "runs": [{"run": r, "label": run.label, "n": len(run.paths), "kind": run.kind} for r, run in enumerate(state.runs)],
                         "fields": available_fields(state), "phase_quantities": _phase.quantities(), "colormaps": colormaps.names(), "defaults": state.defaults.as_dict(), "store": state.store.stats(),
                         "presets": sorted(plugins.PRESETS), "tile": tile_info(state),
                         "plugin_overlays": [{"name": n, "label": ((fn.__doc__ or n).strip().splitlines() or [n])[0][:80],
                                              "options": [{"key": k, "label": lab, "default": d} for k, lab, d in plugins.OVERLAY_OPTIONS.get(n, [])]}
-                                            for n, fn in sorted(plugins.OVERLAYS.items()) if n not in _builtin_overlays()],
+                                            for n, fn in sorted(plugins.OVERLAYS.items()) if n not in _builtin_overlays()
+                                            and (n not in _mesh_overlays() or any(run.kind for run in state.runs))],
                         "threads": state.threads, "max_threads": state.max_threads, "root": state.root}), "application/json")
                 if u.path == "/api/jobs":
                     return self._send(200, json.dumps({"jobs": state.jobs.list(), "slurm": " ".join(state.jobs.slurm), "ffmpeg": bool(state.ffmpeg)}), "application/json")
@@ -873,7 +913,7 @@ def make_handler(state):
                     return self._send(200, json.dumps(state.browse(q.get("dir", [""])[0], q.get("deep", ["0"])[0] in ("1", "true"))), "application/json")
                 if u.path == "/api/runs":
                     from . import runs as R
-                    return self._send(200, json.dumps({"runs": [{"run": r, "label": run.label, "n": len(run.paths), "time_myr": run.has_myr, "period": run.period,
+                    return self._send(200, json.dumps({"runs": [{"run": r, "label": run.label, "n": len(run.paths), "kind": run.kind, "time_myr": run.has_myr, "period": run.period,
                                                                   "snapshots": [run.describe(i) for i in range(len(run.paths))]} for r, run in enumerate(state.runs)],
                                                        "aligns": list(R.ALIGNS)}), "application/json")
                 if u.path == "/api/series":

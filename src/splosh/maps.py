@@ -47,6 +47,7 @@ class View:
     post: str = "none"          # transforms.py: none | resid[:azim|mean|smooth:S] | grad[:S]  (contrast against a reference, or gradient magnitude, of the map)
     exact: bool = False         # projection: True = exact row-band engine instead of the multi-resolution default (slices are always exact)
     kappa: float = 0.0          # volume: opacity per unit mass (code length^2 / mass), tau = kappa * column density; 0 = automatic (tau = 1 at the window's mean column density)
+    interp: str = "linear"      # mesh data (mesh.py): linear (trilinear in the finest level covering a pixel) | nearest (the nearest stored point); particles ignore it
 
     def as_dict(self):
         return asdict(self)
@@ -59,6 +60,8 @@ class View:
             raise ValueError(f"axes must be one of {list(AXES)}")
         if self.mode not in ("proj", "slice", "volume"):
             raise ValueError("mode must be proj, slice or volume")
+        if self.interp not in ("linear", "nearest"):
+            raise ValueError("interp must be linear or nearest")
         if not self.kappa >= 0:
             raise ValueError("kappa must be >= 0 (0 = automatic)")
         if self.weight not in ("auto", "mass", "volume", "column"):
@@ -139,6 +142,9 @@ def resolve_weight(view):
 def required_gas_fields(view):
     """PartType0 datasets a render of `view` reads (the loader takes this as gas_fields)."""
     f = {"Coordinates", "SmoothingLength", "Masses"}
+    from . import kinds
+    if view.field not in plugins.FIELDS and view.field not in BUILTIN and view.field != "rho" and kinds.is_mesh_field(view.field):
+        return f                                        # a field of a mesh kind (kinds.py): the mesh loader ignores the particle datasets
     if view.field not in plugins.FIELDS and view.field not in BUILTIN:
         from . import datasets
         datasets.ensure(view.field)                     # a snapshot dataset by its name (datasets.py)
@@ -205,6 +211,9 @@ def render_map(snap, view, frame=None, engine_kw=None):
     engine_kw: extra keyword arguments for the projection engine (e.g. min_npix of the multi-resolution levels; used by tiles.py)."""
     view.validate()
     plugins.load_plugins()
+    if "mesh" in snap:                                      # a snapshot of a mesh kind (kinds.py, mesh.py): a slice of the finest level at every pixel
+        from .mesh import render_mesh
+        return render_mesh(snap, view, frame)
     frame = frame or make_frame(snap, view.center, view.align, view.tilt)
     from .frames import select_in_frame, gather
     ia, ib, il = AXES[view.axes]

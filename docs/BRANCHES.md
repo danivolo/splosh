@@ -15,7 +15,9 @@
 | splatting, maps, slices, volume rendering, frames, units, derived fields, tiles, partial loading | yes | |
 | viewer, layouts and figures, movies, the analysis pipeline, comparisons | yes | |
 | time-series sources of GIZMO's own logs (energy, blackholes, cpu, timebin, timings, balance) | yes | |
-| the registries: fields, overlays, scalars, series sources, snapshot products, presets, info sections | yes | |
+| the registries: fields, overlays, scalars, series sources, snapshot products, presets, info sections, kinds | yes | |
+| the generic block-structured mesh model, its slice renderer and box outlines (KINDS.md) | yes | |
+| the reader of one code's mesh files, its variable names and derived quantities | | yes |
 | datasets and logs of a modified code (extra particle fields, per-object log files) | | yes |
 | presets and layouts for specific runs, figures of a thesis or paper | | yes |
 | tools of one cluster or one person's workflow | | yes |

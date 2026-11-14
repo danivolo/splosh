@@ -27,9 +27,13 @@ def snapshot_hash(path, full=False):
         return _sig_cache[ck]
     h = hashlib.sha1()
     h.update(str(st.st_size).encode())
-    with h5py.File(path, "r") as f:
-        for k in sorted(f["Header"].attrs):
-            h.update(k.encode()); h.update(np.asarray(f["Header"].attrs[k]).tobytes())
+    try:
+        with h5py.File(path, "r") as f:
+            if "Header" in f:
+                for k in sorted(f["Header"].attrs):
+                    h.update(k.encode()); h.update(np.asarray(f["Header"].attrs[k]).tobytes())
+    except OSError:
+        pass                                            # not an HDF5 file (a plugin kind's own format): the size and the sampled blocks below
     with open(path, "rb") as fh:
         if full:
             for blk in iter(lambda: fh.read(1 << 22), b""):
@@ -46,7 +50,7 @@ def _norm(v):
     return float(f"{v:.6g}") if isinstance(v, float) else v
 
 
-LATER_DEFAULTS = {"tilt": "none", "kappa": 0.0}     # View fields added after maps were stored: left out of the key at their default, so old keys stay valid
+LATER_DEFAULTS = {"tilt": "none", "kappa": 0.0, "interp": "linear"}     # View fields added after maps were stored: left out of the key at their default, so old keys stay valid
 
 
 def _view_dict(view, skip=()):

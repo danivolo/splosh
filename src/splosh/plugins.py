@@ -8,6 +8,7 @@ A plugin is an importable module that registers things when imported:
     plugins.register_preset(name, dict)    # named bundle of view settings
     plugins.register_series(name, fn, files=fn2, label=...)   # a time-series source of a run (series.py): fn(ctx) -> series.Table, files(ctx) -> input files (cache key)
     plugins.register_scalar(name, fn, needs=())   # fn(snap, **params) -> float or {column: float}, one row per snapshot of `splosh analyze` (snap: see io.load_snapshot; needs: extra PartType0 datasets, '?X' = optional)
+    plugins.register_kind(name, detect, snapshots, open, fields=..., units=..., default_view=...)   # a kind of run that is not particles (block-structured mesh data): docs/KINDS.md
 Discovery (load_plugins): entry points of the group `splosh.plugins` (each names a module to import) and the environment
 variable SPLOSH_PLUGINS (comma-separated module names). The core never imports a plugin by name."""
 import importlib
@@ -67,6 +68,22 @@ def register_product(name, fn, needs=(), version=1, label=None, applies=None, pa
     defaults: the columns a time-series pane shows first; meta: {column: {label, unit, group}}."""
     PRODUCTS[name] = {"fn": fn, "needs": tuple(needs), "version": int(version), "label": label or name, "applies": applies, "params": dict(params or {}),
                       "defaults": list(defaults), "meta": dict(meta or {})}
+
+
+KINDS = {}           # name -> dict(detect, snapshots, open, fields, units, default_view, label, time, doc): kinds of runs (kinds.py, docs/KINDS.md)
+
+
+def register_kind(name, detect, snapshots, open, fields=None, units=None, default_view=None, label=None, time=None, doc=None):
+    """A kind of run whose snapshots are not GIZMO particle files (docs/KINDS.md). detect(folder) -> bool: this kind claims the folder (cheap: it runs for every
+    folder the picker lists); snapshots(folder) -> [paths]: its snapshot files (only these are offered); open(path) -> a mesh object (mesh.py: time, levels,
+    variables, read(var, level, patch, lo, hi)). fields: {name: {"needs": (var, ...), "fn": fn(v) -> array | None, "label": str, "unit": str}}, fn gets a dict
+    of the sampled variables (and the pixel positions "x", "y", "z"); fn None: the value of the single variable in needs. units: {"length": name, "time": name}.
+    default_view: View settings a run of this kind opens with (also a preset of this name). time(path) -> float: the snapshot's time, read cheaply
+    (default: the attribute Time of /Header)."""
+    KINDS[name] = {"detect": detect, "snapshots": snapshots, "open": open, "fields": {str(k): dict(v) for k, v in (fields or {}).items()},
+                   "units": dict(units or {}), "default_view": dict(default_view or {}), "label": label or name, "time": time, "doc": doc or ""}
+    if default_view:
+        register_preset(name, default_view)
 
 
 def load_plugins(force=False):
