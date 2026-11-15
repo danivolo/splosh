@@ -263,6 +263,7 @@ def test_other_torques_outside_R(run):
     for k in [c_ for c_ in s if c_.startswith("Thydro_")]:
         assert s[k] == pytest.approx(2 * s["Tgrav_" + k[7:]], rel=1e-9)
         assert s["jdoth_" + k[7:]] == pytest.approx(-(s["Fadvtot_" + k[7:]] + 3 * s["Tgrav_" + k[7:]]), rel=1e-9)
+        assert s["Tspur_" + k[7:]] == pytest.approx(s[k], rel=1e-12)                 # no field, no registered fluxes: all of Thydro
     assert max(abs(v) for c_, v in s.items() if c_.startswith("Tbulge_")) < 1e-9                 # centred: radial force, no torque
     assert all(abs(v) < 1e-9 for c_, v in s.items() if c_.startswith("Tframe_"))                  # the Plummer pull on a centred binary is zero
     s2 = P.PRODUCTS["disc"]["fn"](p, {**base, "plummer": [100.0, 3.0, 2.0, 0.0, 0.0]})["scalars"]

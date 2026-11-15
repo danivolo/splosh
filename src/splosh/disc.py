@@ -26,6 +26,7 @@ Per cylindrical shell (columns <name>_<R>, a family per quantity, R the shell's 
     nu, alphaeff, tvisc   the effective viscosity of all the stresses with the measured shear (F = -2 pi R^3 nu Sigma dOmega/dR), nu Omega / c_s^2, R^2 / nu in orbits
     Tbulge, Tframe, Tgrav   torques on the gas outside R: a static Plummer sphere (param plummer), the accelerating frame, all gravity (the cells'
                 'Acceleration' dataset); jdotb = jdot - Tbulge - Tframe, jdotg = (fluxes) - Tgrav: the budget with them
+    Tspur       Thydro - Fmax - (registered fluxes, e.g. an explicit viscosity): in the continuum zero (pressure exerts no torque on a closed annulus)
     Thydro, jdoth   the hydro forces' torque on the gas outside R (the cells' 'HydroAcceleration'), and -(Fadvtot + Tgrav + Thydro): with both datasets
                 the identity d Jout/dt = -jdoth holds exactly up to the time sampling (it compares the code's forces with the stress fluxes Frey+Fmax+Fvisc)
     Jout        angular momentum of the gas outside R (units of a^2 Omega_b x mass): closure test d(Jout)/dt = -jdot between snapshots (no outer losses)
@@ -349,6 +350,8 @@ def disc(path, params):
         fam["dThydro"] = _bin(idx, len(Rmid), m * tz(ah)) / np.diff(edges) / lunit      # where it acts: per unit R/a (like dTdR)
         if "Tgrav" in fam:
             fam["jdoth"] = -(fam["Fadvtot"] + fam["Tgrav"] + fam["Thydro"])
+        # in the continuum the hydro torque on the gas outside R equals the stress fluxes through R (pressure exerts none): the rest is spurious
+        fam["Tspur"] = fam["Thydro"] - (fam["Fmax"] if "Fmax" in fam else 0.0) - sum(fam["F" + n] for n in names)
     # the gas left out by exclude_ids (e.g. injected wind cells): its mass and advective angular-momentum fluxes through the same cylinders
     if not keep.all():
         xp = np.asarray(s["Coordinates"], np.float64)[~keep] - com
@@ -476,7 +479,7 @@ FAMILIES = {"sigma_": "Sigma", "hr_": "H/R", "rhomid_": "rho_mid", "cs2_": "c_s^
             "epsP_": "epsilon_P", "toomre_": "Toomre Q", "hH_": "<h> / H", "nH_": "cells per H", "mdotx_": "Mdot of the excluded gas",
             "Fx_": "excluded gas (advective)", "jdotx_": "J inflow incl. excluded gas", "mdott_": "Mdot of all gas", "nu_": "nu_eff", "tvisc_": "t_visc [orbits]",
             "alphaeff_": "alpha_eff (all stresses)", "qshear_": "d ln Omega / d ln R", "Jout_": "J of the gas outside R", "Jxout_": "J of the excluded gas outside R", "Tbulge_": "Plummer torque outside R",
-            "Tframe_": "frame torque outside R", "Tgrav_": "all-gravity torque outside R", "jdotb_": "J inflow - all known torques", "jdotg_": "J inflow - gravity (dataset)", "Thydro_": "hydro torque outside R (dataset)", "dThydro_": "hydro torque density per unit R/a (dataset)",
+            "Tframe_": "frame torque outside R", "Tgrav_": "all-gravity torque outside R", "jdotb_": "J inflow - all known torques", "jdotg_": "J inflow - gravity (dataset)", "Thydro_": "hydro torque outside R (dataset)", "dThydro_": "hydro torque density per unit R/a (dataset)", "Tspur_": "spurious torque: Thydro - (Fmax + registered fluxes)",
             "jdoth_": "-(Fadvtot + Tgrav + Thydro) (datasets)"}
 
 plugins.register_product("disc", disc, needs=("Coordinates", "Velocities", "Masses", "Density", "InternalEnergy", "SmoothingLength", "?MagneticField", "?ParticleIDs",
