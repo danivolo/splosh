@@ -346,6 +346,7 @@ def disc(path, params):
     ah = _dataset(path, "HydroAcceleration", keep)
     if ah is not None and ah.ndim == 2:
         fam["Thydro"] = outside(m * tz(ah)) / lunit
+        fam["dThydro"] = _bin(idx, len(Rmid), m * tz(ah)) / np.diff(edges) / lunit      # where it acts: per unit R/a (like dTdR)
         if "Tgrav" in fam:
             fam["jdoth"] = -(fam["Fadvtot"] + fam["Tgrav"] + fam["Thydro"])
     # the gas left out by exclude_ids (e.g. injected wind cells): its mass and advective angular-momentum fluxes through the same cylinders
@@ -475,7 +476,7 @@ FAMILIES = {"sigma_": "Sigma", "hr_": "H/R", "rhomid_": "rho_mid", "cs2_": "c_s^
             "epsP_": "epsilon_P", "toomre_": "Toomre Q", "hH_": "<h> / H", "nH_": "cells per H", "mdotx_": "Mdot of the excluded gas",
             "Fx_": "excluded gas (advective)", "jdotx_": "J inflow incl. excluded gas", "mdott_": "Mdot of all gas", "nu_": "nu_eff", "tvisc_": "t_visc [orbits]",
             "alphaeff_": "alpha_eff (all stresses)", "qshear_": "d ln Omega / d ln R", "Jout_": "J of the gas outside R", "Jxout_": "J of the excluded gas outside R", "Tbulge_": "Plummer torque outside R",
-            "Tframe_": "frame torque outside R", "Tgrav_": "all-gravity torque outside R", "jdotb_": "J inflow - all known torques", "jdotg_": "J inflow - gravity (dataset)", "Thydro_": "hydro torque outside R (dataset)",
+            "Tframe_": "frame torque outside R", "Tgrav_": "all-gravity torque outside R", "jdotb_": "J inflow - all known torques", "jdotg_": "J inflow - gravity (dataset)", "Thydro_": "hydro torque outside R (dataset)", "dThydro_": "hydro torque density per unit R/a (dataset)",
             "jdoth_": "-(Fadvtot + Tgrav + Thydro) (datasets)"}
 
 plugins.register_product("disc", disc, needs=("Coordinates", "Velocities", "Masses", "Density", "InternalEnergy", "SmoothingLength", "?MagneticField", "?ParticleIDs",
