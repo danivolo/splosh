@@ -249,9 +249,10 @@ def test_other_torques_outside_R(run):
     with h5py.File(p, "a") as f:
         f["PartType0"]["Acceleration"] = np.column_stack([-c * pos[:, 1], c * pos[:, 0], np.zeros(len(m))])    # (r x a)_z = c R^2
         f["PartType0"]["HydroAcceleration"] = np.column_stack([-2 * c * pos[:, 1], 2 * c * pos[:, 0], np.zeros(len(m))])
+        f["PartType0"]["ViscousTorque"] = np.column_stack([np.zeros(len(m)), np.zeros(len(m)), m * 2 * c * (pos[:, 0] ** 2 + pos[:, 1] ** 2)])
     plugins.load_plugins()
     base = P.params_of("disc", {"r_min": 2.0, "r_max": 7.0, "nbins": 5, "exclude_ids": [], "fluxes": []})
-    s = P.PRODUCTS["disc"]["fn"](p, {**base, "plummer": [100.0, 3.0, 0.0, 0.0, 0.0]})["scalars"]
+    s = P.PRODUCTS["disc"]["fn"](p, {**base, "plummer": [100.0, 3.0, 0.0, 0.0, 0.0], "cell_torques": {"Tpair": "ViscousTorque"}})["scalars"]
     R = np.hypot(pos[:, 0], pos[:, 1])
     a, Om = 1.0, 1.0                                                     # a = 1, G M = 1: a^2 Omega_b = 1
     e = np.logspace(np.log10(2.0), np.log10(7.0), 6)
@@ -264,6 +265,7 @@ def test_other_torques_outside_R(run):
         assert s[k] == pytest.approx(2 * s["Tgrav_" + k[7:]], rel=1e-9)
         assert s["jdoth_" + k[7:]] == pytest.approx(-(s["Fadvtot_" + k[7:]] + 3 * s["Tgrav_" + k[7:]]), rel=1e-9)
         assert s["Tspur_" + k[7:]] == pytest.approx(s[k], rel=1e-12)                 # no field, no registered fluxes: all of Thydro
+        assert s["Tpair_" + k[7:]] == pytest.approx(s[k], rel=1e-9)                  # the same torque, written per cell
     assert max(abs(v) for c_, v in s.items() if c_.startswith("Tbulge_")) < 1e-9                 # centred: radial force, no torque
     assert all(abs(v) < 1e-9 for c_, v in s.items() if c_.startswith("Tframe_"))                  # the Plummer pull on a centred binary is zero
     s2 = P.PRODUCTS["disc"]["fn"](p, {**base, "plummer": [100.0, 3.0, 2.0, 0.0, 0.0]})["scalars"]

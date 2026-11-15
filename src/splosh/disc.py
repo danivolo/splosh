@@ -26,6 +26,7 @@ Per cylindrical shell (columns <name>_<R>, a family per quantity, R the shell's 
     nu, alphaeff, tvisc   the effective viscosity of all the stresses with the measured shear (F = -2 pi R^3 nu Sigma dOmega/dR), nu Omega / c_s^2, R^2 / nu in orbits
     Tbulge, Tframe, Tgrav   torques on the gas outside R: a static Plummer sphere (param plummer), the accelerating frame, all gravity (the cells'
                 'Acceleration' dataset); jdotb = jdot - Tbulge - Tframe, jdotg = (fluxes) - Tgrav: the budget with them
+    T<name>     (param cell_torques {"T<name>": dataset}) a code's own per-cell torque (3 floats, about the origin) summed over the gas outside R
     Tspur       Thydro - Fmax - (registered fluxes, e.g. an explicit viscosity): in the continuum zero (pressure exerts no torque on a closed annulus)
     Thydro, jdoth   the hydro forces' torque on the gas outside R (the cells' 'HydroAcceleration'), and -(Fadvtot + Tgrav + Thydro): with both datasets
                 the identity d Jout/dt = -jdoth holds exactly up to the time sampling (it compares the code's forces with the stress fluxes Frey+Fmax+Fvisc)
@@ -342,6 +343,15 @@ def disc(path, params):
     if acc is not None and acc.ndim == 2:
         fam["Tgrav"] = outside(m * tz(acc - (a_c if a_c is not None else 0.0))) / lunit
         fam["jdotg"] = jin - fam["Tgrav"]
+    # per-cell torque datasets written by a code (param cell_torques = {"Tname": "Dataset"}: 3 floats per cell, a torque r x F about the coordinate
+    # origin): T<name>_<R> = their z-component (the binary's orbit normal) summed over the gas outside R, d<name>_<R> per unit R/a. Taken as it is:
+    # moving the origin to the centre would subtract r_c x F with F not written; |r_c| / R is the size of that error (the binary's centre near the origin)
+    for tname, dsname in (params.get("cell_torques") or {}).items():
+        vt = _dataset(path, dsname, keep)
+        if vt is not None and vt.ndim == 2:
+            vz = vt @ zhat
+            fam[tname] = outside(vz) / lunit
+            fam["d" + tname] = _bin(idx, len(Rmid), vz) / np.diff(edges) / lunit
     # the hydrodynamic forces as the code applied them ('HydroAcceleration': pressure, viscosity, magnetic): their torque on the gas outside R. Then
     # the material identity d Jout/dt = Fadvtot (cells crossing R) + Tgrav + Thydro holds whatever the scheme conserves: jdoth = -(Fadvtot + Tgrav + Thydro)
     ah = _dataset(path, "HydroAcceleration", keep)
@@ -485,7 +495,7 @@ FAMILIES = {"sigma_": "Sigma", "hr_": "H/R", "rhomid_": "rho_mid", "cs2_": "c_s^
 plugins.register_product("disc", disc, needs=("Coordinates", "Velocities", "Masses", "Density", "InternalEnergy", "SmoothingLength", "?MagneticField", "?ParticleIDs",
                                               "PartType5"),
                          version=6, label="disc: profiles, angular-momentum budget, eccentricity, minidiscs", applies=_applies,
-                         params={"gamma": None, "r_min": 0.5, "r_max": 12.0, "nbins": 44, "exclude_ids": [], "z_cut": None, "fluxes": [], "plummer": None}, defaults=["r_cav"],
+                         params={"gamma": None, "r_min": 0.5, "r_max": 12.0, "nbins": 44, "exclude_ids": [], "z_cut": None, "fluxes": [], "plummer": None, "cell_torques": {}}, defaults=["r_cav"],
                          meta={**{k: {"label": a, "group": g} for k, (a, g) in META.items()}, "varpi_disc": {"label": META["varpi_disc"][0], "group": "disc", "wrap": 360.0},
                                "phi_lump": {"label": META["phi_lump"][0], "group": "disc", "wrap": 360.0},
                                **{k: {"label": v, "group": "profiles"} for k, v in FAMILIES.items()}})
