@@ -1,0 +1,99 @@
+# MRI turbulence spectra in a cube of the disc (opt-in snapshot product `pk3d`, docs/PLOTS.md "3D spectra in a cube of the disc"): the magnetic and
+# kinetic energy spectra and the density power against k = kn 2 pi / L (kn: wavelengths across the cube), averaged over windows of time; the three field
+# components; the local log-slope; the spectra against time; the energies in the cube. Compute first: `splosh products RUN --names pk3d`, or a [pk3d]
+# table in <run>/analysis_viewer/products/params.toml (e.g. box = 2.0, r0 = 3.0, n = 128). Reference slopes: -5/3 (Kolmogorov), -3/2 (Iroshnikov-Kraichnan).
+
+schema = "splosh-layout-1"
+name = "mri_spectra"
+scope = "run"
+ncols = 2
+figure = {panel_in = 5.0}
+
+[[panel]]
+type = "radial"
+id = "EB"
+label = "magnetic energy spectrum E_B(k)"
+source = "prod_pk3d"
+prefix = "E_B_"
+windows = 4
+xscale = "log"
+yscale = "log"
+xlabel = "k L / 2 pi"
+ylabel = "E_B per unit kn [code pressure]"
+
+[[panel]]
+type = "radial"
+id = "Ev"
+label = "kinetic energy spectrum E_v(k) of sqrt(rho) dv"
+source = "prod_pk3d"
+prefix = "E_v_"
+windows = 4
+xscale = "log"
+yscale = "log"
+xlabel = "k L / 2 pi"
+ylabel = "E_v per unit kn [code pressure]"
+
+[[panel]]
+type = "radial"
+id = "EBc"
+label = "E_B by component (box frame: R, phi, z), last 5 orbits"
+source = "prod_pk3d"
+prefixes = ["E_BR_", "E_Bphi_", "E_Bz_"]
+labels = {E_BR_ = "B_R", E_Bphi_ = "B_phi", E_Bz_ = "B_z"}
+windows = "last:5"
+xscale = "log"
+yscale = "log"
+xlabel = "k L / 2 pi"
+
+[[panel]]
+type = "radial"
+id = "slopes"
+label = "local log-slope d ln E / d ln k (E_B, E_v), last 5 orbits"
+source = "prod_pk3d"
+prefixes = ["E_B_", "E_v_"]
+windows = "last:5"
+slope = true
+xscale = "log"
+yscale = "lin"
+hlines = [-1.6667, -1.5]
+xlabel = "k L / 2 pi"
+
+[[panel]]
+type = "radial"
+id = "Prho"
+label = "density power P_rho(k) of rho / <rho> - 1"
+source = "prod_pk3d"
+prefix = "P_rho_"
+windows = 4
+xscale = "log"
+yscale = "log"
+xlabel = "k L / 2 pi"
+
+[[panel]]
+type = "heatmap"
+id = "EB_t"
+label = "E_B(k) against time"
+source = "prod_pk3d"
+prefix = "E_B_"
+xaxis = "orb"
+yscale = "log"
+ylabel = "k L / 2 pi"
+
+[[panel]]
+type = "heatmap"
+id = "Ev_t"
+label = "E_v(k) against time"
+source = "prod_pk3d"
+prefix = "E_v_"
+xaxis = "orb"
+yscale = "log"
+ylabel = "k L / 2 pi"
+
+[[panel]]
+type = "timeseries"
+id = "energies"
+label = "energy densities in the cube: B^2/2, rho dv^2/2, mean field |<B>|^2/2"
+source = "prod_pk3d"
+columns = ["emag", "ekin", "emag_mean"]
+xaxis = "orb"
+ylog = true

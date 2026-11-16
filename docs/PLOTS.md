@@ -2,14 +2,15 @@
 
 Four plot capabilities on top of the snapshot products (products.py), the series sources and the layouts. Each has a snapshot product (computed once per
 snapshot, read as the series source `prod_<name>`, its families `<prefix><number>` drawn as heatmaps against time or as `radial` panels) and / or a layout
-panel type (drawn by both renderers: the bitmap dashboards and the matplotlib figures). Code: `src/splosh/hist.py`, `modes.py`, `pk.py`, `dmd.py`, the panel
-types in `plotpanels.py`. Ready layouts in docs/layouts: `plots_distributions`, `plots_modes`, `plots_pk`, `plots_dmd`.
+panel type (drawn by both renderers: the bitmap dashboards and the matplotlib figures). Code: `src/splosh/hist.py`, `modes.py`, `pk.py`, `pk3d.py`, `dmd.py`, the panel
+types in `plotpanels.py`. Ready layouts in docs/layouts: `plots_distributions`, `plots_modes`, `plots_pk`, `mri_spectra`, `plots_dmd`.
 
 | what | panel type | product (series source) | command |
 |---|---|---|---|
 | histograms, CDFs | `hist` | `hist` (`prod_hist`) | |
 | azimuthal modes A_m(R), phases, bending, gas quadrupole | (heatmap, radial, timeseries of the source) | `modes` (`prod_modes`) | |
 | spatial power spectra P(k) | `pk` | `pk` (`prod_pk`, opt-in) | |
+| 3D spectra of B, kinetic energy, density in a cube of the disc (MRI turbulence) | (radial, heatmap of the source) | `pk3d` (`prod_pk3d`, opt-in) | |
 | dynamic mode decomposition | `dmd` | | `splosh dmd RUN` |
 
 ## Product parameters of a run
@@ -85,6 +86,55 @@ geometry `x y z R r h v los`), in the view's unit system (`units`).
   length; unset: `width_a` x a = 8 a with a binary, else 2.2 x the radius holding 95% of the gas: then fix it in params.toml, or the window changes
   from snapshot to snapshot), `npix` (256), `window`, `subtract`, `nk` (24). Heatmap: `prefix = "P_"`, `yscale = "log"`.
 
+## 3D spectra in a cube of the disc (`pk3d.py`, product `pk3d`)
+For MRI turbulence: the magnetic, kinetic and density spectra of the gas in a cube of the disc, per snapshot. Opt-in like `pk` (computed when named,
+`splosh products RUN --names pk3d`, or when the run's params.toml has a `[pk3d]` table).
+- **Frame** (`modes.disc_frame`, the rules of disc.py): two black holes: their centre of mass, z along the orbit normal, lengths in units of the osculating
+  semi-major axis a; one black hole: about it, z along the gas angular momentum within `r_max`, code length; none: the gas centre of mass, code length.
+  The cube of side L = `box` is centred in the midplane at radius `r0` along the frame's in-plane x axis (the simulation x projected on the plane, an
+  inertial direction; rotated by `phi0` degrees). Box axes: x = radial and y = azimuthal at the cube's centre, z = the disc normal.
+- **Gas used**: only the particles whose kernel overlaps the cube (|x_i| < L/2 + H on each axis), so the cost is set by the cube, not the disc.
+- **Deposit** (SPH, the GIZMO cubic spline of support H): each particle is spread over the n^3 cells (dx = L / n) with the support max(H, `hmin` dx),
+  `hmin` = 2 cells (a particle smaller than a cell still reaches its neighbours), its sampled kernel renormalised to integrate to one (footprints under
+  6 cells). Cell values: rho = sum m W (the SPH density), dv = sum m dv W / sum m W (mass-weighted), B = sum V B W / sum V W with V = m / rho
+  (volume-weighted, normalised: a uniform field is exact wherever the gas reaches). The grid is therefore smoothed on the scale max(H, 2 dx): a mode of
+  wavenumber k keeps the amplitude W^(k H) of the kernel's Fourier transform (0.9 at k H = 1.6; the test checks it). Cells no kernel reaches hold no gas
+  (rho = dv = B = 0); `fill` is the fraction of cells with sum V W > 0.5.
+- **Fields**: B in code units with mu_0 = 1 (B^2 / 2 is the magnetic pressure in code units, as `fields.f_pmag`; the conversion of disc.py, through
+  UnitMagneticField_in_gauss), when the snapshot has MagneticField. dv, the turbulent velocity, is the velocity relative to the frame minus the mean
+  flow (`rotation`): `shell` (default) the mass-weighted means of v_R, v_phi, v_z of the cube's own gas in n / 4 cylindrical shells across its range of
+  R, linearly interpolated in R (the local mean flow: spirals or an eccentric disc are not counted as turbulence); `kepler` only Omega_K(R) R e_phi with
+  Omega_K^2 = G M / R^3 [1 + 3/4 q / (1 + q)^2 (a / R)^2] (disc.py's; with no black hole it falls back to `shell`); `none` nothing.
+- **Spectra**: each field minus its window-weighted mean (`subtract_mean`, default true: the mean field is reported separately), times a 3D `window`
+  (`hann` default, `tukey` 25% cosine edges, `none`: the cube is not periodic), FFT (`numpy.fft.rfftn`), |F|^2 summed over shells of kn = |k| / k_f,
+  k_f = 2 pi / L, divided by the shell's width in kn. Bin edges: `nk` log-spaced edges from 0.5 to n/2 + 0.5 snapped to half-integers (whole integer
+  shells, single shells at low kn); the bin's kn is the mean |kn| of its Fourier modes, fixed by n and nk, so the family rows are the same in every
+  snapshot of the same n, nk (heatmaps against time). **Normalisation (Parseval)**: sum over bins E(kn) dkn + hi = 1/2 <f'^2 w^2> / <w^2> (f' the field
+  minus its weighted mean, w the window): the spectrum integrates to the window-weighted mean energy density of the fluctuation, in code pressure units.
+  A 3D power P(k) ~ k^-11/3 is E(k) ~ k^-5/3 (shell sum). The window's own Fourier width mixes the lowest kn: fit slopes above kn ~ 4 with Hann, ~ 8
+  with Tukey.
+- **Families** (k index kn = k L / 2 pi, the number of wavelengths across the cube; k in 1/a = kn 2 pi / `box` with a binary):
+  `E_B_<kn>` = 1/2 |B_k|^2 summed over the three components; `E_BR_`, `E_Bphi_`, `E_Bz_` each component alone (box frame); `E_v_<kn>` =
+  1/2 |(sqrt(rho) dv)_k|^2 (the kinetic energy spectrum); `P_rho_<kn>` = |delta_k|^2 with delta = rho / <rho>_w - 1 (no 1/2: its sum is the
+  window-weighted variance of delta). All per unit kn.
+- **Scalars**: `tot_B`, `tot_v`, `tot_rho`, `tot_BR`, ... (the Parseval totals: sum E dkn + hi), `hi_B`, ... (the part beyond the Nyquist shell, the
+  cube's corners), `slope_B`, `slope_v`, `slope_rho`, `slope_BR`, `slope_Bphi`, `slope_Bz` (least-squares log-slope of the spectrum over `kn_lo` <
+  kn < `kn_hi`, 4 - 16); `Emag` = sum B^2 / 2 dV and `Ekin` = sum rho dv^2 / 2 dV over the cube (unwindowed, code energy units), `emag`, `ekin` (the
+  same per unit volume), `emag_mean` = |<B>|^2 / 2 of the cube's mean field and `BR_mean`, `Bphi_mean`, `Bz_mean`; `Mbox`, `rho_mean`, `fill`, `npart`
+  (particles used); the cube: `L` (code length), `box`, `r0` (units of a), `a`, `n`, `dx`, `kf` (2 pi / L in 1/code length); with a binary `e`, `q`.
+- **Parameters** (defaults): `box` (2.0: units of a with two black holes, else code length), `r0` (3.0, same units), `phi0` (0 deg), `n` (128 cells per
+  side), `hmin` (2 cells), `rotation` (shell), `window` (hann), `nk` (32), `subtract_mean` (true), `kn_lo`, `kn_hi` (4, 16), `r_max` (12: the gas
+  angular momentum of a single black hole). With one or no black hole set `box` and `r0` in code length in params.toml. A cube of 2 a at 3 a spans
+  R = 2 - 4 a and |z| < a (~3 H for H/R = 0.1): the window tapers the cube's faces, so the spectra describe its inner half; use n >= 128 so that
+  dx is well below H (the spectra stop being physical above kn ~ L / (2 max(H, 2 dx))).
+- **Cost** (measured on 8 cores, synthetic 10M-particle disc about a binary, R = 1.5 - 12 a, H/R = 0.1, cube 2 a at 3 a: 4e5 particles in it, the
+  snapshot already in memory): n = 128 6 s, n = 256 36 s; the deposit (8 float32 grids: 32 n^3 bytes, 0.5 GB at n = 256) and the FFTs (one component
+  at a time in double precision, ~ 50 n^3 bytes) dominate; the snapshot's gas arrays (~ 100 bytes per particle, 1 GB for 10M) come on top, and reading
+  them from disk. Low-density particles with a support H much larger than the cube are the most expensive (each visits up to n^3 cells).
+- **Not included**: the split of k into parallel / perpendicular to the mean field (the per-component spectra and the mean field are given instead).
+- **Drawing**: docs/layouts/mri_spectra.toml: `radial` panels against kn (`prefix = "E_B_"`, `windows = 4`, log axes; `prefixes` for the components;
+  `slope = true` for the local log-slope with -5/3 and -3/2 marked) and `heatmap` panels (`prefix = "E_B_"`, `yscale = "log"`) for E(k, t).
+
 ## Dynamic mode decomposition (`dmd.py`)
 `splosh dmd RUN [--field rho] [--width W | --width-a 8] [--npix 128] [--rank 20] [--tmin T0] [--tmax T1] [--center C] [--align none|bh] [--tilt T]
 [--linear] [--subtract-mean] [--every N] [--code-time] [--name dmd] [--out DIR]`
@@ -121,6 +171,11 @@ geometry `x y z R r h v los`), in the view's unit system (`units`).
 - pk: a sine of 8 wavelengths across the window (the peak at k = 8 k_f), Parseval (the variance), Gaussian random fields with P ~ k^-3 (slope -3 for
   every window, and for the log of a lognormal field), the reference lines; the panel (k in 1/length from the fundamental to the Nyquist, both
   renderers) and the product (8 a window about a binary).
+- pk3d (tests/test_pk3d.py): Parseval (every window, with and without the mean), the bin edges; a sine of 4 wavelengths in B_z on a particle lattice
+  (the peak at kn = 4, its energy B0^2 / 4 times the kernel's |W^(k)|^2 within 3%, the other components zero); random-phase fields with P ~ k^-11/3
+  (E ~ k^-5/3 within 0.05 without a window, 0.08 with Hann or Tukey); a Keplerian disc about a binary (the turbulent energy below 1e-4 of the
+  unsubtracted one with `kepler` and `shell`; a uniform B_z all in the mean); a velocity mode on top of the rotation (E_v peaks at its kn); two
+  snapshots through products.compute as a heatmap and radial panels, the opt-in rule and the example layout.
 - DMD: a synthetic movie with an m = 2 pattern turning with temporal frequency 1.5 and a decaying (rate -0.8) m = 1 pattern turning at 0.4: both
   recovered to 1e-6, the steady part at f = 0; with --subtract-mean the DFT bias; the period scaling; resampling. The command on 16 snapshots of a
   particle ring with an m = 2 pattern turning at Omega = 1 (f = 2 Omega / 2 pi recovered to 2%, growth ~ 0), its files, and the four panel views in

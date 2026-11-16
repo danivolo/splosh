@@ -271,3 +271,4 @@ def main(a):
 
 from . import disc  # noqa: E402,F401  (the core product `disc`: disc profiles, angular-momentum budget, eccentricity, minidiscs)
 from . import hist, modes, pk  # noqa: E402,F401  (the core products `hist`, `modes`, `pk`: distributions, azimuthal modes, spatial power spectra)
+from . import pk3d  # noqa: E402,F401  (the core product `pk3d`: 3D spectra of B, kinetic energy and density in a cube of the disc)
