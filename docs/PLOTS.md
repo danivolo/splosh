@@ -124,7 +124,7 @@ For MRI turbulence: the magnetic, kinetic and density spectra of the gas in a cu
   (particles used); the cube: `L` (code length), `box`, `r0` (units of a), `a`, `n`, `dx`, `kf` (2 pi / L in 1/code length); with a binary `e`, `q`.
 - **Parameters** (defaults): `box` (2.0: units of a with two black holes, else code length), `r0` (3.0, same units), `phi0` (0 deg), `n` (128 cells per
   side), `hmin` (2 cells), `rotation` (shell), `window` (hann), `nk` (32), `subtract_mean` (true), `kn_lo`, `kn_hi` (4, 16), `r_max` (12: the gas
-  angular momentum of a single black hole). With one or no black hole set `box` and `r0` in code length in params.toml. A cube of 2 a at 3 a spans
+  angular momentum of a single black hole), `exclude_ids` (a list of particle IDs left out, e.g. spawned wind cells; not a default). With one or no black hole set `box` and `r0` in code length in params.toml. A cube of 2 a at 3 a spans
   R = 2 - 4 a and |z| < a (~3 H for H/R = 0.1): the window tapers the cube's faces, so the spectra describe its inner half; use n >= 128 so that
   dx is well below H (the spectra stop being physical above kn ~ L / (2 max(H, 2 dx))).
 - **Cost** (measured on 8 cores, synthetic 10M-particle disc about a binary, R = 1.5 - 12 a, H/R = 0.1, cube 2 a at 3 a: 4e5 particles in it, the

@@ -360,7 +360,12 @@ def pk3d_arrays(s, params):
 
 def pk3d(path, params):
     from .io import load_snapshot
-    s = load_snapshot(path, gas_fields=("Coordinates", "Velocities", "Masses", "Density", "SmoothingLength", "?MagneticField"))
+    gas = ("Coordinates", "Velocities", "Masses", "Density", "SmoothingLength", "MagneticField")
+    s = load_snapshot(path, gas_fields=gas[:5] + ("?MagneticField", "?ParticleIDs"))
+    ex = params.get("exclude_ids") or []           # cells left out by ID (e.g. spawned wind cells); not a default parameter, so cached results stay valid
+    if ex and "ParticleIDs" in s:
+        keep = ~np.isin(np.asarray(s["ParticleIDs"]), np.asarray(ex, dtype=np.int64))
+        s = {**s, **{k: np.asarray(s[k])[keep] for k in gas if k in s}}
     return {"scalars": pk3d_arrays(s, params)}
 
 

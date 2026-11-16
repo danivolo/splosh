@@ -188,3 +188,22 @@ def test_product_series_and_layout(tmp_path):
     assert kn[np.nanargmax(eR)] == pytest.approx(3.0, abs=0.5)                                  # the B_R mode of 3 wavelengths along y
     lay = LY.validate_layout(LY.load_layout(os.path.join(os.path.dirname(__file__), "..", "docs", "layouts", "mri_spectra.toml")))
     assert {p["source"] for p in lay["panel"]} == {"prod_pk3d"}
+
+
+def test_exclude_ids_drops_cells(tmp_path):
+    """exclude_ids removes those particles before the deposit: the cube's mass falls by theirs."""
+    import h5py
+    from splosh import products as P
+    from test_disc import kepler_disc, write
+    (tmp_path / "output").mkdir()
+    pos, vel, m, rho, u = kepler_disc(n=20_000, r0=1.5, r1=5.0)
+    p = write(tmp_path / "output" / "snapshot_000.hdf5", pos, vel, m, rho, u, [[0.5, 0, 0], [-0.5, 0, 0]], [[0, 0.5, 0], [0, -0.5, 0]], [0.5, 0.5])
+    with h5py.File(p, "a") as f:
+        ids = f["PartType0"]["ParticleIDs"][:]
+        ids[::2] = 777
+        del f["PartType0"]["ParticleIDs"]
+        f["PartType0"]["ParticleIDs"] = ids
+    fn = P.PRODUCTS["pk3d"]["fn"]
+    a = fn(p, P.params_of("pk3d", {"n": 32}))["scalars"]
+    b = fn(p, P.params_of("pk3d", {"n": 32, "exclude_ids": [777]}))["scalars"]
+    assert 0.4 < b["npart"] / a["npart"] < 0.6
