@@ -2,129 +2,156 @@
 <html lang="en"><head><meta charset="utf-8"><title>splosh</title><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b1020'/%3E%3Cpath d='M32 32c6-8 18-6 20 4s-10 20-22 16S10 34 18 22s30-10 34 2' fill='none' stroke='%2378c8ff' stroke-width='4' stroke-linecap='round'/%3E%3Cpath d='M32 32c-6 8-18 6-20-4s10-20 22-16 20 18 12 30' fill='none' stroke='%23ffb45a' stroke-width='3' stroke-linecap='round' opacity='.85'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%23fff3c4'/%3E%3C/svg%3E">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-:root{color-scheme:dark}
+/* design tokens: the same names as the Control panel. The viewer is dark only (maps read best on black): it uses the panel's dark values; the panel's light set is
+   --bg #f5f6f8 --panel #fff --panel2 #f0f2f5 --fg #1b1f24 --muted #687280 --line #e2e5ea --accent #2563eb --accent-fg #fff --ok #15803d --warn #b45309 --bad #b91c1c.
+   --hover is the viewer's own (a hovered or chosen row). Motion: only transform and opacity are animated; reduced motion sets the durations to 0. The maps keep their colours. */
+:root{color-scheme:dark;--bg:#111316;--panel:#1a1d22;--panel2:#22262c;--fg:#e6e8eb;--muted:#98a0aa;--line:#2c3138;--accent:#6ea8ff;--accent-fg:#0b1220;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;
+  --hover:#2a3039;--radius:8px;--radius-sm:5px;--ease:cubic-bezier(.4,0,.2,1);--ease-out:cubic-bezier(.16,1,.3,1);--dur:180ms;--dur-slow:320ms}
+@media (prefers-reduced-motion:reduce){:root{--dur:0ms;--dur-slow:0ms}}
 *{box-sizing:border-box}
-body{margin:0;background:#111;color:#ddd;font:13px/1.35 system-ui,sans-serif;display:flex;height:100vh}
+body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.35 system-ui,sans-serif;display:flex;height:100vh}
 #panel{width:260px;padding:10px;overflow:auto;flex:none;box-sizing:border-box}
-#grip{flex:none;width:5px;cursor:col-resize;background:#222;border-left:1px solid #333}#grip:hover,#grip.drag{background:#4af6}
-.wrow{display:flex;flex-wrap:wrap;gap:0 6px;align-items:flex-end}.wrow>div{flex:1 1 84px;min-width:0}.wrow select,.wrow input,.wrow button{width:100%;min-width:0}.slab{color:#9bd;font:12px ui-monospace,monospace;font-weight:normal}
+#grip{flex:none;width:5px;cursor:col-resize;background:var(--panel2);border-left:1px solid var(--line)}#grip:hover,#grip.drag{background:var(--accent)}
+.wrow{display:flex;flex-wrap:wrap;gap:0 6px;align-items:flex-end}.wrow>div{flex:1 1 84px;min-width:0}.wrow select,.wrow input,.wrow button{width:100%;min-width:0}.slab{color:var(--accent);font:12px ui-monospace,monospace;font-weight:normal}
 .rules{display:flex;flex-wrap:wrap;gap:0 6px}.rules>div{flex:1 1 130px;min-width:0}.rules select,.rules input{width:100%;min-width:0}
-#threads{flex:1}#threadlab{flex:none;font:12px ui-monospace,monospace;color:#9bd;min-width:5.5em;text-align:right}
-#fieldmenu .items{flex-direction:column;flex-wrap:nowrap}#fieldmenu .frow{display:flex;flex-wrap:wrap;gap:4px}#fieldmenu .frow+.frow{border-top:1px solid #2a3036;padding-top:4px}
+#threads{flex:1}#threadlab{flex:none;font:12px ui-monospace,monospace;color:var(--accent);min-width:5.5em;text-align:right}
+#fieldmenu .items{flex-direction:column;flex-wrap:nowrap}#fieldmenu .frow{display:flex;flex-wrap:wrap;gap:4px}#fieldmenu .frow+.frow{border-top:1px solid var(--line);padding-top:4px}
 #panel h1{font-size:15px;margin:0 0 8px;display:flex;justify-content:space-between;align-items:center}
-#panel h1 a{font-size:12px;font-weight:normal;color:#8bd;margin-right:6px}
-label{display:block;margin-top:7px;color:#9ab}
-select,input[type=number],input[type=text]{width:100%;background:#222;color:#ddd;border:1px solid #444;padding:3px;font:inherit}
+#panel h1 a{font-size:12px;font-weight:normal;color:var(--accent);margin-right:6px}
+label{display:block;margin-top:7px;color:var(--muted)}
+select,input[type=number],input[type=text]{width:100%;background:var(--panel2);color:var(--fg);border:1px solid var(--line);padding:3px;font:inherit}
 input[type=range]{width:100%}
 .row{display:flex;gap:4px;align-items:center}.row>*{flex:1}
-button{background:#2a3a4a;color:#ddd;border:1px solid #456;padding:3px 8px;cursor:pointer;flex:none}
-button:hover{background:#34495c}
-fieldset{border:1px solid #333;margin:10px 0 0;padding:2px 6px 6px}legend{color:#9ab;padding:0 4px}
+button{background:var(--panel2);color:var(--fg);border:1px solid var(--line);padding:3px 8px;cursor:pointer;flex:none}
+button:hover{background:var(--hover)}
+fieldset{border:1px solid var(--line);margin:10px 0 0;padding:2px 6px 6px}legend{color:var(--muted);padding:0 4px}
 #stage{flex:1;min-width:0;min-height:0;display:grid;gap:3px;background:#000;grid-auto-rows:minmax(0,1fr)}
 #stage.n1{grid-template-columns:minmax(0,1fr)}#stage.n2,#stage.n3,#stage.n4{grid-template-columns:repeat(2,minmax(0,1fr))}
 .cell{display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;container-type:size}
 .pane{position:relative;width:min(100cqw,100cqh);height:min(100cqw,100cqh);background:#000}
-#stage:not(.n1) .pane.sel{outline:2px solid #4af;outline-offset:-2px}
+#stage:not(.n1) .pane.sel{outline:2px solid var(--accent);outline-offset:-2px}
 canvas.view{background:#000;cursor:grab;width:100%;height:100%;display:block}
-.spin{position:absolute;right:62px;top:8px;width:18px;height:18px;border:3px solid #fff4;border-top-color:#4af;border-radius:50%;animation:sp .8s linear infinite;display:none;pointer-events:none}
+.spin{position:absolute;right:62px;top:8px;width:18px;height:18px;border:3px solid #fff4;border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite;display:none;pointer-events:none}
 .spin.on{display:block}@keyframes sp{to{transform:rotate(360deg)}}
 .clock{position:absolute;left:50%;top:30px;transform:translateX(-50%);font:12px ui-monospace,monospace;background:#000b;padding:1px 8px;border-radius:3px;pointer-events:none;white-space:nowrap;max-width:calc(100% - 140px);overflow:hidden;text-overflow:ellipsis}
-.clock.none{color:#fa8}
-.nosnap{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:#000;color:#fa8;font:15px ui-monospace,monospace;text-align:center;padding:20px;pointer-events:none}
+.clock.none{color:var(--warn)}
+.nosnap{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:#000;color:var(--warn);font:15px ui-monospace,monospace;text-align:center;padding:20px;pointer-events:none}
 .nosnap small{color:#a97;margin-top:8px}.nosnap.on{display:flex}
 canvas.ovl{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
-canvas.bar{position:absolute;right:6px;top:6px;border:1px solid #444;width:48px;height:192px;background:#0008}
+canvas.bar{position:absolute;right:6px;top:6px;border:1px solid var(--line);width:48px;height:192px;background:#0008}
 .orient{position:absolute;left:6px;top:26px;display:none;z-index:3}body.orient-on .orient{display:block}
-.orient canvas{width:110px;height:110px;background:#0009;border:1px solid #345;border-radius:55px;cursor:grab;display:block}
+.orient canvas{width:110px;height:110px;background:#0009;border:1px solid var(--line);border-radius:55px;cursor:grab;display:block}
 .orient .obtn{display:flex;gap:2px;margin-top:2px}.orient .obtn button{font-size:10px;padding:1px 3px}
 .cap{position:absolute;left:6px;top:4px;font:11px ui-monospace,monospace;background:#000a;padding:1px 5px;max-width:calc(100% - 70px);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .badge{position:absolute;left:50%;top:6px;transform:translateX(-50%);font:bold 15px ui-monospace,monospace;padding:2px 12px;border-radius:4px;color:#000;display:none;pointer-events:none;letter-spacing:1px}
 .badge.A{background:#fa3;display:block}.badge.B{background:#3df;display:block}.badge.D{background:#f6c;display:block}
 .pane.bA{box-shadow:inset 0 0 0 3px #fa3}.pane.bB{box-shadow:inset 0 0 0 3px #3df}
-.readout:empty{display:none}.mbox{position:absolute;z-index:6;pointer-events:none;border:1px dashed #8cf;background:rgba(120,190,255,0.15)}
+.readout:empty{display:none}.mbox{position:absolute;z-index:6;pointer-events:none;border:1px dashed var(--accent);background:rgba(120,190,255,0.15)}
 canvas.plot{position:absolute;left:0;top:0;width:100%;height:100%;display:none;background:#0b0e12;cursor:crosshair;z-index:2}
 .pane.kprofile canvas.plot,.pane.kseries canvas.plot,.pane.kradial canvas.plot,.pane.kspectrum canvas.plot,.pane.kheatmap canvas.plot,.pane.kphase canvas.plot{display:block}.pane.kheatmap canvas.bar,.pane.kheatmap .orient,.pane.kphase canvas.bar,.pane.kphase .orient,.pane.kradial canvas.bar,.pane.kradial .orient,.pane.kspectrum canvas.bar,.pane.kspectrum .orient{display:none}
 .pane.kheatmap .pk .ssrc,.pane.kheatmap .pk .sheat,.pane.kheatmap .pk .sids,.pane.kheatmap .pk .sx,.pane.kheatmap .pk .srel{display:inline-block}.pk .sheat{display:none}.pane.kprofile canvas.bar,.pane.kseries canvas.bar,.pane.kseries .orient,.pane.kprofile .orient{display:none}
 .pk{position:absolute;right:6px;bottom:4px;z-index:4;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:3px;font:11px sans-serif;opacity:.55;max-width:calc(100% - 12px)}.pk:hover,.pane:hover .pk{opacity:1}
-.pk:has(.scolmenu.on){opacity:1}.pane .pk select,.pane .pk button,.pane .pk label{width:auto;height:auto;margin:0;line-height:1.3;font:11px sans-serif;background:#000c;color:#ddd;border:1px solid #456;border-radius:3px;padding:1px 3px}.pk .ssrc,.pk .scolwrap,.pk .sids,.pk .ssm,.pk .sx,.pk .sy,.pk .srel,.pk .slog,.pk .sbuild,.pk .sstk,.pk .shz,.pk .shy,.pk .php{display:none}.pane.kphase .pk .php{display:inline-block}.pane .pk input.prng{width:9em;margin:0;font:11px sans-serif;background:#000c;color:#ddd;border:1px solid #456;border-radius:3px;padding:1px 3px}
-.pk .scolwrap{position:relative}.pk .scolmenu{display:none;position:absolute;right:0;top:100%;margin-top:2px;background:#10151c;border:1px solid #456;border-radius:4px;padding:6px 8px;max-height:60vh;overflow:auto;width:max-content;max-width:420px;z-index:9;text-align:left}
-.pk .scolmenu.on{display:block}.pk .scolmenu .grp{margin:4px 0}.pk .scolmenu .grp b{display:block;color:#9bd;font-size:11px;margin-bottom:1px}.pk .scolmenu label{display:block;border:0;background:none;padding:1px 0;white-space:nowrap}.pk .scolmenu i{color:#89a}
+.pk:has(.scolmenu.on){opacity:1}.pane .pk select,.pane .pk button,.pane .pk label{width:auto;height:auto;margin:0;line-height:1.3;font:11px sans-serif;background:#000c;color:var(--fg);border:1px solid var(--line);border-radius:3px;padding:1px 3px}.pk .ssrc,.pk .scolwrap,.pk .sids,.pk .ssm,.pk .sx,.pk .sy,.pk .srel,.pk .slog,.pk .sbuild,.pk .sstk,.pk .shz,.pk .shy,.pk .php{display:none}.pane.kphase .pk .php{display:inline-block}.pane .pk input.prng{width:9em;margin:0;font:11px sans-serif;background:#000c;color:var(--fg);border:1px solid var(--line);border-radius:3px;padding:1px 3px}
+.pk .scolwrap{position:relative}.pk .scolmenu{display:none;position:absolute;right:0;top:100%;margin-top:2px;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:6px 8px;max-height:60vh;overflow:auto;width:max-content;max-width:420px;z-index:9;text-align:left}
+.pk .scolmenu.on{display:block}.pk .scolmenu .grp{margin:4px 0}.pk .scolmenu .grp b{display:block;color:var(--accent);font-size:11px;margin-bottom:1px}.pk .scolmenu label{display:block;border:0;background:none;padding:1px 0;white-space:nowrap}.pk .scolmenu i{color:var(--muted)}
 .pk .sids label{border:0;background:none;padding:0 2px}
 .pane.kseries .pk .ssrc,.pane.kseries .pk .scolwrap,.pane.kseries .pk .sids,.pane.kseries .pk .ssm,.pane.kseries .pk .sx,.pane.kseries .pk .sy,.pane.kseries .pk .srel,.pane.kseries .pk .sstk,.pane.kheatmap .pk .shz,.pane.kheatmap .pk .shy,.pane.kprofile .pk .slog{display:inline-block}
-.pk .rd,.pk .sp{display:none}.pane.kradial .pk .rd,.pane.kspectrum .pk .sp,.pane.kradial .pk .ssrc,.pane.kradial .pk .scolwrap,.pane.kradial .pk .sy,.pane.kradial .pk .srel,.pane.kspectrum .pk .ssrc,.pane.kspectrum .pk .scolwrap,.pane.kspectrum .pk .sids,.pane.kspectrum .pk .srel{display:inline-block}.pane .pk input.rsin{width:6em;margin:0;font:11px sans-serif;background:#000c;color:#ddd;border:1px solid #456;border-radius:3px;padding:1px 3px}
+.pk .rd,.pk .sp{display:none}.pane.kradial .pk .rd,.pane.kspectrum .pk .sp,.pane.kradial .pk .ssrc,.pane.kradial .pk .scolwrap,.pane.kradial .pk .sy,.pane.kradial .pk .srel,.pane.kspectrum .pk .ssrc,.pane.kspectrum .pk .scolwrap,.pane.kspectrum .pk .sids,.pane.kspectrum .pk .srel{display:inline-block}.pane .pk input.rsin{width:6em;margin:0;font:11px sans-serif;background:#000c;color:var(--fg);border:1px solid var(--line);border-radius:3px;padding:1px 3px}
 .pane.kseries.nodata .pk .sbuild{display:inline-block}.pane.kseries.nodata .pk .scolwrap,.pane.kseries.nodata .pk .sids,.pane.kseries.nodata .pk .ssm{display:none}
 .pane.kprofile .pk,.pane.kseries .pk,.pane.kheatmap .pk,.pane.kphase .pk,.pane.kradial .pk,.pane.kspectrum .pk{top:5px;bottom:auto;opacity:.8}
 .readout{position:absolute;left:6px;bottom:4px;font:12px ui-monospace,monospace;background:#000b;padding:2px 6px;max-width:calc(100% - 12px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
-.chk{display:flex;align-items:center;gap:3px;margin:3px 0 0;color:#9ab;white-space:nowrap}.chk input{margin:0}
-#ovmsg,#inspmsg{font:11px/1.35 ui-monospace,monospace;color:#e98;margin-top:4px;white-space:pre-wrap}
+.chk{display:flex;align-items:center;gap:3px;margin:3px 0 0;color:var(--muted);white-space:nowrap}.chk input{margin:0}
+#ovmsg,#inspmsg{font:11px/1.35 ui-monospace,monospace;color:var(--bad);margin-top:4px;white-space:pre-wrap}
 #insp{font:11px/1.35 ui-monospace,monospace;max-height:42vh;overflow:auto}
-#insp .hd{color:#9ab;margin:2px 0 4px;white-space:pre-wrap}
-#insp .card{border:1px solid #333;border-left:3px solid #456;padding:2px 5px;margin-top:3px;cursor:pointer;white-space:pre}
-#insp .card.on{border-left-color:#4af;background:#1b2833}
-#jb_info{font:11px ui-monospace,monospace;color:#789;margin-top:4px;overflow-wrap:anywhere}
-#joblist .job{border:1px solid #333;border-left:3px solid #456;padding:3px 5px;margin-top:4px;font:11px/1.35 ui-monospace,monospace;overflow-wrap:anywhere;min-width:0}
-#joblist .job.running{border-left-color:#4af}#joblist .job.done{border-left-color:#6c6}#joblist .job.failed,#joblist .job.cancelled{border-left-color:#c66}
-#joblist .bar{height:4px;background:#222;margin:2px 0}#joblist .bar i{display:block;height:4px;background:#4af}
-#joblist .tail{color:#789;white-space:pre-wrap;overflow-wrap:anywhere;max-height:4.2em;overflow:hidden}#joblist a{color:#8bd;margin-right:8px}
-#hist{width:100%;height:64px;background:#10151a;border:1px solid #333;margin-top:4px;cursor:ew-resize}
-#status{font:11px/1.4 ui-monospace,monospace;color:#8a8;white-space:pre-wrap;overflow-wrap:anywhere}
+#insp .hd{color:var(--muted);margin:2px 0 4px;white-space:pre-wrap}
+#insp .card{border:1px solid var(--line);border-left:3px solid var(--line);padding:2px 5px;margin-top:3px;cursor:pointer;white-space:pre}
+#insp .card.on{border-left-color:var(--accent);background:var(--hover)}
+#jb_info{font:11px ui-monospace,monospace;color:var(--muted);margin-top:4px;overflow-wrap:anywhere}
+#joblist .job{border:1px solid var(--line);border-left:3px solid var(--line);padding:3px 5px;margin-top:4px;font:11px/1.35 ui-monospace,monospace;overflow-wrap:anywhere;min-width:0}
+#joblist .job.running{border-left-color:var(--accent)}#joblist .job.done{border-left-color:var(--ok)}#joblist .job.failed,#joblist .job.cancelled{border-left-color:var(--bad)}
+#joblist .bar{height:4px;background:var(--panel2);margin:2px 0}#joblist .bar i{display:block;height:4px;background:var(--accent)}
+#joblist .tail{color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere;max-height:4.2em;overflow:hidden}#joblist a{color:var(--accent);margin-right:8px}
+#hist{width:100%;height:64px;background:var(--panel2);border:1px solid var(--line);margin-top:4px;cursor:ew-resize}
+#status{font:11px/1.4 ui-monospace,monospace;color:var(--ok);white-space:pre-wrap;overflow-wrap:anywhere}
 body{padding-top:27px;box-sizing:border-box}.hid{display:none!important}
-#tabs{display:flex;gap:2px;margin:-2px 0 6px}#tabs button{flex:1;padding:4px;background:#1a222c;border:1px solid #345;color:#9ab}#tabs button.on{background:#2a3a4a;color:#fff;border-color:#4af}
+#tabs{display:flex;gap:2px;margin:-2px 0 6px}#tabs button{flex:1;padding:4px;background:var(--panel);border:1px solid var(--line);color:var(--muted)}#tabs button.on{background:var(--panel2);color:#fff;border-color:var(--accent)}
 #stage{position:relative}#pubview{position:absolute;inset:0;z-index:20;background:#fff;overflow:auto;display:none;text-align:center}#pubview.on{display:block}
 #pubview img{max-width:100%;max-height:calc(100% - 4px);object-fit:contain}#pubnotes{position:absolute;left:6px;bottom:4px;font:11px ui-monospace,monospace;color:#555;white-space:pre-wrap;text-align:left;background:#fffc}
 #pubclose{position:absolute;right:6px;top:6px;z-index:2}
-.ptag{display:none;position:absolute;left:50%;bottom:4px;transform:translateX(-50%);z-index:5;font:11px ui-monospace,monospace;background:#234c;color:#cde;padding:1px 6px;border-radius:3px;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90%}
+.ptag{display:none;position:absolute;left:50%;bottom:4px;transform:translateX(-50%);z-index:5;font:11px ui-monospace,monospace;background:#234c;color:var(--fg);padding:1px 6px;border-radius:3px;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90%}
 .pane.kseries,.pane.kprofile,.pane.kheatmap,.pane.kphase,.pane.kradial,.pane.kspectrum{width:100cqw;height:100cqh}
 .pane.kseries .ptag,.pane.kprofile .ptag,.pane.kheatmap .ptag,.pane.kphase .ptag,.pane.kradial .ptag,.pane.kspectrum .ptag{bottom:auto;top:2px;left:auto;right:6px;transform:none}
 body.figmode .pane .pk{opacity:0;transition:opacity .15s}body.figmode .pane:hover .pk{opacity:1}body.figmode .pane:hover .ptag{display:none}
-body.figmode .ptag{display:block}body.figmode .pane{outline:1px dashed #456;outline-offset:-1px}
+body.figmode .ptag{display:block}body.figmode .pane{outline:1px dashed var(--line);outline-offset:-1px}
 body.mapsonly{padding-top:0}body.mapsonly #panel,body.mapsonly #grip{display:none!important}
 body.mapsonly #menubar{transform:translateY(-100%);transition:transform .15s}body.mapsonly.menupeek #menubar{transform:none}
-#menubar{position:fixed;top:0;left:0;right:0;height:26px;background:#181d24;border-bottom:1px solid #333;display:flex;align-items:stretch;z-index:20;font:13px system-ui,sans-serif;user-select:none}
-#menubar .brand{padding:4px 12px 0 8px;color:#9cf;font-weight:600;display:flex;gap:6px;align-items:center}#menubar .brand img{width:16px;height:16px}
-.mb{position:relative}.mb>button{height:100%;background:none;border:0;color:#ddd;padding:0 10px;font:inherit;cursor:pointer}.mb>button:hover,.mb.open>button{background:#2a3340}
-.mdrop{position:absolute;top:100%;left:0;background:#1a1f26;border:1px solid #456;min-width:230px;display:none;padding:4px 0;box-shadow:0 6px 18px #000a}.mb.open .mdrop{display:block}
-.mdrop .it{display:flex;justify-content:space-between;gap:16px;width:100%;text-align:left;padding:4px 14px;background:none;border:0;color:#ddd;font:inherit;cursor:pointer;text-decoration:none}
-.mdrop .it:hover{background:#2a3340}.mdrop .it kbd{color:#789;font:11px ui-monospace,monospace}.mdrop hr{border:0;border-top:1px solid #333;margin:4px 0}
-.mdrop .it.ck::before{content:'\2713';width:14px;margin-left:-6px;color:#4af}.mdrop .it.unck::before{content:'';width:14px;margin-left:-6px}
+#menubar{position:fixed;top:0;left:0;right:0;height:26px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:stretch;z-index:20;font:13px system-ui,sans-serif;user-select:none}
+#menubar .brand{padding:4px 12px 0 8px;color:var(--accent);font-weight:600;display:flex;gap:6px;align-items:center}#menubar .brand img{width:16px;height:16px}
+.mb{position:relative}.mb>button{height:100%;background:none;border:0;color:var(--fg);padding:0 10px;font:inherit;cursor:pointer}.mb>button:hover,.mb.open>button{background:var(--hover)}
+.mdrop{position:absolute;top:100%;left:0;background:var(--panel);border:1px solid var(--line);min-width:230px;display:none;padding:4px 0;box-shadow:0 6px 18px #000a}.mb.open .mdrop{display:block}
+.mdrop .it{display:flex;justify-content:space-between;gap:16px;width:100%;text-align:left;padding:4px 14px;background:none;border:0;color:var(--fg);font:inherit;cursor:pointer;text-decoration:none}
+.mdrop .it:hover{background:var(--hover)}.mdrop .it kbd{color:var(--muted);font:11px ui-monospace,monospace}.mdrop hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+.mdrop .it.ck::before{content:'\2713';width:14px;margin-left:-6px;color:var(--accent)}.mdrop .it.unck::before{content:'';width:14px;margin-left:-6px}
 #fieldbtn{width:100%;text-align:left;display:flex;justify-content:space-between}
-#fieldmenu{position:fixed;z-index:30;display:none;background:#1a1f26;border:1px solid #456;box-shadow:0 6px 18px #000a;font:13px system-ui,sans-serif}#fieldmenu.on{display:flex}
-#fieldmenu .groups{display:flex;flex-direction:column;padding:4px 0;min-width:130px;border-right:1px solid #333}
-#fieldmenu .groups button{text-align:left;background:none;border:0;color:#ddd;padding:4px 12px;font:inherit;cursor:pointer;display:flex;justify-content:space-between;gap:10px}
-#fieldmenu .groups button:hover,#fieldmenu .groups button.on{background:#2a3340}#fieldmenu .groups button.cur{color:#4af}
+#fieldmenu{position:fixed;z-index:30;display:none;background:var(--panel);border:1px solid var(--line);box-shadow:0 6px 18px #000a;font:13px system-ui,sans-serif}#fieldmenu.on{display:flex}
+#fieldmenu .groups{display:flex;flex-direction:column;padding:4px 0;min-width:130px;border-right:1px solid var(--line)}
+#fieldmenu .groups button{text-align:left;background:none;border:0;color:var(--fg);padding:4px 12px;font:inherit;cursor:pointer;display:flex;justify-content:space-between;gap:10px}
+#fieldmenu .groups button:hover,#fieldmenu .groups button.on{background:var(--hover)}#fieldmenu .groups button.cur{color:var(--accent)}
 #fieldmenu .items{display:flex;gap:4px;padding:6px;max-width:460px;min-width:200px}
-#fieldmenu .items button{background:#222a33;border:1px solid #345;color:#ddd;padding:3px 8px;font:12px ui-monospace,monospace;cursor:pointer;border-radius:3px}
-#fieldmenu .items button:hover{background:#2f3c4a}#fieldmenu .items button.cur{border-color:#4af;color:#4af}
+#fieldmenu .items button{background:var(--panel2);border:1px solid var(--line);color:var(--fg);padding:3px 8px;font:12px ui-monospace,monospace;cursor:pointer;border-radius:3px}
+#fieldmenu .items button:hover{background:var(--hover)}#fieldmenu .items button.cur{border-color:var(--accent);color:var(--accent)}
 #notes_tr{position:fixed;top:32px;right:10px;z-index:40;display:flex;flex-direction:column;gap:6px;max-width:360px}
-#notes_tr .note{background:#1a1f26;border:1px solid #456;border-left:4px solid #4af;padding:8px 28px 8px 10px;font:13px system-ui,sans-serif;position:relative;box-shadow:0 6px 18px #000a}
-#notes_tr .note.ok{border-left-color:#5c5}#notes_tr .note.bad{border-left-color:#e66}#notes_tr .note a{color:#8bd}
-#notes_tr .note .x{position:absolute;top:4px;right:4px;background:none;border:0;color:#9ab;font-size:16px;cursor:pointer;padding:0 4px}
-#pcorner{position:absolute;right:8px;bottom:8px;z-index:4;background:#000c;border:1px solid #345;border-radius:4px;padding:4px 7px;max-width:62%;pointer-events:none;display:none}
-#pcorner.on{display:block}#pcorner #ptext{font:11px/1.35 ui-monospace,monospace;color:#9bd;white-space:pre-wrap;margin-bottom:3px}#pcorner #perr{font:11px/1.35 ui-monospace,monospace;color:#f99;white-space:pre-wrap;overflow-wrap:anywhere}
+#notes_tr .note{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);padding:8px 28px 8px 10px;font:13px system-ui,sans-serif;position:relative;box-shadow:0 6px 18px #000a}
+#notes_tr .note.ok{border-left-color:var(--ok)}#notes_tr .note.bad{border-left-color:var(--bad)}#notes_tr .note a{color:var(--accent)}
+#notes_tr .note .x{position:absolute;top:4px;right:4px;background:none;border:0;color:var(--muted);font-size:16px;cursor:pointer;padding:0 4px}
+#pcorner{position:absolute;right:8px;bottom:8px;z-index:4;background:#000c;border:1px solid var(--line);border-radius:4px;padding:4px 7px;max-width:62%;pointer-events:none;display:none}
+#pcorner.on{display:block}#pcorner #ptext{font:11px/1.35 ui-monospace,monospace;color:var(--accent);white-space:pre-wrap;margin-bottom:3px}#pcorner #perr{font:11px/1.35 ui-monospace,monospace;color:var(--bad);white-space:pre-wrap;overflow-wrap:anywhere}
 #pcorner #pbar{margin:0;width:220px;max-width:100%}
-#pbar{height:5px;background:#222;border-radius:2px;margin:0 0 5px;display:none}#pbar i{display:block;height:5px;width:0;background:#4af;border-radius:2px;transition:width .25s linear}
-#pbar.est i{background:#7ac}#pbar.idk i{width:100%!important;background:repeating-linear-gradient(90deg,#345 0 10px,#4af 10px 20px);animation:pb 1s linear infinite}
+#pbar{height:5px;background:var(--panel2);border-radius:2px;margin:0 0 5px;display:none}#pbar i{display:block;height:5px;width:0;background:var(--accent);border-radius:2px;transition:width .25s linear}
+#pbar.est i{background:#7ac}#pbar.idk i{width:100%!important;background:repeating-linear-gradient(90deg,var(--line) 0 10px,var(--accent) 10px 20px);animation:pb 1s linear infinite}
 @keyframes pb{from{background-position:0 0}to{background-position:20px 0}}
-#ptext{font:11px ui-monospace,monospace;color:#9bd;margin-bottom:3px;display:none}
+#ptext{font:11px ui-monospace,monospace;color:var(--accent);margin-bottom:3px;display:none}
 #abinfo{font:11px ui-monospace,monospace;color:#cba;margin-top:4px;white-space:pre-wrap}
 #picker{position:fixed;inset:0;background:#000d;display:none;align-items:center;justify-content:center;z-index:11}
-#pk_recent{margin:0 0 8px}#pk_recent .rc{display:flex;gap:8px;align-items:baseline;padding:2px 4px;cursor:pointer;border-radius:3px}#pk_recent .rc:hover{background:#2a3340}
-#pk_recent .rc small{color:#789;flex:none}#pk_recent .rc span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#pk_recent .gone{opacity:.45}
-#picker.on{display:flex}#picker>div{background:#1a1f26;border:1px solid #456;padding:12px 16px;width:min(720px,96vw);max-height:92vh;display:flex;flex-direction:column}
-#pk_list{overflow:auto;flex:1;min-height:120px;margin:6px 0;border:1px solid #333;font:12px ui-monospace,monospace}
-#pk_list div{display:flex;gap:6px;align-items:center;padding:2px 6px;border-bottom:1px solid #222}#pk_list div:hover{background:#223}
-#pk_list .nm{flex:0 1 auto;max-width:45%;cursor:pointer;color:#cde;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#pk_list .ds,#pk_recent .ds{flex:1;min-width:0;color:#89a;font:11px system-ui,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#pk_list .nm.leaf{cursor:default;color:#9ab}
-#pk_list .ct{color:#8a8;width:110px;flex:none;text-align:right}#pk_dir{font:12px ui-monospace,monospace;color:#fc8;word-break:break-all}#pk_msg{color:#e98;font:12px ui-monospace,monospace;min-height:1em}
+#pk_recent{margin:0 0 8px}#pk_recent .rc{display:flex;gap:8px;align-items:baseline;padding:2px 4px;cursor:pointer;border-radius:3px}#pk_recent .rc:hover{background:var(--hover)}
+#pk_recent .rc small{color:var(--muted);flex:none}#pk_recent .rc span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#pk_recent .gone{opacity:.45}
+#picker.on{display:flex}#picker>div{background:var(--panel);border:1px solid var(--line);padding:12px 16px;width:min(720px,96vw);max-height:92vh;display:flex;flex-direction:column}
+#pk_list{overflow:auto;flex:1;min-height:120px;margin:6px 0;border:1px solid var(--line);font:12px ui-monospace,monospace}
+#pk_list div{display:flex;gap:6px;align-items:center;padding:2px 6px;border-bottom:1px solid var(--panel2)}#pk_list div:hover{background:var(--hover)}
+#pk_list .nm{flex:0 1 auto;max-width:45%;cursor:pointer;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#pk_list .ds,#pk_recent .ds{flex:1;min-width:0;color:var(--muted);font:11px system-ui,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#pk_list .nm.leaf{cursor:default;color:var(--muted)}
+#pk_list .ct{color:var(--ok);width:110px;flex:none;text-align:right}#pk_dir{font:12px ui-monospace,monospace;color:var(--warn);word-break:break-all}#pk_msg{color:var(--bad);font:12px ui-monospace,monospace;min-height:1em}
 #help{position:fixed;inset:0;background:#000d;display:none;align-items:center;justify-content:center;z-index:10}
-#help.on{display:flex}#help div{background:#1a1f26;border:1px solid #456;padding:14px 22px;max-width:min(560px,94vw);max-height:92vh;overflow:auto}
-#help h2{margin:0 0 8px;font-size:15px}#help td.grp{color:#9bd;font:bold 12px sans-serif;padding-top:8px}
+#help.on{display:flex}#help div{background:var(--panel);border:1px solid var(--line);padding:14px 22px;max-width:min(560px,94vw);max-height:92vh;overflow:auto}
+#help h2{margin:0 0 8px;font-size:15px}#help td.grp{color:var(--accent);font:bold 12px sans-serif;padding-top:8px}
 body:has(#panel.hid) #grip{display:none}#snaprow{position:relative}#snapghost{position:absolute;top:2px;bottom:2px;width:4px;margin-left:-2px;background:#fc4;border-radius:2px;pointer-events:none;display:none;box-shadow:0 0 4px #fc4}
-#snaplab.scrub,.clock.scrub{color:#fc4}#ctx{position:fixed;z-index:60;display:none;background:#1a1f26;border:1px solid #456;border-radius:4px;padding:3px 0;min-width:220px;box-shadow:0 4px 14px #000a;font:12px sans-serif}
-#ctx.on{display:block}#ctx .hd{padding:3px 10px 5px;color:#9ab;font:11px ui-monospace,monospace;white-space:pre-wrap;border-bottom:1px solid #333;margin-bottom:3px;max-width:340px}
-#ctx a{display:flex;justify-content:space-between;gap:16px;padding:3px 10px;color:#dde;text-decoration:none;cursor:pointer}#ctx a:hover{background:#2a3a4a}#ctx a kbd{color:#fc8;font:11px ui-monospace,monospace}#ctx hr{border:0;border-top:1px solid #333;margin:3px 0}
-#help table{border-collapse:collapse}#help td{padding:2px 10px 2px 0;vertical-align:top}#help td:first-child{font:12px ui-monospace,monospace;color:#fc8;white-space:nowrap}
-small{color:#789}
-@media (max-width:760px){#grip{display:none}body{flex-direction:column}#panel{width:auto;max-height:38vh;border-right:0;border-bottom:1px solid #333}#stage.n2{grid-template-columns:minmax(0,1fr)}}
+#snaplab.scrub,.clock.scrub{color:#fc4}#ctx{position:fixed;z-index:60;display:none;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:3px 0;min-width:220px;box-shadow:0 4px 14px #000a;font:12px sans-serif}
+#ctx.on{display:block}#ctx .hd{padding:3px 10px 5px;color:var(--muted);font:11px ui-monospace,monospace;white-space:pre-wrap;border-bottom:1px solid var(--line);margin-bottom:3px;max-width:340px}
+#ctx a{display:flex;justify-content:space-between;gap:16px;padding:3px 10px;color:var(--fg);text-decoration:none;cursor:pointer}#ctx a:hover{background:var(--panel2)}#ctx a kbd{color:var(--warn);font:11px ui-monospace,monospace}#ctx hr{border:0;border-top:1px solid var(--line);margin:3px 0}
+#help table{border-collapse:collapse}#help td{padding:2px 10px 2px 0;vertical-align:top}#help td:first-child{font:12px ui-monospace,monospace;color:var(--warn);white-space:nowrap}
+small{color:var(--muted)}
+button,select,input[type=number],input[type=text]{border-radius:var(--radius-sm)}button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.mdrop,#fieldmenu,#notes_tr .note,#ctx,#picker>div,#help div,#pcorner{border-radius:var(--radius)}
+.clock,.readout,#snaplab,.slab,#threadlab,#status,#abinfo,#clockinfo,#insp,#joblist,#jb_info,#ptext,#pk_list .ct,input[type=number],.xh b{font-variant-numeric:tabular-nums}
+/* icon buttons (inline SVG, the title is the tooltip) */
+.ib{display:inline-flex;align-items:center;justify-content:center;padding:3px 7px}.ib svg{width:14px;height:14px;display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.ib svg .fl{fill:currentColor;stroke:none}
+#menubar .tools{margin-left:auto;display:flex;align-items:center;gap:1px;padding-right:6px}#menubar .tools button{height:22px;background:none;border:0;color:var(--muted);padding:0 6px}#menubar .tools button:hover{background:var(--hover);color:var(--fg)}
+#menubar .tools .sep{width:1px;height:14px;background:var(--line);margin:0 4px}#playbtn .pz,#playbtn.on .pl{display:none}#playbtn.on .pz{display:block}#playbtn.on{color:var(--accent)}
+/* the map: the previous picture stays (dimmed) while the next one loads, then fades out over it (a copy in canvas.ghost) */
+canvas.view{transition:opacity var(--dur) var(--ease)}.pane.loading canvas.view{opacity:.72}
+canvas.ghost{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;opacity:0}
+/* plot panes: the cursor's crosshair with its values, the current-time marker that slides to the new time */
+.xh{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:3;display:none;overflow:hidden}.xh.on{display:block}
+.xh i{position:absolute;left:0;top:0;background:#fff8}.xh .xv{width:1px}.xh .yv{height:1px}
+.xh b{position:absolute;left:0;top:0;font:11px ui-monospace,monospace;font-weight:normal;color:var(--fg);background:#000b;border:1px solid var(--line);border-radius:var(--radius-sm);padding:1px 5px;white-space:nowrap}
+.tmark{position:absolute;left:0;top:0;width:1.5px;background:#fc4;pointer-events:none;z-index:3;display:none;will-change:transform;transition:transform var(--dur-slow) var(--ease-out)}
+/* side panel sections: the legend opens and closes them (a slide: grid rows 0fr / 1fr, opacity) */
+#panel fieldset>legend{cursor:pointer;user-select:none;display:flex;align-items:center;gap:3px}#panel fieldset>legend:hover{color:var(--fg)}
+legend .chev{width:10px;height:10px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;transition:transform var(--dur) var(--ease)}fieldset.shut legend .chev{transform:rotate(-90deg)}
+.fbody{display:grid;grid-template-rows:1fr;transition:grid-template-rows var(--dur) var(--ease)}fieldset.shut .fbody{grid-template-rows:0fr}fieldset.shut{padding-bottom:0}
+.fin{min-height:0;min-width:0;overflow:hidden;transition:opacity var(--dur) var(--ease)}fieldset.shut .fin{opacity:0;visibility:hidden;transition:opacity var(--dur) var(--ease),visibility 0s linear var(--dur)}
+@media (max-width:560px){#menubar .tools .opt{display:none}#menubar .mb>button{padding:0 7px}}
+@media (prefers-reduced-motion:reduce){.fbody,.fin,legend .chev,.tmark,canvas.view{transition:none!important}.spin{animation-duration:2.4s}}
+@media (max-width:760px){#grip{display:none}body{flex-direction:column}#panel{width:auto;max-height:38vh;border-right:0;border-bottom:1px solid var(--line)}#stage.n2{grid-template-columns:minmax(0,1fr)}}
 </style></head><body>
 <div id="menubar"><div class="brand"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b1020'/%3E%3Cpath d='M32 32c6-8 18-6 20 4s-10 20-22 16S10 34 18 22s30-10 34 2' fill='none' stroke='%2378c8ff' stroke-width='4' stroke-linecap='round'/%3E%3Cpath d='M32 32c-6 8-18 6-20-4s10-20 22-16 20 18 12 30' fill='none' stroke='%23ffb45a' stroke-width='3' stroke-linecap='round' opacity='.85'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%23fff3c4'/%3E%3C/svg%3E" alt="">splosh</div>
   <div class="mb"><button>File</button><div class="mdrop">
@@ -137,12 +164,13 @@ small{color:#789}
     <a class="it" href="#" data-key="Enter">Play / pause <kbd>Enter</kbd></a><a class="it" href="#" data-key="a">Auto colour limits <kbd>a</kbd></a><a class="it" href="#" data-key="r">Re-render <kbd>r</kbd></a></div></div>
   <div class="mb"><button>View</button><div class="mdrop" id="viewmenu"></div></div>
   <div class="mb"><button>Help</button><div class="mdrop"><a class="it" id="helpbtn" href="#">Keys <kbd>?</kbd></a></div></div>
+  <div class="tools"><button class="ib opt" data-key="b" title="previous snapshot (b)" aria-label="previous snapshot"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg></button><button class="ib" id="playbtn" data-key="Enter" title="play / pause (Enter)" aria-label="play or pause"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="fl pl" d="M4.5 3v10l8.5-5z"/><path class="pz" d="M5.5 3.5v9M10.5 3.5v9"/></svg></button><button class="ib opt" data-key=" " title="next snapshot (space)" aria-label="next snapshot"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg></button><span class="sep opt"></span><button class="ib" id="tb_reset" data-key="o" title="reset the view (o)" aria-label="reset the view"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10"/><circle cx="8" cy="8" r="1.6"/></svg></button><button class="ib" id="tb_dl" title="download the selected pane as shown (PNG)" aria-label="download the selected pane"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v8M4.5 7 8 10.5 11.5 7M3 13.5h10"/></svg></button><button class="ib" id="tb_panel" data-key="q" title="show / hide the side panel (q)" aria-label="side panel"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M6 3v10"/></svg></button></div>
 </div>
 <div id="panel">
   <div id="tabs"><button data-tab="explore" class="on" title="the maps, profiles and time series: what to look at">Explore</button><button data-tab="figure" title="the panes as a figure (a layout): grid, labels, the figure options, publication look, export, movie">Figure</button></div>
   <div id="explore">
   <label>snapshot (selected pane) <span id="snaplab"></span></label>
-  <div class="row" id="snaprow" title="ctrl or shift + wheel: scan the snapshots (loaded when you release the key)"><button id="prev">&lt;</button><input type="range" id="snap" min="0" max="0" value="0"><button id="next">&gt;</button><div id="snapghost"></div></div>
+  <div class="row" id="snaprow" title="ctrl or shift + wheel: scan the snapshots (loaded when you release the key)"><button id="prev" class="ib" title="previous snapshot (b)" aria-label="previous snapshot"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg></button><input type="range" id="snap" min="0" max="0" value="0"><button id="next" class="ib" title="next snapshot (space)" aria-label="next snapshot"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg></button><div id="snapghost"></div></div>
   <div class="wrow"><div style="flex:2 1 150px"><label>field</label><select id="field" class="hid"></select><button id="fieldbtn" title="choose the field (grouped)"><span id="fieldlab">rho</span><span>&#9662;</span></button></div>
     <div><label>mode</label><select id="mode"><option value="proj">projection</option><option value="slice">slice</option><option value="volume">volume (opacity)</option></select></div><div><label title="how the field is averaged: auto = mass for projections, volume for slices; mass = the density-weighted mean along the line of sight; volume = the volume-weighted mean; column = the column density of the field (projection: sum m q W / area, e.g. torque per unit area for a specific torque; slice: rho q)">weight</label><select id="weight"><option value="auto">auto</option><option value="mass">mass</option><option value="volume">volume</option><option value="column">column</option></select></div><div><label>axes (los = 3rd)</label><select id="axes"><option>xy</option><option>xz</option><option>yz</option></select></div></div>
   <div id="z0row"><label>slice plane z0</label><input type="number" id="z0" value="0" step="0.1"></div>
@@ -275,8 +303,8 @@ function makePane(src) {
              selCrit: null, selOnly: false, selHi: true, selItem: null, selMsg: "", ovBusy: false, ovMsg: "", insp: null, inspSeq: 0, inspMsg: "", clickTimer: null, downAt: null};
   if (src) { for (const k of ["run", "snap", "field", "mode", "weight", "axes", "z0", "cmap", "scale", "diff", "post", "postarg", "soft"]) p[k] = src[k]; p.prev = src.prev ? {...src.prev} : null; p.missing = src.missing; p.view = S.linked ? src.view : {...src.view}; Object.assign(p.nl, src.nl); Object.assign(p.dl, src.dl); p.ovo = {...src.ovo}; }
   const i = S.panes.length, cell = document.createElement("div"); cell.className = "cell";
-  cell.innerHTML = '<div class="pane"><canvas class="view" width="768" height="768"></canvas><canvas class="ovl" width="768" height="768"></canvas><canvas class="bar" width="64" height="256"></canvas><div class="cap"></div><div class="badge"></div><div class="spin" title="loading tiles"></div><div class="clock"></div><div class="nosnap"></div><div class="readout"></div><div class="ptag"></div><canvas class="plot" width="768" height="768"></canvas><div class="pk"><select class="kind" title="what this pane shows"><option value="map">map</option><option value="profile">radial profile</option><option value="series">time series</option><option value="heatmap">heatmap</option><option value="phase">phase diagram</option><option value="radial">radial profile (time-averaged)</option><option value="spectrum">spectrum</option></select><select class="sheat" title="the family of columns (name + number) drawn against time"></select><select class="ssrc" title="data source: the snapshot scalars, GIZMO logs (energy.txt, blackholes.txt), plugin sources (black-hole logs, binary orbit)"></select><span class="scolwrap"><button class="scolbtn" title="columns to draw">columns ▾</button><div class="scolmenu"></div></span><span class="sids"></span><select class="ssm" title="running mean (centred window), in binary periods P0"><option value="0">no mean</option><option value="0.01">mean 0.01 P0</option><option value="0.1">mean 0.1 P0</option><option value="1">mean 1 P0</option></select><select class="sx" title="time axis"><option value="orb">t/P0</option><option value="myr">Myr</option><option value="t">code t</option></select><select class="sy" title="y axis: auto = log when positive over more than 100x, symlog when both signs span decades"><option value="auto">y auto</option><option value="lin">y lin</option><option value="log">y log</option><option value="symlog">y symlog</option></select><select class="sstk" title="the columns as parts of a total (e.g. the mass of a circumbinary disc and of two minidiscs): stacked shaded zones, or fractions of the total; the total is drawn as a line when it is not constant"><option value="">lines</option><option value="stack">stacked</option><option value="fraction">fractions</option></select><select class="shz" title="colours: log; linear; symlog = diverging about 0 (signed quantities: torque density, Mdot, B_phi), linear within 1e-3 of the largest |z|"><option value="log">z log</option><option value="lin">z lin</option><option value="symlog">z symlog</option></select><select class="shy" title="y axis of the rows (the numbers in the column names): linear, or log for log-spaced radii (row edges at the geometric midpoints)"><option value="lin">y lin</option><option value="log">y log</option></select><select class="rd rdiv" title="divide by another family (the ratio of the window means: jdot_ / mdot_ = ell_0)"></select><input class="rd rsin rwin" placeholder="windows: 1" title="time windows: N (the run in N equal parts, coloured by time), last:K (the last K orbits) or [[a, b], ...] (orbits)"><label class="rd" title="draw d ln|y| / d ln R of the window mean instead of y"><input type="checkbox" class="rslope"> slope</label><input class="sp rsin sfmin" placeholder="fmin" title="lowest frequency (1/P0; empty: half of 1 / the time span)"><input class="sp rsin sfmax" placeholder="fmax" title="highest frequency (1/P0; empty: the Nyquist-like limit, at most 20)"><input class="sp rsin sdet" placeholder="detrend P0" title="subtract a running mean of this many P0 before the periodogram (empty: only the mean)"><button class="srel" title="read the files again (a running simulation wrote more)">↻</button><label class="slog" title="logarithmic y axis"><input type="checkbox" class="ylog" checked> log y</label><select class="php pqx" title="phase diagram: the x quantity"></select><select class="php pqy" title="phase diagram: the y quantity"></select><label class="php" title="logarithmic x axis"><input type="checkbox" class="pxl" checked> log x</label><label class="php" title="logarithmic y axis"><input type="checkbox" class="pyl" checked> log y</label><select class="php pw" title="what each bin sums: the gas mass, the number of particles, their volume"><option>mass</option><option>count</option><option>volume</option></select><select class="php pb" title="bins per axis"><option value="64">64 bins</option><option value="128">128 bins</option><option value="200">200 bins</option><option value="256">256 bins</option><option value="400">400 bins</option></select><input class="php prng pxr" placeholder="x range: auto" title="x range: lo, hi (empty: automatic; a box zoom fills it)"><input class="php prng pyr" placeholder="y range: auto" title="y range: lo, hi (empty: automatic; a box zoom fills it)"><button class="php pclr" title="clear the selection drawn on this diagram (R)">clear sel.</button><button class="sbuild" title="compute the built-in scalars of every snapshot in a background job (to RUN/analysis_viewer/series)">build</button></div><div class="orient"><canvas width="220" height="220" title="drag: turn the view (rendered when you let go); click an axis tip: look along it"></canvas><div class="obtn"><button data-o="face" title="tilt none">face-on</button><button data-o="edge" title="incl:90">edge-on</button><button data-o="L" title="tilt L: the gas disc face-on">disc</button><button data-o="Lbh" title="tilt Lbh: the BH orbit face-on">orbit</button></div></div></div>';
-  p.cell = cell; p.el = cell.firstChild; p.cv = p.el.querySelector("canvas.view"); p.ctx = p.cv.getContext("2d"); p.bar = p.el.querySelector("canvas.bar"); p.ovcv = p.el.querySelector("canvas.ovl"); p.ovctx = p.ovcv.getContext("2d");
+  cell.innerHTML = '<div class="pane"><canvas class="view" width="768" height="768"></canvas><canvas class="ghost" width="768" height="768"></canvas><canvas class="ovl" width="768" height="768"></canvas><canvas class="bar" width="64" height="256"></canvas><div class="cap"></div><div class="badge"></div><div class="spin" title="loading tiles"></div><div class="clock"></div><div class="nosnap"></div><div class="readout"></div><div class="ptag"></div><canvas class="plot" width="768" height="768"></canvas><div class="pk"><select class="kind" title="what this pane shows"><option value="map">map</option><option value="profile">radial profile</option><option value="series">time series</option><option value="heatmap">heatmap</option><option value="phase">phase diagram</option><option value="radial">radial profile (time-averaged)</option><option value="spectrum">spectrum</option></select><select class="sheat" title="the family of columns (name + number) drawn against time"></select><select class="ssrc" title="data source: the snapshot scalars, GIZMO logs (energy.txt, blackholes.txt), plugin sources (black-hole logs, binary orbit)"></select><span class="scolwrap"><button class="scolbtn" title="columns to draw">columns ▾</button><div class="scolmenu"></div></span><span class="sids"></span><select class="ssm" title="running mean (centred window), in binary periods P0"><option value="0">no mean</option><option value="0.01">mean 0.01 P0</option><option value="0.1">mean 0.1 P0</option><option value="1">mean 1 P0</option></select><select class="sx" title="time axis"><option value="orb">t/P0</option><option value="myr">Myr</option><option value="t">code t</option></select><select class="sy" title="y axis: auto = log when positive over more than 100x, symlog when both signs span decades"><option value="auto">y auto</option><option value="lin">y lin</option><option value="log">y log</option><option value="symlog">y symlog</option></select><select class="sstk" title="the columns as parts of a total (e.g. the mass of a circumbinary disc and of two minidiscs): stacked shaded zones, or fractions of the total; the total is drawn as a line when it is not constant"><option value="">lines</option><option value="stack">stacked</option><option value="fraction">fractions</option></select><select class="shz" title="colours: log; linear; symlog = diverging about 0 (signed quantities: torque density, Mdot, B_phi), linear within 1e-3 of the largest |z|"><option value="log">z log</option><option value="lin">z lin</option><option value="symlog">z symlog</option></select><select class="shy" title="y axis of the rows (the numbers in the column names): linear, or log for log-spaced radii (row edges at the geometric midpoints)"><option value="lin">y lin</option><option value="log">y log</option></select><select class="rd rdiv" title="divide by another family (the ratio of the window means: jdot_ / mdot_ = ell_0)"></select><input class="rd rsin rwin" placeholder="windows: 1" title="time windows: N (the run in N equal parts, coloured by time), last:K (the last K orbits) or [[a, b], ...] (orbits)"><label class="rd" title="draw d ln|y| / d ln R of the window mean instead of y"><input type="checkbox" class="rslope"> slope</label><input class="sp rsin sfmin" placeholder="fmin" title="lowest frequency (1/P0; empty: half of 1 / the time span)"><input class="sp rsin sfmax" placeholder="fmax" title="highest frequency (1/P0; empty: the Nyquist-like limit, at most 20)"><input class="sp rsin sdet" placeholder="detrend P0" title="subtract a running mean of this many P0 before the periodogram (empty: only the mean)"><button class="srel" title="read the files again (a running simulation wrote more)">↻</button><label class="slog" title="logarithmic y axis"><input type="checkbox" class="ylog" checked> log y</label><select class="php pqx" title="phase diagram: the x quantity"></select><select class="php pqy" title="phase diagram: the y quantity"></select><label class="php" title="logarithmic x axis"><input type="checkbox" class="pxl" checked> log x</label><label class="php" title="logarithmic y axis"><input type="checkbox" class="pyl" checked> log y</label><select class="php pw" title="what each bin sums: the gas mass, the number of particles, their volume"><option>mass</option><option>count</option><option>volume</option></select><select class="php pb" title="bins per axis"><option value="64">64 bins</option><option value="128">128 bins</option><option value="200">200 bins</option><option value="256">256 bins</option><option value="400">400 bins</option></select><input class="php prng pxr" placeholder="x range: auto" title="x range: lo, hi (empty: automatic; a box zoom fills it)"><input class="php prng pyr" placeholder="y range: auto" title="y range: lo, hi (empty: automatic; a box zoom fills it)"><button class="php pclr" title="clear the selection drawn on this diagram (R)">clear sel.</button><button class="sbuild" title="compute the built-in scalars of every snapshot in a background job (to RUN/analysis_viewer/series)">build</button></div><div class="orient"><canvas width="220" height="220" title="drag: turn the view (rendered when you let go); click an axis tip: look along it"></canvas><div class="obtn"><button data-o="face" title="tilt none">face-on</button><button data-o="edge" title="incl:90">edge-on</button><button data-o="L" title="tilt L: the gas disc face-on">disc</button><button data-o="Lbh" title="tilt Lbh: the BH orbit face-on">orbit</button></div></div></div>';
+  p.cell = cell; p.el = cell.firstChild; p.cv = p.el.querySelector("canvas.view"); p.ctx = p.cv.getContext("2d"); p.bar = p.el.querySelector("canvas.bar"); p.ovcv = p.el.querySelector("canvas.ovl"); p.ghost = p.el.querySelector("canvas.ghost"); p.ovctx = p.ovcv.getContext("2d");
   p.orient = p.el.querySelector(".orient canvas"); attachOrient(p);
   p.cap = p.el.querySelector(".cap"); p.badge = p.el.querySelector(".badge"); p.spin = p.el.querySelector(".spin"); p.clock = p.el.querySelector(".clock"); p.nosnap = p.el.querySelector(".nosnap"); p.readout = p.el.querySelector(".readout");
   attachPlot(p);
@@ -441,6 +469,19 @@ function showLimits(p) {
   $("vmin").value = (+p.lim[0]).toPrecision(4); $("vmax").value = (+p.lim[1]).toPrecision(4);
   $("auto").checked = L.auto; $("lock").checked = L.lock; $("cmap").disabled = p.diff !== "off";
 }
+// ---- motion: a new picture fades in over a copy of the previous one (opacity only, on the compositor); the previous picture stays, dimmed, while the next one loads
+const MOTION = window.matchMedia ? matchMedia("(prefers-reduced-motion: reduce)") : {matches: false};
+const DUR = (() => { const v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--dur")); return Number.isFinite(v) ? v : 180; })();
+function fadeFrom(p) {   // call before drawing the new picture: the ghost takes what the pane shows now and fades out over the new one
+  const g = p.ghost; if (!g || !g.animate || MOTION.matches || !DUR || p.kind !== "map" || !p.off || p.missing || S.playing) return;
+  const now = performance.now(), quick = now - (p.fadeT || -1e9) < 2 * DUR; p.fadeT = now;
+  if (p.fade) { p.fade.cancel(); p.fade = null; }
+  if (quick) return;     // rapid stepping (a held key, scrubbing): the pictures swap at once (no smear, no extra compositing)
+  const c = g.getContext("2d"); c.clearRect(0, 0, g.width, g.height); c.drawImage(p.cv, 0, 0);
+  p.fade = g.animate([{opacity: p.el.classList.contains("loading") ? 0.72 : 1}, {opacity: 0}], {duration: DUR + 60, easing: "cubic-bezier(.4,0,.2,1)"});
+}
+function dim(p) { clearTimeout(p.dimT); p.dimT = setTimeout(() => p.el.classList.add("loading"), 120); }     // a cache hit answers sooner: no dimming at all
+function undim(p) { clearTimeout(p.dimT); p.el.classList.remove("loading"); }
 function toScreen(p, x, y) { const W = p.cv.width, s = W / p.view.width; return [(x - p.view.cx) * s + W / 2, W / 2 - (y - p.view.cy) * s]; }
 function toWorld(p, px, py) { const W = p.cv.width, s = W / p.view.width; return [(px - W / 2) / s + p.view.cx, (W / 2 - py) / s + p.view.cy]; }
 function draw(p) {
@@ -468,7 +509,7 @@ function draw(p) {
   ctx.fillStyle = "#000c"; ctx.fillRect(12, W - 36, bar * sc + 4, 7); ctx.fillStyle = "#fff"; ctx.fillRect(14, W - 34, bar * sc, 3);   // dark backing: legible on the white of a difference map
   ctx.font = "13px sans-serif"; ctx.lineWidth = 3; ctx.strokeStyle = "#000c"; ctx.strokeText(lab, 14, W - 40); ctx.fillText(lab, 14, W - 40);
   drawOv(p);
-  if (p.kind !== "map") drawPlot(p);
+  if (p.kind !== "map") drawPlot(p); else if (p.tmKey !== null || (p.xh && p.xh.classList.contains("on"))) { timeMark(p); crossHair(p, null); }
 }
 const drawAll = () => S.panes.forEach(draw);
 function valueAtT(p, t) {   // the map value drawn at stretch position t (bisection on the monotone stretch)
@@ -699,8 +740,25 @@ function mapsOnly(on) {
 document.addEventListener("mousemove", e => { if (document.body.classList.contains("mapsonly")) document.body.classList.toggle("menupeek", e.clientY < 8 || !!e.target.closest("#menubar")); });
 const SECTIONS = [["panel", "side panel", true], ["runbox", "runs and time alignment", true], ["cmpbox", "compare (A / B, difference)", true], ["ovbox", "overlays", true],
                   ["phbox", "phase diagram", true], ["inspbox", "inspect", true], ["jobbox", "long jobs (movies, analysis)", true], ["dispbox", "display options", true], ["infobox", "map info (render details)", false], ["orient", "orientation widget", false]];
+function shutPrefs() { try { return JSON.parse(localStorage.getItem("splosh.shut") || "{}"); } catch (e) { return {}; } }
+function shutSection(fs, shut) {
+  fs.classList.toggle("shut", shut); const lg = fs.querySelector(":scope > legend"); if (lg) lg.setAttribute("aria-expanded", String(!shut));
+  if (!fs.id) return; const v = shutPrefs(); if (shut) v[fs.id] = 1; else delete v[fs.id]; try { localStorage.setItem("splosh.shut", JSON.stringify(v)); } catch (e) {}
+}
+{ const v = shutPrefs(); document.querySelectorAll("#panel fieldset").forEach(fs => {   // wrap each section's content (all but the legend) for the 0fr / 1fr slide
+  const lg = fs.querySelector(":scope > legend"); if (!lg) return;
+  const body = document.createElement("div"), inner = document.createElement("div"); body.className = "fbody"; inner.className = "fin"; body.appendChild(inner);
+  for (const n of [...fs.childNodes]) if (n !== lg) inner.appendChild(n);
+  fs.appendChild(body);
+  lg.insertAdjacentHTML("afterbegin", '<svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3"/></svg>'); lg.title = lg.title || "click: open / close this section";
+  lg.setAttribute("role", "button"); lg.tabIndex = 0;
+  if (fs.id && v[fs.id]) { fs.classList.add("shut"); lg.setAttribute("aria-expanded", "false"); } else lg.setAttribute("aria-expanded", "true");
+  lg.addEventListener("click", () => shutSection(fs, !fs.classList.contains("shut")));
+  lg.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); shutSection(fs, !fs.classList.contains("shut")); } });
+}); }
 function viewPrefs() { try { return JSON.parse(localStorage.getItem("splosh.view") || "{}"); } catch (e) { return {}; } }
 function setSection(id, on) {
+  if (on && $(id) && $(id).classList.contains("shut")) shutSection($(id), false);     // shown from the View menu (or a menu that needs it): open too
   if (id === "orient") document.body.classList.toggle("orient-on", on); else $(id).classList.toggle("hid", !on);
   const v = viewPrefs(); v[id] = on; try { localStorage.setItem("splosh.view", JSON.stringify(v)); } catch (e) {}
   buildViewMenu();
@@ -796,7 +854,7 @@ async function fetchPane(p) {
   if (isSel()) { $("status").textContent = "rendering..."; watchProgress(p, seq); }
   try {
     if (p.missing) {   // no snapshot of this run at the aligned time: nothing to request, say so
-      p.pending = false; p.markers = []; p.spin.classList.remove("on"); draw(p); updateClock(p); updateCaption(p); refreshOverlay(p); p.readout.textContent = "";
+      undim(p); p.pending = false; p.markers = []; p.spin.classList.remove("on"); draw(p); updateClock(p); updateCaption(p); refreshOverlay(p); p.readout.textContent = "";
       if (isSel()) $("status").textContent = S.runs[p.run].label + ": " + p.missing; return;
     }
     p.nosnap.classList.remove("on");
@@ -807,7 +865,7 @@ async function fetchPane(p) {
     if (plan) {   // deep zoom: the covering tiles, composited into one map; the map shown meanwhile (transformed) is the coarse placeholder
       tents = []; for (let iy = plan.iy0; iy <= plan.iy1; iy++) for (let ix = plan.ix0; ix <= plan.ix1; ix++) tents.push(getTile(tileParams(p, plan, ix, iy)));
       reused = tents.every(e => e.done);
-      if (!reused) p.spin.classList.add("on");
+      if (!reused) { p.spin.classList.add("on"); dim(p); }
       try { await Promise.all([...tents.map(e => e.promise), wantBH ? getMarkers(p).then(m => { markers = m; }) : null]); } finally { if (seq === p.seq) p.spin.classList.remove("on"); }
       if (seq !== p.seq) return;
       if (wantBH && markers === undefined) markers = await getMarkers(p);
@@ -816,13 +874,14 @@ async function fetchPane(p) {
       p.spin.classList.remove("on");
       ents = diff ? [getEntry(paneParams(p, S.A)), getEntry(paneParams(p, S.B))] : [getEntry(paneParams(p))];
       if (ents.some(e => !e.done) || (wantBH && ents[0].markers === undefined)) {
+        if (ents.some(e => !e.done)) dim(p);
         await Promise.all([...ents.map(e => e.promise), wantBH ? loadMarkers(ents[0]) : null]);
         if (seq !== p.seq) return;
       }
       p.map = diff ? makeDiff(ents[0].map, ents[1].map, p.diff) : ents[0].map; p.markers = wantBH ? ents[0].markers || [] : [];
       reused = ents[0].reused;
     }
-    bake(p); draw(p); updateCaption(p); updateClock(p); if (!S.altDrag) drawOrient(p); p.pending = false; p.readout.textContent = ""; refreshOverlay(p); refreshPhase(p);
+    fadeFrom(p); undim(p); bake(p); draw(p); updateCaption(p); updateClock(p); if (!S.altDrag) drawOrient(p); p.pending = false; p.readout.textContent = ""; refreshOverlay(p); refreshPhase(p);
     if (isSel()) {
       const meta = p.map.meta;
       $("status").textContent = `${meta.label}  t = ${meta.time.toPrecision(6)}\n${meta.view.mode} ${meta.view.axes}  ${meta.n_particles} particles${plan ? " (largest tile)" : ""}\n` +
@@ -832,7 +891,7 @@ async function fetchPane(p) {
       if (plan) { if ($("prefetch").checked) prefetchTiles(p, plan); }
       else if ($("prefetch").checked && !diff) for (const d of [1, -1]) { const k = p.snap + d; if (k >= 0 && k < S.runs[p.run].snaps.length) getEntry(paneParams(p, {...p, snap: k})).promise.catch(() => {}); }
     }
-  } catch (e) { if (seq === p.seq) { p.pending = false; p.spin.classList.remove("on"); if (isSel()) $("status").textContent = "error: " + e.message; } }
+  } catch (e) { if (seq === p.seq) { undim(p); p.pending = false; p.spin.classList.remove("on"); if (isSel()) $("status").textContent = "error: " + e.message; } }
 }
 function requestPanes(list, delay) { for (const p of list) { p.pending = true; clearTimeout(p.timer); p.timer = setTimeout(() => fetchPane(p), delay === undefined ? 150 : delay); } if (typeof FIG !== "undefined" && FIG.pub) pubSchedule(); }
 const request = delay => requestPanes([sel()], delay);          // the selected pane's data changed
@@ -891,7 +950,7 @@ function drawPlot(p) {   // drawn at the canvas' displayed size (CSS pixels x de
   if (p.plot.width !== Math.round(W * dpr) || p.plot.height !== Math.round(Hh * dpr)) { p.plot.width = Math.round(W * dpr); p.plot.height = Math.round(Hh * dpr); }
   PH = Hh;
   const c = p.plot.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, Hh);
-  p.plotAxes = null;
+  p.plotAxes = null; p.tmX = null;
   if (p.kind === "profile") drawProfile(p, c, W);
   else if (p.kind === "series") drawSeries(p, c, W);
   else if (p.kind === "heatmap") drawHeat(p, c, W);
@@ -900,6 +959,25 @@ function drawPlot(p) {   // drawn at the canvas' displayed size (CSS pixels x de
   const b = p.zbox; if (b && p.plotAxes) { const A = p.plotAxes;      // the box (or axis band) being drawn for a zoom
     const x0 = b.m === "y" ? A.L : Math.min(b.x0, b.x1), x1 = b.m === "y" ? A.L + A.w : Math.max(b.x0, b.x1), y0 = b.m === "x" ? A.T : Math.min(b.y0, b.y1), y1 = b.m === "x" ? A.T + A.h : Math.max(b.y0, b.y1);
     c.fillStyle = "rgba(120,190,255,0.15)"; c.fillRect(x0, y0, x1 - x0, y1 - y0); c.strokeStyle = "#8cf"; c.lineWidth = 1; c.setLineDash([4, 3]); c.strokeRect(x0 + 0.5, y0 + 0.5, x1 - x0, y1 - y0); c.setLineDash([]); }
+  timeMark(p);
+}
+function timeMark(p) {   // the current-time line of a time series / heatmap: a div moved with a transform, eased when only the time changed (same axes), else placed at once
+  const m = p.tmark, A = p.plotAxes, x = p.tmX; if (!m) return;
+  if (x == null || !A || p.kind === "map") { if (p.tmKey !== null) { m.style.display = "none"; p.tmKey = null; } return; }
+  const key = [A.L, A.T, A.w, A.h, A.inv(A.L), A.inv(A.L + A.w)].join();
+  if (key !== p.tmKey) { m.style.transition = "none"; m.style.height = A.h + "px"; m.style.display = "block"; }
+  else if (m.style.transition) m.style.transition = "";
+  m.style.transform = `translate3d(${(x - 0.75).toFixed(1)}px,${A.T}px,0)`; p.tmKey = key;
+}
+function crossHair(p, x, y) {   // the plot pane's crosshair: two lines and the axis values under the cursor (moved with transforms; the canvas is not redrawn for it)
+  const h = p.xh, A = p.plotAxes; if (!h) return;
+  if (x == null || !A || p.kind === "map") { h.classList.remove("on"); return; }
+  const [v, hl, tag] = h.children, xv = A.inv(x), yv = A.invY(y);
+  v.style.height = A.h + "px"; v.style.transform = `translate3d(${x}px,${A.T}px,0)`; hl.style.width = A.w + "px"; hl.style.transform = `translate3d(${A.L}px,${y}px,0)`;
+  tag.textContent = `x ${Number.isFinite(xv) ? tickText(+xv.toPrecision(5)) : "-"}   y ${Number.isFinite(yv) ? tickText(+yv.toPrecision(5)) : "-"}`;
+  const right = x > A.L + 0.62 * A.w, below = y < A.T + 28;
+  tag.style.transform = `translate3d(${right ? x - 8 : x + 8}px,${below ? y + 8 : y - 8}px,0) translate(${right ? "-100%" : "0"},${below ? "0" : "-100%"})`;
+  h.classList.add("on");
 }
 function plotMessage(c, W, lines) { const Hh = PH || W; c.fillStyle = "#0b0e12"; c.fillRect(0, 0, W, Hh); c.fillStyle = "#bcd"; c.font = "13px sans-serif"; c.textAlign = "center"; lines.forEach((t, i) => c.fillText(t, W / 2, Hh / 2 - 10 + 19 * i, W - 20)); c.textAlign = "left"; }
 function drawProfile(p, c, W) {
@@ -1080,7 +1158,7 @@ function drawSeries(p, c, W) {
   }
   c.setLineDash([]); c.globalAlpha = 1;
   const snap = S.runs[p.run].snaps[p.snap], tNow = p.missing ? null : +snap.time, tLook = st.hover != null ? st.hover : tNow;
-  if (tNow != null && inWin(tNow)) { const x = A.X(X.f(tNow)); c.strokeStyle = "#fc4"; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x, A.T); c.lineTo(x, A.T + A.h); c.stroke(); }
+  if (tNow != null && inWin(tNow)) p.tmX = A.X(X.f(tNow));     // the yellow line: a div over the plot (timeMark), it slides to the next snapshot's time
   if (st.hover != null) { const x = A.X(X.f(st.hover)); c.strokeStyle = "#fff8"; c.setLineDash([4, 3]); c.lineWidth = 1; c.beginPath(); c.moveTo(x, A.T); c.lineTo(x, A.T + A.h); c.stroke(); c.setLineDash([]); }
   const lines = [];                                              // legend: each curve's value at the snapshot's time (or under the cursor)
   for (const k of cv) {
@@ -1147,7 +1225,7 @@ function drawStack(p, c, W, D, cv, X, top, win, multiId, multiCol) {
   if (tot) { c.strokeStyle = "#fff"; c.lineWidth = 1.6; c.setLineDash([6, 3]); c.beginPath(); let on = false;
     K.grid.forEach((t, i) => { if (!Number.isFinite(tot[i])) { on = false; return; } const x = A.X(X.f(t)), y = A.Y(tot[i]); on ? c.lineTo(x, y) : c.moveTo(x, y); on = true; }); c.stroke(); c.setLineDash([]); }
   const snap = S.runs[p.run].snaps[p.snap], tNow = p.missing ? null : +snap.time, tLook = st.hover != null ? st.hover : tNow;
-  if (tNow != null && inWin(tNow)) { const x = A.X(X.f(tNow)); c.strokeStyle = "#fc4"; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x, A.T); c.lineTo(x, A.T + A.h); c.stroke(); }
+  if (tNow != null && inWin(tNow)) p.tmX = A.X(X.f(tNow));     // the yellow line: a div over the plot (timeMark), it slides to the next snapshot's time
   if (st.hover != null) { const x = A.X(X.f(st.hover)); c.strokeStyle = "#fff8"; c.setLineDash([4, 3]); c.lineWidth = 1; c.beginPath(); c.moveTo(x, A.T); c.lineTo(x, A.T + A.h); c.stroke(); c.setLineDash([]); }
   let b = -1; if (tLook != null) { let bd = Infinity; K.grid.forEach((t, i) => { const d = Math.abs(t - tLook); if (d < bd) { bd = d; b = i; } }); }
   const lines = K.parts.map((k, j) => { const v = b >= 0 ? K.Y[j][b] : null, f = b >= 0 ? K.Y[j][b] / K.total[b] : null;
@@ -1201,7 +1279,7 @@ function drawHeat(p, c, W) {   // a family of columns <prefix><number> against t
   for (let j = 0; j < ny; j++) { const y0 = A.Y(ye[j + 1]), y1 = A.Y(ye[j]); c.drawImage(off, 0, ny - 1 - j, nx, 1, A.L, y0, A.w, Math.max(1, y1 - y0)); }
   c.restore();
   const snap = S.runs[p.run].snaps[p.snap], tNow = p.missing ? null : +snap.time;
-  if (tNow != null) { const x = A.X(X.f(tNow)); if (x >= A.L && x <= A.L + A.w) { c.strokeStyle = "#fc4"; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x, A.T); c.lineTo(x, A.T + A.h); c.stroke(); } }
+  if (tNow != null) { const x = A.X(X.f(tNow)); if (x >= A.L && x <= A.L + A.w) p.tmX = x; }
   c.font = "11px sans-serif"; c.fillStyle = "#89a";
   let txt = zs === "symlog" ? `${st.heat}* of ${st.src}: symlog colours, -${fmt(ma)}..${fmt(ma)} (linear within ${fmt(lt)})`
           : zs === "lin" ? `${st.heat}* of ${st.src}: linear colours, ${fmt(mn)}..${fmt(mx)}` : `${st.heat}* of ${st.src}: log colours, ${(mx / 1e6).toPrecision(2)}e6..${mx.toPrecision(3)} (black: below 1e-6 of the maximum)`;
@@ -1308,6 +1386,8 @@ function setKind(p, k) {
 }
 function attachPlot(p) {
   p.plot = p.el.querySelector("canvas.plot");
+  p.tmark = document.createElement("div"); p.tmark.className = "tmark"; p.tmKey = null; p.xh = document.createElement("div"); p.xh.className = "xh"; p.xh.innerHTML = '<i class="xv"></i><i class="yv"></i><b></b>';
+  p.plot.after(p.tmark, p.xh);
   if (window.ResizeObserver) new ResizeObserver(() => { if (p.kind !== "map") drawPlot(p); }).observe(p.plot);     // the pane changed size: redraw at the new size
   const pk = p.el.querySelector(".pk"), st = serState(p); pk.addEventListener("mousedown", e => e.stopPropagation()); pk.addEventListener("wheel", e => e.stopPropagation());
   pk.querySelector(".kind").onchange = e => { selectPane(S.panes.indexOf(p)); setKind(p, e.target.value); };
@@ -1346,12 +1426,13 @@ function attachPlot(p) {
     PZ.drag = d; ev.preventDefault();
   });
   p.plot.addEventListener("mousemove", ev => { const A = p.plotAxes; if (!A) return; const [x, y] = at(ev), inside = x >= A.L && x <= A.L + A.w, reg = plotRegion(A, x, y);
+    if (PZ.drag || reg !== "in") crossHair(p, null); else crossHair(p, x, y);
     if (!PZ.drag) p.plot.style.cursor = reg === "x" ? "ew-resize" : reg === "y" ? "ns-resize" : "crosshair";
     if (p.kind === "profile") setHoverR(inside ? {R: A.inv(x) / lengthUnit(p).factor, src: p} : null);
     if (p.kind === "phase") { p.phHover = reg === "in" ? [x, y] : null; if (!PZ.drag) drawPlot(p); }
     if (p.kind === "radial" || p.kind === "spectrum") { p.rsHover = reg === "in" ? A.inv(x) : null; if (!PZ.drag) drawPlot(p); }
     if ((p.kind === "series" || p.kind === "heatmap") && p.serX) { st.hover = inside ? p.serX.inv(A.inv(x)) : null; st.hoverY = A.invY ? A.invY(y) : null; if (!PZ.drag) drawPlot(p); } });
-  p.plot.addEventListener("mouseleave", () => { if (p.kind === "profile") setHoverR(null); if (p.kind === "series" || p.kind === "heatmap") { st.hover = null; drawPlot(p); } if (p.kind === "phase") { p.phHover = null; drawPlot(p); } if (p.rsHover != null) { p.rsHover = null; drawPlot(p); } });
+  p.plot.addEventListener("mouseleave", () => { crossHair(p, null); if (p.kind === "profile") setHoverR(null); if (p.kind === "series" || p.kind === "heatmap") { st.hover = null; drawPlot(p); } if (p.kind === "phase") { p.phHover = null; drawPlot(p); } if (p.rsHover != null) { p.rsHover = null; drawPlot(p); } });
   p.plot.addEventListener("wheel", ev => {   // inside: zoom about the cursor (time series, heatmap: time only; alt: y only); over an axis strip: that axis only
     const A = p.plotAxes; if (!A) return; ev.preventDefault();
     const [x, y] = at(ev), reg = plotRegion(A, x, y); if (!reg) return;
@@ -2283,7 +2364,7 @@ function togglePanel() { setSection("panel", $("panel").classList.contains("hid"
 function zoom(f) { const p = sel(); p.view.width *= f; $("width").value = (+p.view.width).toPrecision(4); drawAll(); requestView(30); }
 S.playing = null;
 function play(on) {
-  clearInterval(S.playing); S.playing = null; if (!on) return;
+  clearInterval(S.playing); S.playing = null; $("playbtn").classList.toggle("on", !!on); if (!on) return;
   S.playing = setInterval(() => { if (S.panes.every(q => !q.pending)) { const p = sel(); if (p.snap >= S.runs[p.run].snaps.length - 1) play(false); else step(1); } }, 120);
 }
 window.addEventListener("keydown", e => {
@@ -2487,6 +2568,16 @@ for (const id of ["grid", "density", "arrows", "extra", "cn", "cstep", "llen", "
 $("insp").addEventListener("click", e => { const c = e.target.closest(".card"), p = sel(); if (!c || !p.insp) return; p.insp.sel = +c.dataset.k; showInsp(p); drawOv(p); });
 $("snap").addEventListener("input", e => setSnap(+e.target.value));
 $("prev").onclick = () => step(-1); $("next").onclick = () => step(1);
+$("tb_dl").onclick = () => downloadPane(sel());
+function downloadPane(p) {   // the selected pane as shown: the map with its colour bar and overlays, or the plot, as a PNG
+  const src = p.kind === "map" ? p.cv : p.plot, c = document.createElement("canvas"); c.width = src.width; c.height = src.height; const g = c.getContext("2d"); g.drawImage(src, 0, 0);
+  if (p.kind === "map") {
+    g.drawImage(p.ovcv, 0, 0, c.width, c.height);
+    const k = c.width / (p.cv.clientWidth || c.width); if (getComputedStyle(p.bar).display !== "none") g.drawImage(p.bar, c.width - 54 * k, 6 * k, 48 * k, 192 * k);
+  }
+  const s = S.runs[p.run] && S.runs[p.run].snaps[p.snap], name = `${s ? s.name.replace(/\.(hdf5|h5)$/, "") : "pane"}_${p.kind === "map" ? p.field : p.kind}.png`;
+  c.toBlob(b => { if (!b) return; const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); }, "image/png");
+}
 for (const id of ["field", "mode", "weight", "axes", "z0"]) $(id).addEventListener("change", e => { const p = sel(); if (id === "field") signedStyle(p, p.field, $(id).value); p[id] = $(id).value; p.blink = null; updateBadge(p); request(30); if (e.target.tagName === "SELECT") e.target.blur(); });
 for (const id of ["center", "align", "tilt", "kappa", "npix", "units"]) $(id).addEventListener("change", e => { requestAll(30); if (e.target.tagName === "SELECT") e.target.blur(); });
 $("width").addEventListener("change", () => { sel().view.width = +$("width").value; drawAll(); requestView(30); });

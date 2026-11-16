@@ -226,6 +226,11 @@ Mouse (also in `docs/KEYS.md`; `h` in the page lists all keys, generated from th
   copy the coordinates or the value; the header is the hover read-out there); on a time series: go to the snapshot nearest that time, whole run, lines / stacked /
   fractions, copy t and y. Shift + right click gives the browser's own menu;
 - `q` shows / hides the side panel (also in Figure mode; View > side panel).
+- Menu bar, right: icon buttons for previous / play-pause / next snapshot, reset the view, download the selected pane as shown (PNG: the map with its colour bar and
+  overlays, or the plot) and the side panel; each has a tooltip with its key. A click on a section's title in the side panel opens or closes the section (remembered in this browser).
+- Motion: a new map fades in over the previous one, which stays (slightly dimmed) while the next one loads; zoom and pan stretch the current picture at once until the
+  sharp render arrives; when maps arrive faster than the fade (a held key, scrubbing) they swap at once. Plot panes show a crosshair with the axis values under the cursor,
+  and the current-time line of a time series or heatmap slides to the new time. Only opacity and transforms are animated; the system's reduced-motion setting turns it off.
 - Signed fields (`vx vy vz vlos vR vphi jz tau_bin`) get limits symmetric about 0 and, when chosen, `RdBu_r` with asinh (the previous colours come back for an unsigned field).
 - `weight` (map controls): auto (mass for projections, volume for slices), mass, volume, column (the column density of the field; slice: rho q).
 
