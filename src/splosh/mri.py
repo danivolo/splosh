@@ -131,6 +131,8 @@ def mri(path, params):
     fr = d["frame"]
     if fr["binary"]:
         out.update(a=fr["a"], e=fr["e"])
+    from .fields import bunit_scalars
+    out.update(bunit_scalars(d["snap"]))
     return {"scalars": out}
 
 

@@ -86,3 +86,33 @@ def test_family_ignores_underscored_suffixes():
     class T:
         columns = {"A1": 0, "A2": 0, "A1_4.5": 0, "A2_10": 0}
     assert heat_columns(T, "A") == [(1.0, "A1"), (2.0, "A2")]
+
+
+def test_bunit_symlink_warning_and_scalars(tmp_path):
+    """the B unit: read from the run's parameter file through a symlinked snapshot; without any, GIZMO's default with a warning; the products record
+    which one they used (bunit, bunit_default)."""
+    import warnings
+    from splosh import fields
+    run = tmp_path / "run"
+    (run / "output").mkdir(parents=True)
+    pos, vel, m, rho, u = kepler_disc(n=20_000)
+    R = np.hypot(pos[:, 0], pos[:, 1])
+    ephi = np.stack([-pos[:, 1] / R, pos[:, 0] / R, 0 * R], 1)
+    p = write(run / "output" / "snapshot_000.hdf5", pos, vel, m, rho, u, [0, 0, 0], [0, 0, 0], 1.0, B=1e-3 * ephi)
+    (run / "gizmo.params").write_text("UnitMagneticField_in_gauss   1.0   % comment\n")
+    links = tmp_path / "links"
+    links.mkdir()
+    (links / "snapshot_000.hdf5").symlink_to(p)
+    fields._BUNIT_WARNED.clear()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")                   # no warning: found through the symlink
+        out = P.PRODUCTS["mri"]["fn"](str(links / "snapshot_000.hdf5"), P.params_of("mri", {"radii": [4.0]}))["scalars"]
+    assert out["bunit"] == 1.0 and out["bunit_default"] == 0.0
+    (run / "gizmo.params").unlink()
+    fields._BUNIT_WARNED.clear()
+    with pytest.warns(UserWarning, match="UnitMagneticField_in_gauss"):
+        out = P.PRODUCTS["mri"]["fn"](p, P.params_of("mri", {"radii": [4.0]}))["scalars"]
+    assert out["bunit"] == pytest.approx(np.sqrt(4 * np.pi)) and out["bunit_default"] == 1.0
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")                   # once per folder
+        P.PRODUCTS["mri"]["fn"](p, P.params_of("mri", {"radii": [4.0]}))

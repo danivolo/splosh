@@ -234,6 +234,9 @@ def disc(path, params):
         B = np.asarray(s["MagneticField"], np.float64)[keep] * bunit / np.sqrt(4 * np.pi * un.density_cgs * un.velocity_cm_s ** 2)   # code units, mu_0 = 1
     zc = params.get("z_cut")
     sc, out_arr = {}, {}
+    if B is not None:
+        from .fields import bunit_scalars
+        sc.update(bunit_scalars(s))                  # the B unit used, and whether it was GIZMO's default (no parameter file found)
     binary = len(bp) >= 2
     if binary:
         m0, m1 = bm[0], bm[1]

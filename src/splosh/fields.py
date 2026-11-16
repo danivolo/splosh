@@ -152,8 +152,11 @@ def magnetic_unit_gauss(snap, view):
         return b, "option"
     path = snap.get("path")
     if path:
-        d = os.path.dirname(os.path.abspath(path))
-        for folder in (d, os.path.dirname(d)):
+        folders = []
+        for p in (os.path.abspath(path), os.path.realpath(path)):         # a symlinked snapshot: also the run directory it points into
+            d = os.path.dirname(p)
+            folders += [f for f in (d, os.path.dirname(d)) if f not in folders]
+        for folder in folders:
             for cand in sorted(glob.glob(os.path.join(folder, "*usedvalues*"))) + [os.path.join(folder, "gizmo.params")]:
                 try:
                     for line in open(cand):
@@ -162,7 +165,25 @@ def magnetic_unit_gauss(snap, view):
                             return float(w[1]), cand
                 except (OSError, ValueError):
                     pass
+        key = os.path.dirname(os.path.abspath(path))
+        if key not in _BUNIT_WARNED:
+            _BUNIT_WARNED.add(key)
+            import warnings
+            warnings.warn(f"UnitMagneticField_in_gauss not found next to {path} (no gizmo.params / *usedvalues* in the snapshot's folder, its parent, or "
+                          f"where a symlink points): using GIZMO's default sqrt(4 pi). beta, Pmag, alpha_M and the magnetic energies scale with "
+                          f"bunit^2: if the run set another value (often 1.0), pass View.bunit or put the parameter file there.", stacklevel=2)
     return GIZMO_DEFAULT_BUNIT, "GIZMO default sqrt(4 pi)"
+
+
+_BUNIT_WARNED = set()
+
+
+def bunit_scalars(snap):
+    """{bunit, bunit_default}: the B unit a product used (gauss per code unit) and 1 when it was GIZMO's default (no parameter file found): a cached
+    result made with the fallback is recognisable."""
+    from .maps import View
+    b, src = magnetic_unit_gauss(snap, View())
+    return {"bunit": float(b), "bunit_default": 1.0 if src.startswith("GIZMO default") else 0.0}
 
 
 def f_beta(ctx):

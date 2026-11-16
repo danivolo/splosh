@@ -192,6 +192,9 @@ def field_spectra(path, params, edges, band, mmax):
         vals["Pmag"] = 0.5 * (d["BR"] ** 2 + d["Bphi"] ** 2 + d["Bz"] ** 2)
     sel = np.ones(len(R), bool) if params.get("z_cut") is None else np.abs(z) < float(params["z_cut"]) * R
     out = {}
+    if d["B"] is not None:
+        from .fields import bunit_scalars
+        out.update(bunit_scalars(d["snap"]))
     Rm = np.sqrt(edges[1:] * edges[:-1])
     for name in params["fields"]:
         if name not in FIELDS:

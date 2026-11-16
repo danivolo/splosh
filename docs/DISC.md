@@ -59,3 +59,6 @@ ring e = 0.2 with its periapsis; a circumbinary ring; the panels on a toy produc
   against m). Not a default parameter, so existing `modes` results stay cached.
 - Layouts: `docs/layouts/mri_maps.toml` (one snapshot: face-on / edge-on B_phi, B_R, Maxwell stress, alpha_M, beta, Q_z), `docs/layouts/mri_spacetime.toml`
   (the butterfly at three radii, the half-disc B_phi and its periodogram, alpha_M and beta against time, B_phi(z) in time windows).
+- **The B unit** (UnitMagneticField_in_gauss) is read from `gizmo.params` / `*usedvalues*` in the snapshot's folder or its parent, also where a
+  symlinked snapshot points. Without one SPLOSH uses GIZMO's default sqrt(4 pi) and warns (once per folder): beta, Pmag, alpha_M and the magnetic
+  energies scale with bunit^2, a factor 4 pi against a run with 1.0. Every product with B records `bunit` and `bunit_default` (1 = the fallback was used).

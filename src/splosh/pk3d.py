@@ -350,6 +350,9 @@ def pk3d_arrays(s, params):
     out = {"L": info["L"], "box": info["L"] / info["a"], "r0": info["r0"] / info["a"], "a": info["a"], "n": n, "dx": info["L"] / n, "npart": len(m)}
     if frame.get("binary"):
         out.update(e=frame["e"], q=frame["q"])
+    if "MagneticField" in s:
+        from .fields import bunit_scalars
+        out.update(bunit_scalars(s))
     if len(m) == 0:
         return out
     f = grid_fields(xl, dv, m, rho, H, Bl, info["L"], n, float(params.get("hmin") or 2.0))
