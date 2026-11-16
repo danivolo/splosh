@@ -43,3 +43,19 @@ Ready layouts in docs/layouts: `disc_profiles`, `disc_budget`, `disc_morphology`
 
 Checks: tests/test_disc.py (a Keplerian disc with Sigma ~ 1/R and H/R = 0.1: slope, H/R, v_phi/v_K, vertical support, Gaussian profile, no inflow; an eccentric
 ring e = 0.2 with its periapsis; a circumbinary ring; the panels on a toy product; the extra-flux hook).
+
+## MRI and dynamo diagnostics (MHD runs)
+- **Map fields** (fields.py, any map panel or the viewer): `BR`, `Bphi` (cylindrical components about the frame's z axis through the frame centre, gauss;
+  tilt the frame with the disc, `tilt = "L"`), `maxwell` (-B_R B_phi, code pressure units with mu_0 = 1: > 0 carries angular momentum outward),
+  `alphaM` (the local -B_R B_phi / P; average stress and pressure separately for a disc alpha: product `disc`, family `aM_`). Signed fields default to
+  RdBu_r, asinh, symmetric limits (also `Bx`, `By`, `Bz`).
+- **Product `mri`** (mri.py; computed automatically for snapshots with MagneticField): at each radius of `radii` (default 2, 4, 8, units of the frame) the
+  annulus R0 (1 +- dr) binned in height (z / H by default, H the annulus' rms height; `z_unit = "R"` for z / R0): families `Bphi<r>z_` (the butterfly
+  diagram as a heatmap against time), `BR<r>z_`, `Mx<r>z_` (the Maxwell stress), `rho<r>z_`; scalars `Bphiup<r>` / `Bphilo<r>` (mean B_phi of the upper
+  and lower halves: a `spectrum` panel on them gives the dynamo period), `aM<r>`, `beta<r>`, `H<r>`, `Brms<r>`. B in code units, mu_0 = 1. Change the
+  radii per run in `analysis_viewer/products/params.toml` (`[mri]` `radii = [4.0, 8.0, 14.0]`).
+- **Azimuthal spectra of any field** (product `modes`, param `fields`, e.g. `[modes]` `fields = ["Bphi", "BR", "rho", "vR"]`): per shell |c_m| with
+  c_m = sum V f exp(i m phi) / sum V (m = 0 the volume mean), columns `<f>m<k>_<R>` and the band scalars `<f>m<k>` (the family `<f>m`: the spectrum
+  against m). Not a default parameter, so existing `modes` results stay cached.
+- Layouts: `docs/layouts/mri_maps.toml` (one snapshot: face-on / edge-on B_phi, B_R, Maxwell stress, alpha_M, beta, Q_z), `docs/layouts/mri_spacetime.toml`
+  (the butterfly at three radii, the half-disc B_phi and its periodogram, alpha_M and beta against time, B_phi(z) in time windows).

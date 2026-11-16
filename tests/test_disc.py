@@ -295,3 +295,33 @@ def test_advective_split_counts_reynolds_once(run):
         r = k[8:]
         assert s["Fadv_" + r] + s["Frey_" + r] == pytest.approx(s[k], rel=1e-9)
         assert s["jdot_" + r] == pytest.approx(-s[k] - s["Tout_" + r], rel=1e-9, abs=1e-12)
+
+
+def test_mri_map_fields(run):
+    """B_R, B_phi, the Maxwell stress and alpha_M of a field B = B0 (cos t e_R - sin t e_phi) about the black hole (code units, mu_0 = 1 via bunit)."""
+    from splosh.fields import _gauss_per_code
+    from splosh.frames import make_frame
+    from splosh.io import load_snapshot
+    from splosh.maps import FieldContext, View, _field_values
+    pos, vel, m, rho, u = kepler_disc(n=5_000)
+    R = np.hypot(pos[:, 0], pos[:, 1])
+    eR = np.stack([pos[:, 0] / R, pos[:, 1] / R, 0 * R], 1)
+    ephi = np.stack([-pos[:, 1] / R, pos[:, 0] / R, 0 * R], 1)
+    t = 0.3
+    B = 2.0 * (np.cos(t) * eR - np.sin(t) * ephi)
+    p = write(run / "output" / "snapshot_000.hdf5", pos, vel, m, rho, u, [0, 0, 0], [0, 0, 0], 1.0)
+    with h5py.File(p, "a") as f:
+        f["PartType0"]["MagneticField"] = B
+    s = load_snapshot(p, gas_fields=("Coordinates", "Masses", "Density", "InternalEnergy", "Velocities", "MagneticField"))
+    v = View(center="bh", field="BR")
+    ctx = FieldContext(s, make_frame(s, "bh", "none"), v)
+    g = _gauss_per_code(ctx)
+    from splosh.fields import magnetic_unit_gauss
+    bu, _ = magnetic_unit_gauss(s, v)
+    b_code = 2.0 * bu / g                                                     # |B| in code units, mu_0 = 1
+    assert np.allclose(_field_values("BR", ctx), b_code * np.cos(t) * g, rtol=1e-6)
+    assert np.allclose(_field_values("Bphi", ctx), -b_code * np.sin(t) * g, rtol=1e-6)
+    mx = _field_values("maxwell", ctx)
+    assert np.allclose(mx, b_code ** 2 * np.cos(t) * np.sin(t), rtol=1e-6) and np.all(mx > 0)
+    P = (5 / 3 - 1) * rho * u
+    assert np.allclose(_field_values("alphaM", ctx), mx / P, rtol=1e-5)

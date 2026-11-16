@@ -45,7 +45,7 @@ MANIFEST_SCHEMA = "splosh-analysis-1"
 KINDS = ("map", "profile", "scalar", "dashboard", "timeseries", "movie", "compare")
 _VIEW_FIELDS = tuple(View.__dataclass_fields__)
 _MAP_STYLE = {"cmap": "viridis", "scale": None, "limits": "global", "pct": None, "vmin": None, "vmax": None, "title": None, "scalebar": True, "colorbar": True, "viewport": None}
-_SIGNED = ("vx", "vy", "vz", "vlos", "vR", "vphi", "jz", "tau_bin")     # signed fields: RdBu_r, asinh, limits symmetric about 0
+_SIGNED = ("vx", "vy", "vz", "vlos", "vR", "vphi", "jz", "tau_bin", "Bx", "By", "Bz", "BR", "Bphi", "maxwell", "alphaM")     # signed fields: RdBu_r, asinh, limits symmetric about 0
 _ALLOWED = {
     "map": {"name", *_VIEW_FIELDS, *_MAP_STYLE},
     "profile": {"name", "center", "align", "tilt", "quantities", "quantity", "weighting", "rmin", "rmax", "bins", "spacing", "geometry", "gamma", "xh", "mu", "bunit"},
@@ -233,8 +233,9 @@ def _check_scale(scale, where):
 
 
 def _symmetric(p):
-    """True for a map product whose limits are (-v, v): the transforms that give a contrast."""
-    return bool((transforms.style(p.get("post", "none")) or {}).get("symmetric"))
+    """True for a map product whose limits are (-v, v): the transforms that give a contrast, and the signed fields without a transform."""
+    st = transforms.style(p.get("post", "none"))
+    return bool(st.get("symmetric")) if st else p.get("field") in _SIGNED
 
 
 def _complete(p):

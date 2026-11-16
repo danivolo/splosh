@@ -1,0 +1,89 @@
+# MRI turbulence in maps (snapshots with a magnetic field; map fields of fields.py): face-on and edge-on slices of B_phi, B_R, the Maxwell stress
+# -B_R B_phi, the local Maxwell alpha and beta, and the MRI quality factor of the vertical field. The frame: centred on the black hole(s), tilted so z is
+# the gas angular momentum (tilt = "L"); B_R / B_phi are about that axis. Set `width` to the disc (code length) and the radii of interest.
+# Signed fields (BR, Bphi, maxwell, alphaM) default to RdBu_r, asinh, symmetric limits.
+
+schema = "splosh-layout-1"
+name = "mri_maps"
+scope = "snapshot"
+ncols = 3
+figure = {panel_in = 4.0}
+
+[[panel]]
+id = "bphi_face"
+type = "map"
+label = "B_phi, midplane slice [gauss]"
+field = "Bphi"
+mode = "slice"
+center = "bh"
+tilt = "L"
+width = 40.0
+npix = 384
+
+[[panel]]
+id = "br_face"
+type = "map"
+label = "B_R, midplane slice [gauss]"
+field = "BR"
+mode = "slice"
+center = "bh"
+tilt = "L"
+width = 40.0
+npix = 384
+
+[[panel]]
+id = "maxwell_face"
+type = "map"
+label = "Maxwell stress -B_R B_phi, midplane slice"
+field = "maxwell"
+mode = "slice"
+center = "bh"
+tilt = "L"
+width = 40.0
+npix = 384
+
+[[panel]]
+id = "bphi_edge"
+type = "map"
+label = "B_phi, edge-on slice"
+field = "Bphi"
+mode = "slice"
+axes = "xz"
+center = "bh"
+tilt = "L"
+width = 40.0
+npix = 384
+
+[[panel]]
+id = "alphaM_face"
+type = "map"
+label = "local alpha_M = -B_R B_phi / P"
+field = "alphaM"
+weight = "volume"
+center = "bh"
+tilt = "L"
+width = 40.0
+npix = 384
+
+[[panel]]
+id = "beta_edge"
+type = "map"
+label = "plasma beta, edge-on slice"
+field = "beta"
+mode = "slice"
+axes = "xz"
+center = "bh"
+tilt = "L"
+width = 40.0
+npix = 384
+cmap = "viridis"
+
+[[panel]]
+id = "Qz_face"
+type = "map"
+label = "MRI quality Q_z (resolved > 6-10)"
+field = "Qz"
+center = "bh"
+tilt = "L"
+width = 40.0
+npix = 384

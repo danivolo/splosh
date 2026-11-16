@@ -289,17 +289,54 @@ def f_ncellH(ctx):
     return f_cs(ctx) / _omega_k(ctx) / np.cbrt(_need(ctx, "Masses") / _need(ctx, "Density"))
 
 
-def _mri_q(ctx, comp):
+def _b_frame(ctx):
+    """B in code units with mu_0 = 1 (Pmag = |B|^2 / 2, as f_pmag), on the frame's axes."""
     B = _need(ctx, "MagneticField")
     u = _units(ctx)
     bunit, _ = magnetic_unit_gauss(ctx.snap, ctx.view)
-    b = np.asarray(B, np.float64) @ ctx.frame.rot.T * (bunit / np.sqrt(4.0 * np.pi * u.density_cgs * u.velocity_cm_s ** 2))     # code units, mu_0 = 1, frame axes
+    return np.asarray(B, np.float64) @ ctx.frame.rot.T * (bunit / np.sqrt(4.0 * np.pi * u.density_cgs * u.velocity_cm_s ** 2))
+
+
+def _b_cyl(ctx):
+    """(B_R, B_phi, B_z) about the frame's z axis through the frame centre, code units (mu_0 = 1)."""
+    b = _b_frame(ctx)
+    p = ctx.frame.pos(ctx.snap["Coordinates"])
+    R = np.maximum(np.hypot(p[:, 0], p[:, 1]), 1e-30)
+    return (b[:, 0] * p[:, 0] + b[:, 1] * p[:, 1]) / R, (-b[:, 0] * p[:, 1] + b[:, 1] * p[:, 0]) / R, b[:, 2]
+
+
+def _gauss_per_code(ctx):
+    u = _units(ctx)
+    return np.sqrt(4.0 * np.pi * u.density_cgs * u.velocity_cm_s ** 2)
+
+
+def f_bR(ctx):
+    """cylindrical radial field B_R about the frame centre [gauss] (align the frame with the disc: tilt L or align bh)."""
+    return _b_cyl(ctx)[0] * _gauss_per_code(ctx)
+
+
+def f_bphi(ctx):
+    """azimuthal field B_phi about the frame's z axis [gauss]."""
+    return _b_cyl(ctx)[1] * _gauss_per_code(ctx)
+
+
+def f_maxwell(ctx):
+    """Maxwell stress -B_R B_phi (code pressure units, mu_0 = 1): > 0 carries angular momentum outward (MRI turbulence: B_R B_phi < 0 on average)."""
+    bR, bphi, _ = _b_cyl(ctx)
+    return -bR * bphi
+
+
+def f_alpha_m(ctx):
+    """local Maxwell alpha: -B_R B_phi / P (P the gas pressure). Average the stress and the pressure separately for the disc's alpha_M (disc product aM)."""
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return f_maxwell(ctx) / _pressure(ctx)
+
+
+def _mri_q(ctx, comp):
     if comp == "z":
-        bc = b[:, 2]
+        bc = _b_frame(ctx)[:, 2]
     else:
-        p = ctx.frame.pos(ctx.snap["Coordinates"])
-        R = np.maximum(np.hypot(p[:, 0], p[:, 1]), 1e-30)
-        bc = (-b[:, 0] * p[:, 1] + b[:, 1] * p[:, 0]) / R
+        bc = _b_cyl(ctx)[1]
     rho = _need(ctx, "Density")
     lam = 2 * np.pi * np.abs(bc) / np.sqrt(rho) / _omega_k(ctx)
     return lam / np.cbrt(_need(ctx, "Masses") / rho)
@@ -344,6 +381,10 @@ _ALL = [
     ("Pmag", f_pmag, "magnetic pressure |B|^2 / 2 (code units, mu_0 = 1)", ("MagneticField",), PRESSURE),
     ("hres", f_hres, "resolution: thermal scale height / smoothing length, (c_s / Omega_K) / h", ("InternalEnergy", "SmoothingLength"), DIMLESS),
     ("ncellH", f_ncellH, "resolution: cells per thermal scale height, (c_s / Omega_K) / (m / rho)^(1/3)", ("InternalEnergy", "Density"), DIMLESS),
+    ("BR", f_bR, "radial magnetic field B_R about the frame centre [gauss]", ("MagneticField",), GAUSS),
+    ("Bphi", f_bphi, "azimuthal magnetic field B_phi about the frame's z axis [gauss]", ("MagneticField",), GAUSS),
+    ("maxwell", f_maxwell, "Maxwell stress -B_R B_phi (code units, mu_0 = 1; > 0 transports J outward)", ("MagneticField",), PRESSURE),
+    ("alphaM", f_alpha_m, "local Maxwell alpha -B_R B_phi / P", ("MagneticField", "Density", "InternalEnergy"), DIMLESS),
     ("Qz", f_qmri_z, "MRI quality lambda / h of the vertical field (resolved above ~6-10)", ("MagneticField", "Density"), DIMLESS),
     ("Qphi", f_qmri_phi, "MRI quality lambda / h of the azimuthal field", ("MagneticField", "Density"), DIMLESS),
     ("tau_bin", f_tau_bin, "torque on the binary orbit per unit gas mass (> 0 widens it; weight=column: per unit area)", ("SmoothingLength",), (0, 0, 2)),

@@ -17,7 +17,8 @@ of the frame), in units of G M / a^3 (Omega_b^2 for a binary): Qzz (the vertical
 (the in-plane m = 2 part) and phiQ22 (its orientation, deg); Mband (the gas mass of the band).
 A heatmap of the family A2_ against time is A_2(R, t); the radial panel draws A2_ against R; the columns A1 .. A8 also form a family `A` (A against m).
 Parameters: r_min / r_max / nbins (0.5, 12, 32, units of the frame), mmax (8), g_min / g_max (1.5, 5), q_rmin (1.0), z_cut (|z| < z_cut R only; None:
-all gas), exclude_ids, center (auto | com: force the gas centre of mass)."""
+all gas), exclude_ids, center (auto | com: force the gas centre of mass), fields (not a default, so results without it keep their cache: a list of
+FIELDS names, e.g. ["Bphi", "BR", "rho", "vR"]: their azimuthal spectra, field_spectra; needs Density, and MagneticField for the B ones)."""
 import numpy as np
 
 from . import plugins
@@ -168,7 +169,48 @@ def modes(path, params):
         out["Qzz"], out["Q22"], out["phiQ22"] = T[2, 2] / unit, abs(c) / unit, float(np.degrees(np.angle(c)) / 2)
     if fr["binary"]:
         out.update(a=fr["a"], e=fr["e"], q=fr["q"])
+    if params.get("fields"):
+        out.update(field_spectra(path, params, edges, g, mmax))
     return {"scalars": out}
+
+
+FIELDS = {"rho": "density", "BR": "B_R", "Bphi": "B_phi", "Bz": "B_z", "vR": "v_R", "vphi": "v_phi", "vz": "v_z", "Pmag": "B^2 / 2"}
+
+
+def field_spectra(path, params, edges, band, mmax):
+    """azimuthal Fourier amplitudes of other fields on the rings (param `fields`, names of FIELDS): per shell and over the band, |c_m| with
+    c_m = sum V f exp(i m phi) / sum V (V = m / rho the cell volume; m = 0 is the volume mean), columns <f>m<k>_<R> and scalars <f>m<k> (the family <f>m:
+    the spectrum against m at the band). B in code units with mu_0 = 1 (mri.load_disc), velocities about the frame centre. A field the snapshot lacks
+    (B in a hydro run) is skipped."""
+    from .mri import load_disc
+    d = load_disc(path, {**params, "r_frame": float(params.get("r_max") or 12.0)})
+    if d is None:
+        return {}
+    R, phi, z, V = d["R"], d["phi"], d["z"], d["V"]
+    vals = dict(d)
+    if d["B"] is not None:
+        vals["Pmag"] = 0.5 * (d["BR"] ** 2 + d["Bphi"] ** 2 + d["Bz"] ** 2)
+    sel = np.ones(len(R), bool) if params.get("z_cut") is None else np.abs(z) < float(params["z_cut"]) * R
+    out = {}
+    Rm = np.sqrt(edges[1:] * edges[:-1])
+    for name in params["fields"]:
+        if name not in FIELDS:
+            raise ValueError(f"modes: unknown field {name!r}; known: {sorted(FIELDS)}")
+        f = vals.get(name)
+        if f is None or (name[0] in "BP" and d["B"] is None):
+            continue
+        for e, tag in ((edges, None), (np.asarray(band, float), "band")):
+            W, C, _, _, n = coefficients(R[sel], phi[sel], z[sel], (V * f)[sel], e, mmax)
+            Wv = coefficients(R[sel], phi[sel], z[sel], V[sel], e, 1)[0]
+            with np.errstate(invalid="ignore", divide="ignore"):
+                amp = np.vstack([np.abs(W) / Wv, np.abs(C) / Wv])          # m = 0 .. mmax
+            few = n < 20
+            if tag is None:
+                for k in range(mmax + 1):
+                    out.update({f"{name}m{k}_{_y(y)}": (np.nan if fw else float(a)) for y, a, fw in zip(Rm, amp[k], few)})
+            else:
+                out.update({f"{name}m{k}": (np.nan if few[0] else float(amp[k, 0])) for k in range(mmax + 1)})
+    return out
 
 
 META = {**{f"A{k}": {"label": f"A_{k} over the band g_min < R < g_max", "group": "modes"} for k in range(1, MMAX + 1)},
@@ -190,7 +232,7 @@ def _applies(path):
         return "PartType0" in f and len(f["PartType0"]["Masses"]) > 0
 
 
-plugins.register_product("modes", modes, needs=("Coordinates", "Velocities", "Masses", "?ParticleIDs", "PartType5"), version=1,
+plugins.register_product("modes", modes, needs=("Coordinates", "Velocities", "Masses", "?Density", "?MagneticField", "?ParticleIDs", "PartType5"), version=1,
                          label="modes: azimuthal Fourier amplitudes A_m(R), phases, bending mode, gas quadrupole at the centre", applies=_applies,
                          params={"r_min": 0.5, "r_max": 12.0, "nbins": 32, "mmax": MMAX, "g_min": 1.5, "g_max": 5.0, "q_rmin": 1.0, "z_cut": None,
                                  "exclude_ids": [], "center": "auto"},

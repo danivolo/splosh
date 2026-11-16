@@ -466,7 +466,7 @@ def heat_columns(tab, prefix):
     """[(y value, column)] of the columns named <prefix><number>, by number."""
     out = []
     for c in tab.columns:
-        if c.startswith(prefix):
+        if c.startswith(prefix) and "_" not in c[len(prefix):]:          # float() accepts "1_4.5" (= 14.5): A1_4.5 is not a member of the family A
             try:
                 out.append((float(c[len(prefix):]), c))
             except ValueError:

@@ -304,6 +304,8 @@ def validate_layout(layout):
                     raise LayoutError(str(e)) from None
                 if pst and "cmap" not in raw:
                     p["cmap"] = pst["cmap"]
+                elif not pst and p["field"] in _SIGNED and "cmap" not in raw:          # signed fields: diverging about 0 (limits symmetric: analyze._symmetric)
+                    p["cmap"] = "RdBu_r"
                 from .maps import View
                 try:
                     View(**{key: p[key] for key in _view_keys()}).validate()

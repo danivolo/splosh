@@ -1,0 +1,91 @@
+# MRI dynamo in space-time (snapshot product `mri`, default radii 2, 4, 8 in units of the frame: a for a binary, code length for one black hole; change
+# them in the run's analysis_viewer/products/params.toml, [mri] radii = [...], and the prefixes below to match). The butterfly diagram B_phi(z, t) at each
+# radius, the upper/lower-half mean B_phi against time and their periodogram (the dynamo period, typically ~10 orbits at that radius), and the Maxwell
+# alpha and beta of the annuli.
+
+schema = "splosh-layout-1"
+name = "mri_spacetime"
+scope = "run"
+ncols = 3
+figure = {panel_in = 4.5}
+
+[[panel]]
+type = "heatmap"
+id = "bfly2"
+label = "butterfly B_phi(z / H, t) at R = 2"
+source = "prod_mri"
+prefix = "Bphi2z_"
+zscale = "symlog"
+cmap = "RdBu_r"
+ylabel = "z / H"
+
+[[panel]]
+type = "heatmap"
+id = "bfly4"
+label = "butterfly B_phi(z / H, t) at R = 4"
+source = "prod_mri"
+prefix = "Bphi4z_"
+zscale = "symlog"
+cmap = "RdBu_r"
+ylabel = "z / H"
+
+[[panel]]
+type = "heatmap"
+id = "bfly8"
+label = "butterfly B_phi(z / H, t) at R = 8"
+source = "prod_mri"
+prefix = "Bphi8z_"
+zscale = "symlog"
+cmap = "RdBu_r"
+ylabel = "z / H"
+
+[[panel]]
+type = "timeseries"
+id = "halves4"
+label = "mean B_phi of the upper and lower halves, R = 4"
+source = "prod_mri"
+columns = ["Bphiup4", "Bphilo4"]
+
+[[panel]]
+type = "spectrum"
+id = "dynamo4"
+label = "dynamo period: periodogram of the half-disc B_phi, R = 4"
+source = "prod_mri"
+columns = ["Bphiup4", "Bphilo4"]
+
+[[panel]]
+type = "heatmap"
+id = "maxwell4"
+label = "Maxwell stress -B_R B_phi (z / H, t) at R = 4"
+source = "prod_mri"
+prefix = "Mx4z_"
+zscale = "symlog"
+cmap = "RdBu_r"
+ylabel = "z / H"
+
+[[panel]]
+type = "timeseries"
+id = "alphaM"
+label = "Maxwell alpha of the annuli"
+source = "prod_mri"
+columns = ["aM2", "aM4", "aM8"]
+yscale = "log"
+
+[[panel]]
+type = "timeseries"
+id = "beta"
+label = "plasma beta of the annuli"
+source = "prod_mri"
+columns = ["beta2", "beta4", "beta8"]
+yscale = "log"
+
+[[panel]]
+type = "radial"
+id = "bphi_z"
+label = "B_phi(z) at R = 4, time windows"
+source = "prod_mri"
+prefix = "Bphi4z_"
+windows = 4
+hlines = [0.0]
+xlabel = "z / H"
+xscale = "lin"
